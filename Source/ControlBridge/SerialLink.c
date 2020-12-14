@@ -340,7 +340,7 @@ PUBLIC void vSL_LogSend(void)
             vSL_TxByte(FALSE, au8LogBuffer[u8LogStart]);
             u8LogStart++;
         }
-        vSL_TxByte(FALSE, 0x20);
+        //vSL_TxByte(FALSE, 0x20);
         u8LogStart++;
 
         /* Send end character */
