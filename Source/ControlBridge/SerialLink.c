@@ -307,7 +307,7 @@ PUBLIC void vSL_LogSend(void)
     uint8 u8CRC;
     uint8 u8Length;
 
-    u8Length++;
+    //u8Length++;
 
     while (u8LogEnd - u8LogStart != 0)
     {
