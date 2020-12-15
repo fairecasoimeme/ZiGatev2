@@ -1307,7 +1307,8 @@ PRIVATE void APP_ZCL_cbEndpointCallback ( tsZCL_CallBackEvent*    psEvent )
         }// CUSTOM CASE
         break;
         default:
-            vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "EP EVT: Invalid event type\r\n" );
+            vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "EP EVT: Invalid event type %d\r\n" , psEvent->eEventType);
+            vLog_Printf ( TRACE_ZCL, LOG_DEBUG,"Update Id %04x\r\n", psEvent->psClusterInstance->psClusterDefinition->u16ClusterEnum);
         break;
     }//Switch of event
 
