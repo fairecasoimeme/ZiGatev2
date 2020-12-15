@@ -443,7 +443,7 @@ PUBLIC  teZCL_Status eCLD_OnOffGetState(uint8 u8SourceEndPointId, bool_t* pbOn)
 
 }
 
-#ifdef CLD_ONOFF_CMD_ON_WITH_TIMED_OFF
+#if (defined ONOFF_SERVER) && (defined CLD_ONOFF_CMD_ON_WITH_TIMED_OFF)
 /****************************************************************************
  **
  ** NAME:       eCLD_OnOffUpdate
