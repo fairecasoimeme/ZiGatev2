@@ -1572,6 +1572,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             }
             break;
 
+#ifdef CLD_ONOFF_CMD_ON_WITH_TIMED_OFF
             case (E_SL_MSG_ONOFF_TIMED):
             {
 
@@ -1590,6 +1591,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
             }
             break;
+#endif
 
          /* colour cluster commands */
 
