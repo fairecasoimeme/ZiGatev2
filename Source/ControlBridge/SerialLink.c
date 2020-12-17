@@ -59,6 +59,7 @@
 #include <jendefs.h>
 #include <string.h>
 #include <dbg.h>
+#include "log.h"
 
 #include "SerialLink.h"
 #include "app_uart.h"
@@ -101,6 +102,7 @@ PRIVATE uint8 u8CCITT_CRC(uint8 u8CRCIn, uint8 u8Val);
 /****************************************************************************/
 /***        Exported Variables                                            ***/
 /****************************************************************************/
+PUBLIC uint8 u8LogLevel = LOG_LEVEL;
 
 /****************************************************************************/
 /***        Local Variables                                               ***/
@@ -393,7 +395,21 @@ PUBLIC void vSL_LogInit(void)
 
     DBG_vInit(&sFunctionTbl);
 }
+/****************************************************************************
+ *
+ * NAME: vSL_setLogLevel
+ *
 
+ *
+ * PARAMETERS:  Name                RW  Usage
+ *
+ * RETURNS:
+ * void
+ ****************************************************************************/
+PUBLIC void vSL_setLogLevel(uint8 logLevel)
+{
+	u8LogLevel = logLevel;
+}
 
 /****************************************************************************/
 /***        Local Functions                                               ***/

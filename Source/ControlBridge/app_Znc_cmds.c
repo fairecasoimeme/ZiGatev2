@@ -397,6 +397,13 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
         switch ( u16PacketType )
         {
+
+            case (E_SL_MSG_SET_LOGMODE):
+            {
+            	u8LogLevel     =   au8LinkRxBuffer [ 0 ];
+            }
+            break;
+
             case (E_SL_MSG_SET_RAWMODE):
             {
                sZllState.u8RawMode     =   au8LinkRxBuffer [ 0 ];
