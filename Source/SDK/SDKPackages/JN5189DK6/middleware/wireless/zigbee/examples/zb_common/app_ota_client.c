@@ -150,7 +150,7 @@ static uint8_t nbBlob = 0;
     sNvmDefs.u32SectorSize = 512; /* Sector Size = 512 bytes*/
 #else
     sNvmDefs.u8FlashDeviceType = 0; /* Not required as the OTA support knows the external flash type */
-    sNvmDefs.u32SectorSize = 64*1024; /* Sector Size = 64K */
+    sNvmDefs.u32SectorSize = 4*1024; /* Sector Size = 4K */
 #endif
 
     if(0 == memcmp(au8CmpNonce, s_au8Nonce,16))
@@ -899,9 +899,7 @@ static void vInitAndDisplayKeys(void)
                     sPdmOtaApp.u64IeeeAddrOfServer,
                                         FALSE);
             sPdmOtaApp.bValid = TRUE;
-#ifndef DUAL_MODE_APP
             PDM_eSaveRecordData(PDM_ID_OTA_APP,&sPdmOtaApp,sizeof(tsPdmOtaApp));
-#endif
             eOTA_SetServerAddress( APP_u8GetDeviceEndpoint(), sPdmOtaApp.u64IeeeAddrOfServer, sPdmOtaApp.u16NwkAddrOfServer
                             );
 
@@ -1420,9 +1418,7 @@ static void vManageDLProgressState(void)
     sPdmOtaApp.u16NwkAddrOfServer = 0xffff;
     sPdmOtaApp.u8OTAserverEP = 0xff;
     sPdmOtaApp.bValid = FALSE;
-#ifndef DUAL_MODE_APP
     PDM_eSaveRecordData(PDM_ID_OTA_APP,&sPdmOtaApp,sizeof(tsPdmOtaApp));
-#endif
 }
 
 /****************************************************************************
@@ -1440,11 +1436,8 @@ static void vManageDLProgressState(void)
 
 static void vOTAPersist(void)
 {
-    /* Dual mode app always restart the download from the beginning */
-#ifndef DUAL_MODE_APP
     sOTA_PersistedData = sGetOTACallBackPersistdata();
     PDM_eSaveRecordData(PDM_ID_OTA_DATA, &sOTA_PersistedData, sizeof(tsOTA_PersistedData));
-#endif
 }
 
 /****************************************************************************

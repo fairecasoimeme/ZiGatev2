@@ -100,6 +100,10 @@ static const ctimer_interrupt_enable_t ctimer_match_ch_interrupts[] = {
     kCTIMER_Match3InterruptEnable,
 };
 
+#ifndef ENABLE_RAM_VECTOR_TABLE
+ctimer_callback_t cTimerCallbacks[2] = {StackTimer_ISR_withParam, NULL};
+#endif
+
 #else
 static const IRQn_Type mTpmIrqId[] = TPM_IRQS;
 static TPM_Type * mTpmBase[] = TPM_BASE_PTRS;
@@ -180,6 +184,10 @@ void StackTimer_Init(void (*cb)(void))
     /* Install ISR */
     irqId = mCtimerIrqId[gStackTimerInstance_c];
     CTIMER_EnableInterrupts(ctimerBaseAddr, ctimer_match_ch_interrupts[gStackTimerChannel_c]);
+#ifndef ENABLE_RAM_VECTOR_TABLE
+    CTIMER_RegisterCallBack(ctimerBaseAddr, &cTimerCallbacks[0], kCTIMER_SingleCallback);
+#endif
+
 #else
     TPM_Type *tpmBaseAddr = (TPM_Type*)mTpmBase[gStackTimerInstance_c];
 
@@ -190,7 +198,7 @@ void StackTimer_Init(void (*cb)(void))
     tpmBaseAddr->MOD = 0xFFFF;
     /* Configure channel to Software compare; output pin not used */
     TPM_SetupOutputCompare(tpmBaseAddr, (tpm_chnl_t)gStackTimerChannel_c, kTPM_NoOutputSignal, 0x01);
-    
+
     /* Install ISR */
     irqId = mTpmIrqId[gStackTimerInstance_c];
     TPM_EnableInterrupts(tpmBaseAddr, kTPM_TimeOverflowInterruptEnable | (1 << gStackTimerChannel_c));
@@ -202,20 +210,18 @@ void StackTimer_Init(void (*cb)(void))
 /*************************************************************************************/
 int StackTimer_ReInit(void (*cb)(void))
 {
-    TMR_DBG_LOG("cb=%x", cb);
 
     uint32_t result = 0;
 
 #if gTimerMgrUseLpcRtc_c
-    IRQn_Type irqId;
-
-    /* RTC time counter has to be stopped before setting the date & time in the TSR register */
-    irqId = mRtcFrIrqId;
-    ConfigureIntHandler( irqId, cb);
+    ConfigureIntHandler( mRtcFrIrqId, cb);
 #else
-    result = -1;  // failure : Timers which are not lowpower shall be fully reinitialized
+    /* If the timer used for TMR is not conserved during power down
+     * need to restore all
+     */
+    StackTimer_Init(cb);
 #endif
-
+    TMR_DBG_LOG("cb=%x res=%x", cb, result);
     return result;
 }
 
@@ -256,7 +262,6 @@ void StackTimer_Disable(void)
 /*************************************************************************************/
 uint32_t StackTimer_GetInputFrequency(void)
 {
-    TMR_DBG_LOG("");
     uint32_t prescaller = 0;
     uint32_t refClk     = 0;
     uint32_t result     = 0;
@@ -269,14 +274,14 @@ uint32_t StackTimer_GetInputFrequency(void)
     (void)refClk;     /* suppress warnings */
     result = 1000;    /* The high-resolution RTC timer uses a 1kHz clock */
 #elif gTimerMgrUseRtcFrc_c
-    
+
     (void)prescaller; /* unused variables  */
     (void)refClk;     /* suppress warnings */
   #if (defined(BOARD_XTAL1_CLK_HZ) && (BOARD_XTAL1_CLK_HZ == CLK_XTAL_32KHZ))
     result = CLOCK_GetFreq(kCLOCK_32KClk);  //32,768Khz crystal is used
   #else
     if( RTC->CTRL | RTC_CTRL_CAL_EN_MASK) // is calibration enabled ?
-    { 
+    {
         /* result = 32000 +- ( (32768-32000)*(calculated_ppm / ppm_for_32_000))
          *        = 32000 +- ( 768 * calculated_ppm / 0x6000 )
          *        = 32000 +- (3 * calculated_ppm / 0x60)
@@ -304,13 +309,13 @@ uint32_t StackTimer_GetInputFrequency(void)
     prescaller = mTpmConfig.prescale;
     result = refClk / (1 << prescaller);
 #endif
+    TMR_DBG_LOG("%d", result);
     return result;
 }
 
 /*************************************************************************************/
 uint32_t StackTimer_GetCounterValue(void)
 {
-    TMR_DBG_LOG("");
     uint32_t counter_value = 0;
 #if gTimerMgrUseFtm_c
     counter_value = mFtmBase[gStackTimerInstance_c]->CNT;
@@ -323,6 +328,8 @@ uint32_t StackTimer_GetCounterValue(void)
 #else
     counter_value = mTpmBase[gStackTimerInstance_c]->CNT;
 #endif
+    TMR_DBG_LOG("%d", counter_value);
+
     return counter_value;
 }
 
@@ -341,12 +348,13 @@ void StackTimer_SetOffsetTicks(uint32_t offset)
 #else
     TPM_SetupOutputCompare(mTpmBase[gStackTimerInstance_c], (tpm_chnl_t)gStackTimerChannel_c, kTPM_NoOutputSignal, offset);
 #endif
+    TMR_DBG_LOG("%d", offset);
+
 }
 
 /*************************************************************************************/
 uint32_t StackTimer_ClearIntFlag(void)
 {
-    TMR_DBG_LOG("");
     uint32_t flags = 0;
 #if gTimerMgrUseFtm_c
     flags = FTM_GetStatusFlags(mFtmBase[gStackTimerInstance_c]);
@@ -367,8 +375,18 @@ uint32_t StackTimer_ClearIntFlag(void)
     flags = TPM_GetStatusFlags(mTpmBase[gStackTimerInstance_c]);
     TPM_ClearStatusFlags(mTpmBase[gStackTimerInstance_c], flags);
 #endif
+    TMR_DBG_LOG("flags=%x", flags);
     return flags;
 }
+
+#if gTimerMgrUseLpcRtc_c
+#ifndef ENABLE_RAM_VECTOR_TABLE
+void RTC_IRQHandler(void)
+{
+    StackTimer_ISR_withParam(0);
+}
+#endif
+#endif
 
 /*************************************************************************************/
 /*                                       PWM                                         */
@@ -440,7 +458,7 @@ void PWM_StartEdgeAlignedLowTrue(uint8_t instance, tmr_adapter_pwm_param_t *para
         .dutyCyclePercent = param->initValue,
         .firstEdgeDelayPercent = 0
     };
-    
+
     FTM_SetupPwm(mFtmBase[instance], &pwmChannelConfig, 1, kFTM_EdgeAlignedPwm, param->frequency, BOARD_GetFtmClock(instance));
 #else
     tpm_chnl_pwm_signal_param_t pwmChannelConfig = {
@@ -451,7 +469,7 @@ void PWM_StartEdgeAlignedLowTrue(uint8_t instance, tmr_adapter_pwm_param_t *para
         .firstEdgeDelayPercent = 0
 #endif
     };
-    
+
     TPM_SetupPwm(mTpmBase[instance], &pwmChannelConfig, 1, kTPM_EdgeAlignedPwm, param->frequency, BOARD_GetTpmClock(instance));
 #endif
 }

@@ -83,7 +83,7 @@ extern "C" {
 typedef enum
 {
 /* Common Commands */
-    E_SL_MSG_SET_LOGMODE                                       =   0x0001,
+	E_SL_MSG_SET_LOGMODE 									   =   0x0001,
     E_SL_MSG_STATUS                                            =   0x8000,
     E_SL_MSG_LOG                                               =   0x8001,
 

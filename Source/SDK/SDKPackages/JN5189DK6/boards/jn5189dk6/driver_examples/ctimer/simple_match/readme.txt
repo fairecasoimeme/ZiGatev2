@@ -5,8 +5,8 @@ In this example, the match feature of the CTimer is used to toggle the output le
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================

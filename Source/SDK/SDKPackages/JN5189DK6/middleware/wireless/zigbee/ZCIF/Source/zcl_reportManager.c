@@ -301,10 +301,7 @@ PUBLIC  teZCL_Status eZCLAddReport(
     {
         //in case the attribute is string data type allocate the space for it if entry does not exist
         vZCL_AllocateSpaceForStringReports(psAttributeDefinition->eAttributeDataType,psHeadReportRecord);
-    } 
-    
-    // store new value
-    eZCL_StoreChangeAttributeValue(psClusterInstance, psAttributeDefinition, psHeadReportRecord);
+    }
 
     // copy structure
     psHeadReportRecord->psEndPointDefinition = psEndPointDefinition;
@@ -312,6 +309,9 @@ PUBLIC  teZCL_Status eZCLAddReport(
     psHeadReportRecord->psAttributeDefinition = psAttributeDefinition;
 
     memcpy(&psHeadReportRecord->sAttributeReportingConfigurationRecord, psAttributeReportingRecord, sizeof(tsZCL_AttributeReportingConfigurationRecord));
+
+    // store new value
+    eZCL_StoreChangeAttributeValue(psClusterInstance, psAttributeDefinition, psHeadReportRecord);
 
     // get head to start search
     psHeadReportRecordAlloc = (tsZCL_ReportRecord *)psDLISTgetHead(&psZCL_Common->lReportAllocList);

@@ -42,9 +42,7 @@
 #include <pdum_apl.h>
 #include <zps_apl.h>
 #include <zps_apl_aps.h>
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 #include <zps_apl_zdo.h>
-#endif
 #include <zps_apl_zdp.h>
 #include <zps_apl_aib.h>
 #include "aessw_ccm.h"
@@ -69,6 +67,11 @@
 #define ZPS_APL_SEC_DEVICE_LEFT             2
 #define ZPS_APL_SEC_STD_UNSEC_REJOIN        3
 #define ZPS_APL_SEC_INT_LEAVE_REJION        4
+
+#define ZPS_APL_FILTER_NONE                 0
+#define ZPS_APL_FILTER_BCAST                1
+#define ZPS_APL_FILTER_ALL                  2
+
 /****************************************************************************/
 /***        Type Definitions                                              ***/
 /****************************************************************************/
@@ -318,6 +321,7 @@ typedef struct {
         ZPS_ERROR_NO_APDU_CONFIGURED,
         ZPS_ERROR_OS_MESSAGE_QUEUE_OVERRUN,
         ZPS_ERROR_APS_SECURITY_FAIL,
+        ZPS_ERROR_ZDO_LINKSTATUS_FAIL,
     } eError;
 
     union {
@@ -339,6 +343,7 @@ typedef struct {
             void* hMessage;
         } sAfErrorOsMessageOverrun;
 
+        uint64 u64Value;
     } uErrorData;
 } ZPS_tsAfErrorEvent;
 
@@ -804,7 +809,7 @@ PUBLIC  ZPS_tsNwkNetworkDescr* ZPS_psGetNetworkDescriptors (
                                            uint8 *pu8NumberOfNetworks);
 PUBLIC void ZPS_vTCSetCallback(void*);
 PUBLIC void ZPS_vSetOrphanUpdateDisable ( bool_t bEnableOverride );
-PUBLIC void ZPS_vAplAfEnableMcpsFilter ( bool_t bMcpsFilterEnable, uint8 u8ZpsDefaultFilterValue);
+PUBLIC void ZPS_vAplAfEnableMcpsFilter ( uint8 u8McpsFilterEnable, uint8 u8ZpsDefaultFilterValue);
 PUBLIC void ZPS_vRunningCRC32 ( uint8    u8Byte, uint32 *pu32Result );
 PUBLIC void ZPS_vFinalCrc32 (uint32 *pu32Result);
 PUBLIC void zps_vAplAfSetLocalEndDeviceTimeout( void* pvApl, uint16 u16Short, uint8 u8Timeout);
@@ -844,7 +849,6 @@ extern bool_t bSetTclkFlashFeature;
 /***        In-line Functions                                            ***/
 /****************************************************************************/
 
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfInit(void) ZPS_APL_ALWAYS_INLINE;
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfInit(void)
 {
@@ -1162,114 +1166,6 @@ ZPS_APL_INLINE void ZPS_vSetLocalScanDuration(uint8 u8ScanDuration)
 {
     zps_vSetLocalScanDuration(ZPS_pvAplZdoGetAplHandle(),u8ScanDuration);
 }
-#else
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfSetEndpointState(void *pvApl, uint8 u8Endpoint, bool bEnabled) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfSetEndpointState(void *pvApl, uint8 u8Endpoint, bool bEnabled)
-{
-    return zps_eAplAfSetEndpointState(pvApl, u8Endpoint, bEnabled);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetEndpointState(void *pvApl, uint8 u8Endpoint, bool *pbEnabled ) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetEndpointState(void *pvApl, uint8 u8Endpoint, bool *pbEnabled )
-{
-    return zps_eAplAfGetEndpointState(pvApl, u8Endpoint, pbEnabled);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfSetEndpointDiscovery(void *pvApl, uint8 u8Endpoint, uint16 u16ClusterId, bool bOutput, bool bDiscoverable) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfSetEndpointDiscovery(void *pvApl, uint8 u8Endpoint, uint16 u16ClusterId, bool bOutput, bool bDiscoverable)
-{
-    return zps_eAplAfSetEndpointDiscovery(pvApl, u8Endpoint, u16ClusterId, bOutput, bDiscoverable);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetEndpointDiscovery(void *pvApl, uint8 u8Endpoint, uint16 u16ClusterId, bool bOutput, bool_t *pbDiscoverable) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetEndpointDiscovery(void *pvApl, uint8 u8Endpoint, uint16 u16ClusterId, bool bOutput, bool_t *pbDiscoverable)
-{
-    return zps_eAplAfGetEndpointDiscovery(pvApl, u8Endpoint, u16ClusterId, bOutput, pbDiscoverable);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetNodeDescriptor(void *pvApl, ZPS_tsAplAfNodeDescriptor *psDesc) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetNodeDescriptor(void *pvApl, ZPS_tsAplAfNodeDescriptor *psDesc)
-{
-    return zps_eAplAfGetNodeDescriptor(pvApl, psDesc);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetNodePowerDescriptor(void *pvApl, ZPS_tsAplAfNodePowerDescriptor *psDesc) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetNodePowerDescriptor(void *pvApl, ZPS_tsAplAfNodePowerDescriptor *psDesc)
-{
-    return zps_eAplAfGetNodePowerDescriptor(pvApl, psDesc);
-}
-
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetSimpleDescriptor(void *pvApl, uint8 u8Endpoint, ZPS_tsAplAfSimpleDescriptor *psDesc) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGetSimpleDescriptor(void *pvApl, uint8 u8Endpoint, ZPS_tsAplAfSimpleDescriptor *psDesc)
-{
-    return zps_eAplAfGetSimpleDescriptor(pvApl, u8Endpoint, psDesc);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint16 u16DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint16 u16DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfUnicastDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | (u8DstEndpoint << 8) | u8SrcEndpoint, u16DestAddr, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastIeeeDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint64 u64DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastIeeeDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint64 u64DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfUnicastIeeeDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | (u8DstEndpoint << 8) | u8SrcEndpoint, &u64DestAddr,  (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint16 u16DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint16 u16DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfUnicastAckDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | (u8DstEndpoint << 8) | u8SrcEndpoint, u16DestAddr, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastIeeeAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint64 u64DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfUnicastIeeeAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, uint64 u64DestAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfUnicastIeeeAckDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | (u8DstEndpoint << 8) | u8SrcEndpoint, &u64DestAddr, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGroupDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint16 u16DstGroupAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfGroupDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint16 u16DstGroupAddr, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfGroupDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | u8SrcEndpoint,  u16DstGroupAddr, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBroadcastDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, ZPS_teAplAfBroadcastMode eBroadcastMode, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBroadcastDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, uint8 u8DstEndpoint, ZPS_teAplAfBroadcastMode eBroadcastMode, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8 *pu8SeqNum)
-{
-    return zps_eAplAfBroadcastDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | (u8DstEndpoint << 8) | u8SrcEndpoint, eBroadcastMode, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8* pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8* pu8SeqNum)
-{
-    return zps_eAplAfBoundDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | u8SrcEndpoint, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8* pu8SeqNum) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundAckDataReq(void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, uint8* pu8SeqNum)
-{
-    return zps_eAplAfBoundAckDataReq(pvApl, hAPduInst, (u16ClusterId << 16) | u8SrcEndpoint, (eSecurityMode << 8) | u8Radius, pu8SeqNum);
-}
-ZPS_APL_INLINE void ZPS_vAfInterPanInit(void *pvApl) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_vAfInterPanInit(void *pvApl)
-{
-    zps_vAfInterPanInit(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundDataReqNonBlocking (void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, bool bAck ) ZPS_APL_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplAfBoundDataReqNonBlocking (void *pvApl, PDUM_thAPduInstance hAPduInst, uint16 u16ClusterId, uint8 u8SrcEndpoint, ZPS_teAplAfSecurityMode eSecurityMode, uint8 u8Radius, bool bAck )
-{
-    return zps_eAplAfBoundDataReqNonBlocking( pvApl,
-                                     hAPduInst,
-                                     (u16ClusterId << 16) | u8SrcEndpoint,
-                                     (eSecurityMode << 8) | u8Radius,
-                                     bAck );
-}
-#endif
 
 #ifdef ZCP
 PUBLIC void ZPS_vRegisterCommandCallbackAPS(void* pvFnCallback);

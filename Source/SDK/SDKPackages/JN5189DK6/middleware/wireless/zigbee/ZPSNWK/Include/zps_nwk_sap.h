@@ -440,7 +440,7 @@ typedef enum
     ZPS_NWK_ENUM_ROUTE_DISCOVERY_FAILED,      /**< Attempt at route discovery has failed due any reason except lack of table space (0xd0) */
     ZPS_NWK_ENUM_ROUTE_ERROR,                 /**< NLDE-DATA.request has failed due to routing failure on sending device (0xd1) */
     ZPS_NWK_ENUM_BT_TABLE_FULL,               /**< Broadcast or broadcast-mode multicast has failed as there is no room in BTT (0xd2) */
-    ZPS_NWK_ENUM_FRAME_NOT_BUFFERED,           /**< Unicast mode multi-cast frame was discarded pending route discovery (0xd3) */
+    ZPS_NWK_ENUM_FRAME_NOT_BUFFERED,          /**< Insufficient buffering available or Unicast mode multi-cast frame was discarded pending route discovery (0xd3) */
     ZPS_NWK_ENUM_FRAME_IS_BUFFERED            /**< Unicast mode frame on the pending frame (0xd4) */
 } ZPS_teNwkEnum;
 
@@ -531,11 +531,12 @@ typedef enum
  */
 typedef enum
 {
-    ZPS_NWK_REJOIN_ASSOC_JOIN = 0,  /**< Join a network using the MAC association procedure */
-    ZPS_NWK_REJOIN_ORPHAN_REJOIN,   /**< Join or rejoin a network using the orphaning procedure */
-    ZPS_NWK_REJOIN_NWK_REJOIN,      /**< Join or rejoin a network using the NWK rejoin procedure */
-    ZPS_NWK_REJOIN_CHG_CHAN,        /**< Switch the operating channel for a device that is joined to a network */
-    ZPS_NWK_REJOIN_NO_DISC,
+    ZPS_NWK_REJOIN_ASSOC_JOIN = 0,            /**< Join a network using the MAC association procedure */
+    ZPS_NWK_REJOIN_ORPHAN_REJOIN,             /**< Join or rejoin a network using the orphaning procedure */
+    ZPS_NWK_REJOIN_NWK_REJOIN,                /**< Join or rejoin a network using the NWK rejoin procedure */
+    ZPS_NWK_REJOIN_CHG_CHAN,                  /**< Switch the operating channel for a device that is joined to a network */
+    ZPS_NWK_REJOIN_NO_DISC,                   /**< Rejoin process without discovery and back to parent*/
+    ZPS_NWK_REJOIN_NO_DISC_TRY_NEXT_PARENT,   /**< Rejoin process without discovery try next potential parent */
     NUM_ZPS_NWK_REJOIN
 } ZPS_teNwkRejoin;
 
@@ -1029,7 +1030,10 @@ typedef struct
     uint32 u32MacTxUcastAccRetry;				    /**< Current value of u32MacTxUcastAccRetry */
     uint32 u32MacTxUcastAvgRetry;                   /**< Current value of u32MacTxUcastAvgRetry */
     uint32 u32MacTxUcastFail;						/**< Current value of u32MacTxUcastFail */
+    uint32 u32MacRxUcast;                           /**< Current value of u32MacRxUcast */
     uint32 u32MacTxUcast;                           /**< Current value of u32MacTxUcast */
+    uint32 u32MacRxBcast;                           /**< Current value of u32MacRxBcast */
+    uint32 u32MacTxBcast;                           /**< Current value of u32MacTxBcast */
     uint32 u32APSTxUcastRetry;						/**< Current value of u32APSTxUcastRetry */
     uint32 u32APSTxUcastFail;						/**< Current value of u32APSTxUcastFail */
     uint32 u32MacCCaFail;						    /**< Current value of u32MacCCaFail */

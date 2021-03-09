@@ -21,8 +21,8 @@
 
 /*! @name Driver version */
 /*@{*/
-/*! @brief USART driver version 2.1.0. */
-#define FSL_USART_DRIVER_VERSION (MAKE_VERSION(2, 1, 0))
+/*! @brief USART driver version. */
+#define FSL_USART_DRIVER_VERSION (MAKE_VERSION(2, 4, 0))
 /*@}*/
 
 #define USART_FIFOTRIG_TXLVL_GET(base) (((base)->FIFOTRIG & USART_FIFOTRIG_TXLVL_MASK) >> USART_FIFOTRIG_TXLVL_SHIFT)
@@ -145,6 +145,7 @@ typedef struct _usart_config
     bool enableRx;                        /*!< Enable RX */
     bool enableTx;                        /*!< Enable TX */
     bool enableContinuousSCLK;            /*!< USART continuous Clock generation enable in synchronous master mode. */
+    bool enableHardwareFlowControl;       /*!< Enable hardware control RTS/CTS */
     usart_txfifo_watermark_t txWatermark; /*!< txFIFO watermark */
     usart_rxfifo_watermark_t rxWatermark; /*!< rxFIFO watermark */
     usart_sync_mode_t syncMode; /*!< Transfer mode select - asynchronous, synchronous master, synchronous slave. */

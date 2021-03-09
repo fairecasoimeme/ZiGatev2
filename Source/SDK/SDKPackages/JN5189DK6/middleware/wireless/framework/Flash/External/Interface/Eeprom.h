@@ -158,6 +158,17 @@ ee_err_t EEPROM_Init
   void /*IN: No Input Parameters*/
 );
 
+/******************************************************************************
+* NAME: EEPROM_DeInit
+* DESCRIPTION: De-Initializes the EEPROM peripheral
+* PARAMETERS: None
+* RETURN: ee_ok - if the EEPROM has been de-initialized successfully
+*         ee_error - otherwise
+******************************************************************************/
+ee_err_t EEPROM_DeInit
+(
+  void /*IN: No Input Parameters*/
+);
 
 /******************************************************************************
 * NAME: EEPROM_ReadData
@@ -285,6 +296,18 @@ ee_err_t EEPROM_ChipErase
 * RETURN: number of purged transactions
 ******************************************************************************/
 int EEPROM_TransactionQueuePurge(void);
+
+/******************************************************************************
+* NAME: EEPROM_SectorAlignmentAfterReset
+* DESCRIPTION:  This function restores the necesary bytes of a sector, and erase
+*               bytes that are no more necessary. This function can be called if
+ *              we want to go back in a sector and that gFlashEraseDuringWrite is
+ *              not enabled.
+* PARAMETERS: Addr
+* RETURN: ee_ok - the operation completed successfully
+ *        other error codes
+******************************************************************************/
+ee_err_t EEPROM_SectorAlignmentAfterReset(uint32_t Addr);
 
 #if ( gEepromParams_bufferedWrite_c == 1)
 /******************************************************************************

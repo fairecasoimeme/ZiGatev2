@@ -53,6 +53,7 @@ extern "C" {
 #define MAC_TX_OPTION_GTS      (2)             /**< Transmit in GTS */
 #define MAC_TX_OPTION_INDIRECT (4)             /**< Transmit indirectly */
 #define MAC_TX_OPTION_SECURITY (8)             /**< Use security */
+#define MAC_TX_OPTION_TIMESTAMP (16)           /**< Transmit Timestamp */
 
 /* Security levels supported */
 #define MAC_SECURITY_KEYID_MODE_1       (1)
@@ -98,13 +99,8 @@ extern "C" {
 /* General defines for MAC layer for 2.4G is 16 but for Sub Gig this needs to be extended*/
 #define MAC_MAX_SCAN_CHANNELS (27)
 
-#if (defined JENNIC_CHIP_FAMILY_JN516x) || (defined JENNIC_CHIP_FAMILY_JN517x)
-/* Buffers do not need to be in a specific section */
-#define MAC_BUFFER_SECTION
-#else
-/* Place buffers in a specific section */
-#define MAC_BUFFER_SECTION __attribute__ ((section (".mac_buffer")))
-#endif
+#define MAC_BROADCAST_PAN_ID     (0xFFFFU)
+#define MAC_BROADCAST_SHORT_ADDR (0xFFFFU)
 
 /****************************************************************************/
 /***        Type Definitions                                              ***/
@@ -473,6 +469,10 @@ PUBLIC void vMiniMac_PLME_SetReq_CcaMode(uint8 u8Mode);
 
 /* MCPS API */
 PUBLIC teMacStatus eMiniMac_MCPS_DataReq(
+    tsTxFrameFormat        *psTxFrame,
+    teTxFailBufferHandling  eFailBufferHandling);
+
+PUBLIC teMacStatus eMiniMac_MCPS_DataRetransmitReq(
     tsTxFrameFormat        *psTxFrame,
     teTxFailBufferHandling  eFailBufferHandling);
 

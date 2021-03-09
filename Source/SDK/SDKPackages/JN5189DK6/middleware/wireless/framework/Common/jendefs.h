@@ -246,21 +246,12 @@
 
 #define BYTE_ORDER_4(B0)                (B0)
 #else
-/* LITTLE ENDIAN DEFINITIONS
+/* LITTLE ENDIAN DEFINITIONS */
 #define BYTE_ORDER_32(B3, B2, B1, B0)   ((B3) + (B2<<8) + (B1<<16) + (B0<<24))
 
 #define BYTE_ORDER_24(B2, B1, B0)       ((B2) + (B1<<8) + (B0<<16))
 
 #define BYTE_ORDER_16(B1, B0)           (uint16)(((B1) + (B0<<8)))
-
-#define BYTE_ORDER_8(B0)                (B0)
-
-#define BYTE_ORDER_4(B0)                (B0)*/
-#define BYTE_ORDER_32(B3, B2, B1, B0)   ((B0) + (B1<<8) + (B2<<16) + (B3<<24))
-
-#define BYTE_ORDER_24(B2, B1, B0)       ((B0) + (B1<<8) + (B2<<16))
-
-#define BYTE_ORDER_16(B1, B0)           (uint16)(((B0) + (B1<<8)))
 
 #define BYTE_ORDER_8(B0)                (B0)
 
@@ -319,7 +310,10 @@
     #endif
 
     typedef uint8_t                 BOOL_T;     /* boolean type nothing to do with C++ */
+#ifndef HAVE_BOOL
     typedef uint8_t                 bool_t;     /* boolean type nothing to do with C++ */
+#define HAVE_BOOL
+#endif
 
     typedef int8_t                  int8;
     typedef int16_t                 int16;

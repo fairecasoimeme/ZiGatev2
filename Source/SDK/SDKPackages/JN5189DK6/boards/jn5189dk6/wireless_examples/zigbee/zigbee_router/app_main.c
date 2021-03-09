@@ -25,7 +25,11 @@
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
 
+#ifdef LNT_MODE_APP
+#define APP_NUM_STD_TMRS             (3)
+#else
 #define APP_NUM_STD_TMRS             (2)
+#endif
 #define APP_QUEUE_SIZE               (1)
 #define APP_ZTIMER_STORAGE           ( APP_NUM_STD_TMRS )
 
@@ -43,6 +47,18 @@
 /****************************************************************************/
 uint8_t  u8TimerButtonScan;
 uint8_t  u8LedTimer;
+
+#ifdef LNT_MODE_APP
+#include "bdb_api.h"
+
+uint8 u8LntTimerTick;
+
+void APP_cbLntTimerTick(void *pvParam)
+{
+    BDB_eNsStartNwkSteering();
+}
+#endif
+
 /* queue handles */
 tszQueue APP_msgAppEvents;
 uint32_t u32Togglems;
@@ -61,6 +77,7 @@ extern const uint8_t gUseRtos_c;
 
 extern void vAppMain(void);
 
+#ifndef DUAL_MODE_APP
 /****************************************************************************
  *
  * NAME: main_task
@@ -104,6 +121,7 @@ void main_task (uint32_t parameter)
         }
     }
 }
+#endif
 
 /****************************************************************************
  *
@@ -124,6 +142,9 @@ void APP_vInitResources(void)
     /* Create Z timers */
     ZTIMER_eOpen(&u8TimerButtonScan,         APP_cbTimerButtonScan,  NULL, ZTIMER_FLAG_PREVENT_SLEEP);
     ZTIMER_eOpen(&u8LedTimer,           APP_cbTimerLed,         NULL, ZTIMER_FLAG_PREVENT_SLEEP);
+#ifdef LNT_MODE_APP
+    ZTIMER_eOpen(&u8LntTimerTick,       APP_cbLntTimerTick,		NULL, ZTIMER_FLAG_PREVENT_SLEEP);
+#endif
     ZQ_vQueueCreate(&APP_msgAppEvents,        APP_QUEUE_SIZE,       sizeof(APP_tsEvent),         NULL);
 }
 

@@ -21,6 +21,7 @@
 typedef struct {
     uint16 u16ClusterID;
     tsZCL_AttributeReportingConfigurationRecord sAttributeReportingConfigurationRecord;
+    uint32 u32LastFiredUTCTime;
 }tsReports;
 /****************************************************************************/
 /***        Exported Functions                                            ***/
@@ -29,7 +30,8 @@ PDM_teStatus eRestoreReports(void);
 void vMakeSupportedAttributesReportable(void);
 void vLoadDefaultConfigForReportable(void);
 void vSaveReportableRecord( uint16 u16ClusterID, tsZCL_AttributeReportingConfigurationRecord* psAttributeReportingConfigurationRecord);
-
+void vSetReportDataForMinRetention(void);
+void vRestoreReportAfterSleep(void);
 
 
 

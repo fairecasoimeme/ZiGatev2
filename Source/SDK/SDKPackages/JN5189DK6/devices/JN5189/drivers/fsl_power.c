@@ -114,6 +114,8 @@
 #define POWER_APPLY_TRIM(__voltage) \
     ((__voltage < 0xA) ? POWER_APPLY_PWD_TRIM(__voltage) : POWER_APPLY_ACTIVE_TRIM(__voltage))
 
+#define POWER_READ_REG32(A) *(volatile uint32_t *)(A)
+
 /*******************************************************************************
  * Types
  ******************************************************************************/
@@ -559,7 +561,6 @@ bool POWER_BodVbatConfig(pm_bod_cfg_t *bod_cfg_p)
 #endif
     }
 
-    CLOCK_DisableClock(kCLOCK_AnaInt);
     // PRINTF( "BODVBAT=0x%X ANACTRL_CTRL=0x%X _STAT=0x%X _VAL=0x%X _INTENSET=0x%X\n", PMC->BODVBAT,
     // SYSCON->ANACTRL_CTRL, SYSCON->ANACTRL_STAT, SYSCON->ANACTRL_VAL, SYSCON->ANACTRL_INTENSET);
 
@@ -903,6 +904,111 @@ bool POWER_EnterPowerMode(pm_power_mode_t pm_power_mode, pm_power_config_t *pm_p
     }
 
     return ret;
+}
+
+/*!
+ * brief Set the DCDC output to 1.8v
+ *
+ * return none
+ */
+void POWER_SetDcdc1v8(void)
+{
+    /* DCDC settings */
+    uint32_t myDCDC0 = PMC->DCDC0;
+    uint32_t myDCDC1 = PMC->DCDC1;
+    uint32_t valueRegister;
+
+    // Set DCDC1.FORCEFULLCYCLE = 0x1
+    myDCDC1 |= 0x04000000;
+
+    // Set DCDC1.RSENSETRIM =  FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x00000780) >> 7);
+    myDCDC1       = ((myDCDC1 & 0xFFFFFF0F) | valueRegister << 4);
+
+    // Set DCDC1.LCENABLE = 0x0
+    myDCDC1 &= 0xFDFFFFFF;
+
+    // Set DCDC0.VOUT = 0x7
+    myDCDC0 = ((myDCDC0 & 0xFFF1FFFF) | (0x7 << 17));
+
+    // Set DCDC1.SETCURVE = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x00018000) >> 15);
+    myDCDC1       = ((myDCDC1 & 0xFFFFF3FF) | (valueRegister << 10));
+
+    // Set DCDC1.SETDC = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x00007800) >> 11);
+    myDCDC1       = ((myDCDC1 & 0xFFFF0FFF) | (valueRegister << 12));
+
+    // Set DCDC1.RTRIMOFFSET = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x03C00000) >> 22);
+    myDCDC1       = ((myDCDC1 & 0xFFFFFFF0) | valueRegister);
+
+    // Set DCDC1.TRIMAUTOCOT = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x3C000000) >> 26);
+    myDCDC1       = ((myDCDC1 & 0xFE1FFFFF) | (valueRegister << 21));
+
+    // Set DCDC0.TMOS = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x003E0000) >> 17);
+    myDCDC0       = ((myDCDC0 & 0xFFFF07FF) | (valueRegister << 11));
+
+    // Set DCDC0.RC = FLASH 1v8 70mA
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x0000007E) >> 1);
+    myDCDC0       = ((myDCDC0 & 0xFFFFFFC0) | valueRegister);
+
+    PMC->DCDC0 = myDCDC0;
+    PMC->DCDC1 = myDCDC1;
+}
+
+/*!
+ * brief Set the DCDC output to 1.3v
+ *
+ * return none
+ */
+void POWER_SetDcdc1v3(void)
+{
+    uint32_t myDCDC0 = PMC->DCDC0;
+    uint32_t myDCDC1 = PMC->DCDC1;
+    uint32_t valueRegister;
+
+    // Set DCDC1.FORCEFULLCYCLE = 0x1
+    myDCDC1 |= 0x04000000;
+
+    // Set DCDC1.LCENABLE = 0x1
+    myDCDC1 |= 0x02000000;
+
+    // Set DCDC1.RSENSETRIM = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x00000780) >> 7);
+    myDCDC1       = ((myDCDC1 & 0xFFFFFF0F) | (valueRegister << 4));
+
+    // Set DCDC0.VOUT = 0x2
+    myDCDC0 = ((myDCDC0 & 0xFFF1FFFF) | (0x2 << 17));
+
+    // Set DCDC1.SETCURVE = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x00018000) >> 15);
+    myDCDC1       = ((myDCDC1 & 0xFFFFF3FF) | (valueRegister << 10));
+
+    // Set DCDC1.SETDC = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x00007800) >> 11);
+    myDCDC1       = ((myDCDC1 & 0xFFFF0FFF) | (valueRegister << 12));
+
+    // Set DCDC1.RTRIMOFFSET = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x03C00000) >> 22);
+    myDCDC1       = ((myDCDC1 & 0xFFFFFFF0) | valueRegister);
+
+    // Set DCDC1.TRIMAUTOCOT = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE4) & 0x3C000000) >> 26);
+    myDCDC1       = ((myDCDC1 & 0xFE1FFFFF) | (valueRegister << 21));
+
+    // Set DCDC0.TMOS = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x003E0000) >> 17);
+    myDCDC0       = ((myDCDC0 & 0xFFFF07FF) | (valueRegister << 11));
+
+    // Set DCDC0.RC = FLASH 60mA 1v3
+    valueRegister = ((POWER_READ_REG32(0x0009FCE0) & 0x0000007E) >> 1);
+    myDCDC0       = ((myDCDC0 & 0xFFFFFFC0) | valueRegister);
+
+    PMC->DCDC0 = myDCDC0;
+    PMC->DCDC1 = myDCDC1;
 }
 
 #ifdef DUMP_CONFIG

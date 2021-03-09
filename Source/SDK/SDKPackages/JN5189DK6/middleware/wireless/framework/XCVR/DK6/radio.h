@@ -2,8 +2,7 @@
  * @brief Radio driver
  *
  * @note
- * Copyright(C) NXP Semiconductors, 2014
- * All rights reserved.
+ * Copyright 2019 NXP
  *
  * @par
  * Software that is described herein is for illustrative purposes only
@@ -47,12 +46,12 @@ extern "C" {
 /****************************************************************************/
 /***    Radio driver version (XYYY): X major version, YYY minor version   ***/
 /****************************************************************************/
-#define RADIO_VERSION (2085)
+#define RADIO_VERSION (2094)
 
 /****************************************************************************/
 /***    Radio calibration data record version                             ***/
 /****************************************************************************/
-#define RADIO_CAL_RECORD_VERSION (1001)
+#define RADIO_CAL_RECORD_VERSION (1002)
 
 /****************************************************************************/
 /***    Radio driver int time values									  ***/
@@ -501,13 +500,6 @@ int16_t i16Radio_BoundRssiValue(int16_t value);
 void vRadio_BLE_ResetOn(void);
 void vRadio_BLE_ResetOff(void);
 
-void vRadio_remove_patch_ISR(void);
-void vRadio_SingleRX_AgcReadyPatch(void);
-void vRadio_MultiRX_AgcReadyPatch(void);
-void vRadio_Enable_AgcReadyPatch(void);
-void vRadio_Disable_AgcReadyPatch(void);
-
-
 
 /****************************************************************************
  *
@@ -785,6 +777,38 @@ void vRadio_AntennaDiversitySwitch(void);
 uint8_t u8Radio_AntennaDiversityStatus(void);
 
 
+/****************************************************************************
+ *
+ * NAME:       vRadio_SetBLEdpTopEmAddr
+ *
+ * DESCRIPTION:
+ * Configure LL_EM_BASE_ADDRESS of BLEMODEM parameter.
+ *
+ * PARAMETERS:
+ * uint32_t em_addr: EM address.
+ *
+ * RETURNS:
+ * None.
+ *
+ ****************************************************************************/
+void vRadio_SetBLEdpTopEmAddr(uint32_t em_addr);
+
+/****************************************************************************
+ *
+ * NAME:       vRadio_RegisterRfActivityCallback
+ *
+ * DESCRIPTION:
+ * Register callback to be informed about next RF activity start.
+ * Register a NULL pointer disables the mechanism.
+ *
+ * PARAMETERS:
+ * void *pf_callback: pointer to the callback.
+ *
+ * RETURNS:
+ * None.
+ *
+ ****************************************************************************/
+void vRadio_RegisterRfActivityCallback(void *pf_callback);
 
 #ifdef __cplusplus
 }

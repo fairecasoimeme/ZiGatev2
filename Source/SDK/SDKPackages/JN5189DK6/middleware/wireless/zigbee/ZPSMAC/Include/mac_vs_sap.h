@@ -203,6 +203,7 @@ typedef struct
 {
     uint8 u8Status; /**< Status of request @sa MAC_Enum_e */
     uint8 u8Handle; /**< Handle matching associated request */
+    uint32 u32Timestamp; /**< SFD TX time    */
 } MAC_tsMcpsVsCfmData;
 
 /**

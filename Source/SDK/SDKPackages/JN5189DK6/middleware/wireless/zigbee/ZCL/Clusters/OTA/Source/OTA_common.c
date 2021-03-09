@@ -108,7 +108,7 @@ PUBLIC  void vOtaFlashInitHw ( uint8    u8FlashType,
 #if (defined JENNIC_CHIP_FAMILY_JN516x) || (defined JENNIC_CHIP_FAMILY_JN517x) || (defined APP0)
     bAHI_FlashInit(u8FlashType, NULL);
 #else
-    OTA_InitExternalMemory();
+    OTA_ClientInit();
 #endif
 }
 /****************************************************************************

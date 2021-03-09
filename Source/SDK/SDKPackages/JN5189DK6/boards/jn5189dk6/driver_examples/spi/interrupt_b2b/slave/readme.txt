@@ -7,8 +7,8 @@ and check if the data slave received is correct. This example needs to work with
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================
@@ -22,10 +22,10 @@ Board settings
 Connect SPI master on board to SPI slave on other board
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Pin Name   Board Location
-MISO       J3 pin 10
-MOSI       J3 pin 11
-SCK        J3 pin 9
-SEL        J3 pin 12
+MISO       J3 pin 8
+MOSI       J3 pin 24
+SCK        J3 pin 22
+SEL        J3 pin 10
 
 Prepare the Demo
 ================

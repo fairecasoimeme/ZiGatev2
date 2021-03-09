@@ -84,7 +84,8 @@ extern WEAK void WarmMain(void);
 // rather than C++ linkage. To do this, make sure that you are using extern "C"
 // { .... } around the interrupt handler within your main application code.
 //*****************************************************************************
-     void ResetISR(void);
+void ResetISR(void);
+void ResetISR2(void);
 WEAK void NMI_Handler(void);
 WEAK void HardFault_Handler(void);
 WEAK void MemManage_Handler(void);

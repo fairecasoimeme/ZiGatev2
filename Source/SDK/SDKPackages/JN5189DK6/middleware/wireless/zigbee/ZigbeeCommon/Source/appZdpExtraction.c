@@ -56,10 +56,10 @@
  *
  ****************************************************************************/
  
-PUBLIC bool_t zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent,
-        										ZPS_tsAfZdpEvent* psReturnStruct)
+PUBLIC bool_t zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t    bZdp = FALSE;
+    bool_t     bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8    u8SeqNum;

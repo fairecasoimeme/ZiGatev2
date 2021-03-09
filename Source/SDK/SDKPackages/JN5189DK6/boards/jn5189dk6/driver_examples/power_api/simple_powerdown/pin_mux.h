@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -43,18 +43,18 @@ void BOARD_InitBootPins(void);
 #define IOCON_PIO_SLEW1_STANDARD 0x00u /*!<@brief Standard mode, output slew rate control is disabled */
 #define IOCON_PIO_SSEL_DI 0x00u        /*!<@brief SSEL is disabled */
 
-/*! @name PIO0_3 (number 6), LED1
-  @{ */
-#define BOARD_INITPINS_LED1_GPIO GPIO /*!<@brief GPIO device name: GPIO */
-#define BOARD_INITPINS_LED1_PORT 0U   /*!<@brief PORT device name: 0U */
-#define BOARD_INITPINS_LED1_PIN 3U    /*!<@brief 0U pin index: 3 */
-                                      /* @} */
-
 /*! @name PIO0_0 (number 3), LED0
   @{ */
 #define BOARD_INITPINS_LED0_GPIO GPIO /*!<@brief GPIO device name: GPIO */
 #define BOARD_INITPINS_LED0_PORT 0U   /*!<@brief PORT device name: 0U */
 #define BOARD_INITPINS_LED0_PIN 0U    /*!<@brief 0U pin index: 0 */
+                                      /* @} */
+
+/*! @name PIO0_3 (number 6), LED1
+  @{ */
+#define BOARD_INITPINS_LED1_GPIO GPIO /*!<@brief GPIO device name: GPIO */
+#define BOARD_INITPINS_LED1_PORT 0U   /*!<@brief PORT device name: 0U */
+#define BOARD_INITPINS_LED1_PIN 3U    /*!<@brief 0U pin index: 3 */
                                       /* @} */
 
 /*!

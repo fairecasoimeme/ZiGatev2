@@ -302,6 +302,12 @@ of an unsecured MAC frame that will be guaranteed not to exceed aMaxPHYPacketSiz
 #define MAX_NUM_TOFS_PER_FRAME 10
 #endif
 
+/* Symbol rate in IEEE 802.15.4, converts time duration to number of symbols */
+#define PHY_PIB_OQPSK_2400_SYMS_SEC(v) ((uint32)(v) * 62500UL)
+#define PHY_PIB_OQPSK_2400_SYMS_MSEC(v) ((uint32)(v) * 62UL)
+#define PHY_PIB_OQPSK_868_SYMS_SEC(v) ((uint32)(v) * 25000UL)
+#define PHY_PIB_OQPSK_868_SYMS_MSEC(v) ((uint32)(v) * 25UL)
+
 /* Required by sub-GHz implementation ---> */
 #define MAC_RX_POWER_MINIMUM		((int8) -99)		/* -99dBm */
 #define MAC_RX_POWER_OPTIMUM		((int8) -79)		/* -79dBm (+20Dbm above ZPS_NWK_LINK_POWER_RX_SENSITIVITY) */

@@ -13,14 +13,62 @@
 #include "DebugExceptionHandlers_jn518x.h"
 #include "fsl_iocon.h"
 #include "fsl_gpio.h"
+#include "fsl_common.h"
+#include "fsl_spifi.h"
 #include <stdbool.h>
 
+/* SPIFI Flash routines for K32W041AM Chip */
+#define  K32W041AM_SPIFI_FLASH_BUSY_FLAG_MASK  0x01
 
 gpio_pin_config_t led_config = {
     kGPIO_DigitalOutput, 0,
 };
 
 extern void OSA_TimeInit(void);
+
+static uint32_t BOARD_SPIFI_FLASH_ReadStatusReq(void)
+{
+    spifi_command_t status_cmd = { 1, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly, 0x05};        /* Read status register */
+
+    SPIFI_SetCommand(SPIFI, &status_cmd);
+    while ((SPIFI->STAT & SPIFI_STAT_INTRQ_MASK) == 0U)
+    {
+    }
+    return SPIFI_ReadPartialWord(SPIFI, status_cmd.dataLen);
+}
+
+static uint8_t BOARD_SPIFI_FLASH_isBusy(void)
+{
+    return (BOARD_SPIFI_FLASH_ReadStatusReq() & K32W041AM_SPIFI_FLASH_BUSY_FLAG_MASK) == K32W041AM_SPIFI_FLASH_BUSY_FLAG_MASK;
+}
+
+static void BOARD_SPIFI_FLASH_Config(void)
+{
+    if(CHIP_USING_SPIFI_DUAL_MODE())
+    {
+        spifi_command_t DP_cmd = {0, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly, 0xB9};
+
+        spifi_config_t config = {0};
+
+        /* Enable DIOs */
+        BOARD_InitSPIFI();
+
+        /* Initialize SPIFI base driver */
+        SPIFI_GetDefaultConfig(&config);
+
+        config.dualMode = kSPIFI_DualMode;
+
+        SPIFI_Init(SPIFI, &config);
+
+        while (BOARD_SPIFI_FLASH_isBusy());
+
+        /* set SPIFI Flash in Deep power down  mode */
+        SPIFI_SetCommand(SPIFI, &DP_cmd);
+        SPIFI_Deinit(SPIFI);
+        SYSCON->AHBCLKCTRLSET[0] = SYSCON_AHBCLKCTRLSET0_SPIFI_CLK_SET_MASK;
+        BOARD_SetSpiFi_LowPowerEnter();
+    }
+}
 
 void BOARD_InitClocks(void)
 {
@@ -80,8 +128,10 @@ void BOARD_SetClockForPowerMode(void)
 }
 
 
+
 void BOARD_InitHardware(void)
 {
+    reset_cause_t reset_cause;
     /* Security code to allow debug access */
     SYSCON->CODESECURITYPROT = 0x87654320;
 
@@ -111,6 +161,14 @@ void BOARD_InitHardware(void)
     SYSCON -> MAINCLKSEL       = 3;  /* 32 M FRO */
     SystemCoreClockUpdate();
     OSA_TimeInit();
+
+    reset_cause = POWER_GetResetCause();
+
+    /* on K32W041AM chip, external flash need to be initialised and set in deep power down to avoid over consumption */
+    if(reset_cause != RESET_WAKE_PD)
+    {
+    	BOARD_SPIFI_FLASH_Config();
+    }
 
     /* Initialise exception handlers for debugging */
     vDebugExceptionHandlersInitialise();

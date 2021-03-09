@@ -551,13 +551,7 @@ bool_t FLib_CopyFromFlash(void* pDst,
 
     TRY
     {
-        while (cBytes)
-        {
-            *((uint8_t*)pDst) = *((uint8_t*)pSrc);
-            pDst = ((uint8_t*)pDst)+1;
-            pSrc = ((uint8_t*)pSrc)+1;
-            cBytes--;
-        }
+        FLib_MemCpy(pDst, pSrc, cBytes);
     }
     CATCH (BUS_EXCEPTION)
     {

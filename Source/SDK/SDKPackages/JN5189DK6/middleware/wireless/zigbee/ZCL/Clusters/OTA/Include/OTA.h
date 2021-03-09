@@ -361,7 +361,6 @@ typedef enum
     E_CLD_OTA_PARAMS_UPGRADE_SIGNATURE
 }teOTA_ServerParms;
 
-/* only values 0x00 - 0x04 are valid all other values are reserved */
 typedef enum 
 {
     E_CLD_OTA_STATUS_NORMAL,
@@ -370,6 +369,7 @@ typedef enum
     E_CLD_OTA_STATUS_WAIT_TO_UPGRADE,
     E_CLD_OTA_STATUS_COUNT_DOWN,
     E_CLD_OTA_STATUS_WAIT_FOR_MORE,
+    E_CLD_OTA_STATUS_RESET
 }teOTA_ImageUpgradeStatus;
 
 typedef struct

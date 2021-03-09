@@ -25,7 +25,6 @@
 #include "bdb_api.h"
 #include "zigbee_config.h"
 #include "zps_gen.h"
-#include "app_uart.h"
 #include "app_ota_server.h"
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
@@ -524,12 +523,12 @@ static void vHandleIdentifyRequest(uint16_t u16Duration)
     ZTIMER_eStop(u8TimerId);
     if (u16Duration == 0)
     {
-    	UART_vSendString("Identifying stopped\n");
+        DBG_vPrintf(TRUE, "Identifying stopped\n");
     }
     else
     {
         ZTIMER_eStart(u8TimerId, ZTIMER_TIME_MSEC(500));
-        UART_vSendString("Identifying\n");
+        DBG_vPrintf(TRUE, "Identifying\n");
     }
 }
 
@@ -549,13 +548,13 @@ void APP_cbTimerId(void *pvParam)
     if (sBaseDevice.sIdentifyServerCluster.u16IdentifyTime == 0)
     {
         ZTIMER_eStop(u8TimerId);
-        UART_vSendString("Identifying stopped\n");
+        DBG_vPrintf(TRUE, "Identifying stopped\n");
     }
     else
     {
         ZTIMER_eStop(u8TimerId);
         ZTIMER_eStart(u8TimerId, ZTIMER_TIME_MSEC(500));
-        UART_vSendString("Identifying\n");
+        DBG_vPrintf(TRUE, "Identifying\n");
     }
 }
 

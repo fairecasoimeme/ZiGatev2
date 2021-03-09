@@ -1,6 +1,6 @@
 Release Name: MCUXpresso Software Development Kit (SDK)
-Release Version: 2.6.0
-Package License: LA_OPT_NXP_Software_License.htm - Production Use, Section 2.3 applies
+Release Version: 2.6.2
+Package License: LA_OPT_NXP_Software_License.htm - Additional Distribution License, Section 2.3 applies
 
 KSDK_Peripheral_Driver     Description: Peripheral drivers are designed for  
                            the most common use cases identified for the      
@@ -11,17 +11,6 @@ KSDK_Peripheral_Driver     Description: Peripheral drivers are designed for
                            Format: source code                               
                            name: KSDK Peripheral Driver                      
                            Location: devices/<device>/drivers                
-
-Amazon_FreeRTOS            Author: Real Time Engineers, Ltd.                 
-                           Description: IoT operating system for             
-                           microcontrollers                                  
-                           Format: source code                               
-                           License: MIT. See                                 
-                           ,<rootfolder>/rtos/amazon-freertos/License.       
-                           Location: rtos/amazon-freertos                    
-                           name: Amazon FreeRTOS                             
-                           URL: https://aws.amazon.com/freertos/             
-                           version: 1.4.6                                    
 
 FreeRTOS_heap_newlib       Author: Dave Nadler, Nadler & Associates          
                            Consulting                                        
@@ -63,7 +52,7 @@ cmsiscore                  Author: ARM
                            Description: Industry-standard header files       
                            distributes by ARM for cortex-M cores             
 
-FWK                        version: 5.7.0                                    
+FWK                        version: 5.7.1                                    
                            Location: middleware/wireless/framework           
                            Description: Connectivity Framework middleware for
                            Connectivity stacks                               
@@ -72,7 +61,7 @@ FWK                        version: 5.7.0
                            name: Connectivity Framework                      
                            Format: source code and header Files              
 
-SecLib                     version: 5.7.0                                    
+SecLib                     version: 5.7.1                                    
                            Location:                                         
                            middleware/wireless/framework/SecLib/lib_crypto_*.
                            a                                                 
@@ -83,28 +72,7 @@ SecLib                     version: 5.7.0
                            name: Connectivity SecLib                         
                            Format: Binary libraries                          
 
-OpenThread                 version: 1.0.0                                    
-                           Location: middleware/wireless/openthread          
-                           Description: Specific Open Thread demo            
-                           applications for standard Thread devices over an  
-                           open-source implementation of the Thread          
-                           networking protocol                               
-                           License: Open Source - BSD-3-Clause               
-                           Author: NXP & Google                              
-                           name: Applications and stack for OpenThread       
-                           Format: Source code, header files and binaries    
-
-OpenThread_RCP_binary      version: 1.0.0                                    
-                           Location: tools/binaries/ot-rcp.bin               
-                           Description: OpenThread RCP configuration binary  
-                           for JN5189 required for Border Router             
-                           License: Proprietary, See EULA                    
-                           LA_OPT_NXP_Software_License.htm                   
-                           Author: NXP & Google                              
-                           name: OpenThread RCP configuration binary         
-                           Format: Binary file                               
-
-ieee_802_15_4              version: 5.3.3                                    
+ieee_802_15_4              version: 5.3.4                                    
                            Location: middleware/wireless/ieee-802.15.4       
                            Description: NXP Wireless IEEE 802.15.4           
                            License: Proprietary, See EULA                    
@@ -115,7 +83,7 @@ ieee_802_15_4              version: 5.3.3
 
 ZigBee 3.0                 Author: NXP                                       
                            Name: JN518x ZigBee 3.0 Stack                     
-                           Version: 1.0.0                                    
+                           Version: 1.0.1                                    
                            Location: middleware/wireless/zigbee              
                            Description: ZigBee 3.0 protocol stack for JN518x 
                            License: Proprietary, See EULA                    
@@ -136,7 +104,7 @@ ZigBee 3.0 ECB decrypt     Author: Niyaz PK
 
 ZigBee 3.0 Eclipse Plugins Author: NXP                                       
                            Name: ZigBee 3.0 Eclipse Plugins                  
-                           Version: 1.0.0                                    
+                           Version: 1.0.1                                    
                            Location: middleware/wireless/zigbee/tools        
                            Description: ZigBee 3.0 plugins for Eclipse for   
                            configuration of stack parameters                 
@@ -146,7 +114,7 @@ ZigBee 3.0 Eclipse Plugins Author: NXP
 
 ZigBee 3.0 PDUMConfig tool Author: NXP                                       
                            Name: ZigBee 3.0 PDU Manager Configuration Tool   
-                           Version: 1.0.0                                    
+                           Version: 1.0.1                                    
                            Location: middleware/wireless/zigbee/tools        
                            Description: Converts configuration data file into
                            C source and header files. Built with MS .NET     
@@ -157,7 +125,7 @@ ZigBee 3.0 PDUMConfig tool Author: NXP
 
 ZigBee 3.0 ZPSConfig tool  Author: NXP                                       
                            Name: ZigBee 3.0 ZPS Configuration Tool           
-                           Version: 1.0.0                                    
+                           Version: 1.0.1                                    
                            Location: middleware/wireless/zigbee/tools        
                            Description: Converts configuration data file into
                            C source and header files. Built with MS .NET     

@@ -40,6 +40,7 @@ to be available here. */
 #include "board.h"
 
 #include "pin_mux.h"
+#include "fsl_wtimer.h"
 #include <stdbool.h>
 /*******************************************************************************
  * Definitions
@@ -106,6 +107,23 @@ static volatile uint32_t ulCountOfReceivedSemaphores      = 0;
 /*******************************************************************************
  * Code
  ******************************************************************************/
+
+/*!
+ * @brief Configure the wake-up timer for run time stats.
+ */
+void RTOS_AppConfigureTimerForRuntimeStats(void)
+{
+    WTIMER_Init();
+    WTIMER_StartTimer(WTIMER_TIMER0_ID, ~0UL);
+}
+
+/*!
+ * @brief Get run counter from wake-up timer.
+ */
+uint32_t RTOS_AppGetRuntimeCounterValue(void)
+{
+    return (~0UL - WTIMER_ReadTimer(WTIMER_TIMER0_ID));
+}
 /*!
  * @brief Main function
  */

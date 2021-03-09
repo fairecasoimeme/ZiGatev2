@@ -6,6 +6,7 @@
  */
 
 #include "fsl_clock.h"
+#include "board_utility.h"
 
 /*******************************************************************************
  * Definitions
@@ -40,14 +41,6 @@
     being driven at. */
 const uint32_t g_Ext_Clk_Freq = 0U;
 
-#define CLOCK_32MfXtalIecLoadpF_x100_default (600)   /* 6.0pF */
-#define CLOCK_32MfXtalPPcbParCappF_x100_default (10) /* 0.1pF */
-#define CLOCK_32MfXtalNPcbParCappF_x100_default (5)  /* 0.05pF */
-
-const ClockCapacitanceCompensation_t default_Clock32MCapacitanceCharacteristics = {
-    .clk_XtalIecLoadpF_x100    = CLOCK_32MfXtalIecLoadpF_x100_default,
-    .clk_XtalPPcbParCappF_x100 = CLOCK_32MfXtalPPcbParCappF_x100_default,
-    .clk_XtalNPcbParCappF_x100 = CLOCK_32MfXtalNPcbParCappF_x100_default};
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -163,8 +156,20 @@ void CLOCK_AttachClk(clock_attach_id_t connection)
         }
         else if (mux == CM_MODEMCLKSEL)
         {
-            pClkSel[mux] |= SYSCON_MODEMCLKSEL_SEL_ZIGBEE_MASK;
-            pClkSel[mux] &= ((uint32_t)pos | 0xfffeU);
+            if (pos < 2)
+            {
+#if defined(SUPPORT_FOR_15_4) && SUPPORT_FOR_15_4
+                pClkSel[mux] |= SYSCON_MODEMCLKSEL_SEL_ZIGBEE_MASK;
+                pClkSel[mux] &= ((uint32_t)pos | 0x2U);
+#endif
+            }
+            else
+            {
+#if defined(SUPPORT_FOR_BLE) && SUPPORT_FOR_BLE
+                pClkSel[mux] |= SYSCON_MODEMCLKSEL_SEL_BLE_MASK;
+                pClkSel[mux] &= ((uint32_t)((pos - 2) << SYSCON_MODEMCLKSEL_SEL_BLE_SHIFT) | 0x1U);
+#endif
+            }
         }
         else
         {
@@ -191,20 +196,26 @@ void CLOCK_SetClkDiv(clock_div_name_t div_name, uint32_t divided_by_value, bool 
     volatile uint32_t *pClkDiv;
     pClkDiv = (uint32_t *)SYSCON;
 
-    pClkDiv[div_name] |= (1U << 30U); /* halts the divider counter to avoid glitch */
+    if (kCLOCK_DivAhbClk != div_name && kCLOCK_DivFrg != div_name)
+    {
+        pClkDiv[div_name] |= (1U << 30U); /* halts the divider counter to avoid glitch */
+    }
 
     if (divided_by_value != 0U)
     {
         pClkDiv[div_name] = (1U << 30U) | (divided_by_value - 1U);
     }
 
-    if (reset)
+    if (kCLOCK_DivAhbClk != div_name && kCLOCK_DivFrg != div_name)
     {
-        pClkDiv[div_name] |= 1U << 29U;
-        pClkDiv[div_name] &= ~(1U << 29U);
-    }
+        if (reset)
+        {
+            pClkDiv[div_name] |= 1U << 29U;
+            pClkDiv[div_name] &= ~(1U << 29U);
+        }
 
-    pClkDiv[div_name] &= ~(1U << 30U); /* release the divider counter */
+        pClkDiv[div_name] &= ~(1U << 30U); /* release the divider counter */
+    }
 }
 
 uint32_t CLOCK_GetClkDiv(clock_div_name_t div_name)
@@ -972,7 +983,13 @@ void CLOCK_XtalBasicTrim(void)
         ASYNC_SYSCON->XTAL32MCTRL = u32RegVal;
     }
 #else
-    CLOCK_Xtal32M_Trim(0, &default_Clock32MCapacitanceCharacteristics);
+    const ClockCapacitanceCompensation_t *clock32MCapaCharacs = NULL;
+
+    clock32MCapaCharacs = BOARD_GetClock32MCapacitanceCharacteristics();
+
+    assert(NULL != clock32MCapaCharacs);
+
+    CLOCK_Xtal32M_Trim(0, clock32MCapaCharacs);
 #endif
 }
 

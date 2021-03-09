@@ -89,8 +89,12 @@ void APP_vInitialiseCoordinator(void)
                             &u16ByteRead);
 
 
+    APP_SetHighTxPowerMode();
+
     /* Initialise ZBPro stack */
     ZPS_eAplAfInit();
+
+    APP_SetMaxTxPower();
 
     APP_ZCL_vInitialise();
 

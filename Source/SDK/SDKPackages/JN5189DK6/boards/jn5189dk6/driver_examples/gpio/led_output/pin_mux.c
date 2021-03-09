@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -47,14 +47,14 @@ void BOARD_InitBootPins(void)
 BOARD_InitPins:
 - options: {callFromInitBoot: 'true', coreID: cm4, enableClock: 'true'}
 - pin_list:
-  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0_PU/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2_PU/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9_PU/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8_PU/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
+  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
   - {pin_num: '6', peripheral: GPIO, signal: 'PIO0, 3', pin_signal: PIO0_3/SPI0_MISO/USART0_TXD/PWM3/SPI1_SSELN0/ISO7816_CLK, direction: OUTPUT, gpio_init_state: 'false',
     mode: pullUp, slew0: standard, invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********

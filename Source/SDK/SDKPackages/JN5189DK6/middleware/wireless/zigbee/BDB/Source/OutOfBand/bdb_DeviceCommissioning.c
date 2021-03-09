@@ -195,6 +195,9 @@ PUBLIC uint8 BDB_u8OutOfBandCommissionStartDevice ( BDB_tsOobWriteDataToCommissi
 
     uint8 u8Status =  BDB_E_FAILURE;
 
+    if (sBDB.sAttrib.bOutBandRejoinInprogress)
+        return BDB_E_ERROR_COMMISSIONING_IN_PROGRESS;
+
     if (  psStartupData->pu8InstallCode )
     {
          zps_pvAesGetKeyFromInstallCode ( psStartupData->pu8InstallCode , 16, &uKey ) ;
@@ -281,6 +284,14 @@ PUBLIC uint8 BDB_u8OutOfBandCommissionStartDevice ( BDB_tsOobWriteDataToCommissi
     {
         BDB_tsBdbEvent sBdbEvent;
         ZPS_vSetNwkStateActive ( ZPS_pvAplZdoGetNwkHandle() );
+        if( psStartupData->u8DeviceType == ZPS_ZDO_DEVICE_COORD )
+        {
+            ZPS_vNwkNibSetDepth( ZPS_pvAplZdoGetNwkHandle() , 0);
+        }
+        else
+        {
+            ZPS_vNwkNibSetDepth( ZPS_pvAplZdoGetNwkHandle() , 1);
+        }
         u8Status =  ZPS_eAplZdoStartRouter (  ( psStartupData->u8DeviceType != ZPS_ZDO_DEVICE_COORD ) );
         sBDB.sAttrib.bbdbNodeIsOnANetwork = TRUE;
         sBdbEvent.eEventType = BDB_EVENT_OOB_FORM_SUCCESS;
@@ -291,7 +302,7 @@ PUBLIC uint8 BDB_u8OutOfBandCommissionStartDevice ( BDB_tsOobWriteDataToCommissi
     {
        sBDB.sAttrib.bbdbNodeIsOnANetwork = FALSE;
        u8Status =  ZPS_eAplZdoRejoinNetwork ( TRUE );
-       if( u8Status == ZPS_NWK_NLME_CFM_DEFERRED )
+       if( u8Status == ZPS_E_SUCCESS )
        {
            sBDB.sAttrib.bOutBandRejoinInprogress =  TRUE;
        }

@@ -95,7 +95,6 @@ void APP_ZCL_vStartTimers (void)
  ****************************************************************************/
 void APP_vAlignStatesAfterSleep(void)
 {
-
     tsZCL_CallBackEvent sCallBackEvent;
     /* Drive ZCL */
     sCallBackEvent.pZPSevent = NULL;
@@ -105,6 +104,7 @@ void APP_vAlignStatesAfterSleep(void)
         /* Update for 1 second (1000ms) */
         vRunAppOTAStateMachine(1000);
     #endif
+    vRestoreReportAfterSleep();
 }
 
 

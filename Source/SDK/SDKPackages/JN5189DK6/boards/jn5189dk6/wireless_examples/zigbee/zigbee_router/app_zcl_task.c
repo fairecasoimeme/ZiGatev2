@@ -16,7 +16,11 @@
 #include "ZTimer.h"
 #include "dbg.h"
 #include "zigbee_config.h"
+
+#ifdef CLD_OTA
 #include "app_ota_client.h"
+#endif
+
 #include "app_leds.h"
 #include "app.h"
 #include "app_common.h"
@@ -97,8 +101,9 @@ void APP_ZCL_vInitialise(void)
     }
 
     APP_vZCL_DeviceSpecific_Init();
-
+#ifdef CLD_OTA
     vAppInitOTA();
+#endif
     APP_vSetLed(LED1, sBaseDevice.sOnOffServerCluster.bOnOff);
 
 }
@@ -171,7 +176,6 @@ void APP_cbTimerZclTick(void *pvParam)
         sCallBackEvent.eEventType = E_ZCL_CBET_TIMER;
         vZCL_EventHandler(&sCallBackEvent);
     }
-
 }
 
 
@@ -487,14 +491,16 @@ static void APP_vHandleClusterCustomCommands(tsZCL_CallBackEvent *psEvent)
                 DBG_vPrintf(TRACE_ZCL, "Basic Factory Reset Received\r\n");
                 memset(&sBaseDevice,0,sizeof(tsZHA_BaseDevice));
                 APP_vZCL_DeviceSpecific_Init();
+#ifdef CLD_OTA
                 vAppInitOTA();
+#endif
                 eZHA_RegisterBaseDeviceEndPoint(APP_u8GetDeviceEndpoint(),
                                                 &APP_ZCL_cbEndpointCallback,
                                                 &sBaseDevice);
             }
         }
         break;
-
+#ifdef CLD_OTA
         case OTA_CLUSTER_ID:
         {
             tsOTA_CallBackMessage *psCallBackMessage = (tsOTA_CallBackMessage *)psEvent->uMessage.sClusterCustomMessage.pvCustomData;
@@ -515,7 +521,7 @@ static void APP_vHandleClusterCustomCommands(tsZCL_CallBackEvent *psEvent)
 
         }
         break;
-
+#endif
         default:
         break;
     }

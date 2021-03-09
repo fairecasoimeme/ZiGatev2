@@ -8,11 +8,7 @@
 #ifndef _FSL_CLOCK_H_
 #define _FSL_CLOCK_H_
 
-#include "fsl_device_registers.h"
 #include "fsl_common.h"
-#include <stdint.h>
-#include <stdbool.h>
-#include <assert.h>
 #include <stddef.h>
 
 /*! @addtogroup clock */
@@ -25,6 +21,14 @@
 /*! @brief CLOCK driver version 2.1.0. */
 #define FSL_CLOCK_DRIVER_VERSION (MAKE_VERSION(2, 1, 0))
 /*@}*/
+
+#ifndef SUPPORT_FOR_BLE
+#define SUPPORT_FOR_BLE 0
+#endif
+
+#ifndef SUPPORT_FOR_15_4
+#define SUPPORT_FOR_15_4 0
+#endif
 
 #ifdef FPGA_50MHZ
 #define SYSCON_BASE_CLOCK_DIV (6)
@@ -115,6 +119,17 @@ typedef enum
     SYSCON_FRGCLKSRC_NONE,     /*!< FRO 48-MHz */
 } CHIP_SYSCON_FRGCLKSRC_T;
 
+/*! @brief Board specific constant capacitance characteristics
+ * Should be supplied by board manufacturer for best performance.
+ * Capacitances are expressed in hundreds of pF
+ */
+typedef struct ClockCapacitanceCompensation
+{
+    uint32_t clk_XtalIecLoadpF_x100;    /*< XTAL Load capacitance */
+    uint32_t clk_XtalPPcbParCappF_x100; /*< XTAL PCB +ve parasitic capacitance */
+    uint32_t clk_XtalNPcbParCappF_x100; /*< XTAL PCB -ve parasitic capacitance */
+} ClockCapacitanceCompensation_t;
+
 /*------------------------------------------------------------------------------
  clock_ip_name_t definition:
 ------------------------------------------------------------------------------*/
@@ -167,24 +182,29 @@ typedef enum _clock_name
     kCLOCK_Ir        = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_IR_SHIFT),     /*!< Infra Red clock */
     kCLOCK_Pwm       = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_PWM_SHIFT),    /*!< PWM clock */
     kCLOCK_Rng       = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_RNG_SHIFT),    /*!< RNG clock */
+#ifdef I2C2
     kCLOCK_FlexComm6 = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_I2C2_SHIFT),   /*!< FlexComm6 clock */
+#endif
     kCLOCK_Usart0    = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_USART0_SHIFT), /*!< USART0 clock */
     kCLOCK_Usart1    = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_USART1_SHIFT), /*!< USART1 clock */
     kCLOCK_I2c0      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_I2C0_SHIFT),   /*!< I2C0 clock */
     kCLOCK_I2c1      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_I2C1_SHIFT),   /*!< I2C1 clock */
     kCLOCK_Spi0      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_SPI0_SHIFT),   /*!< SPI0 clock */
     kCLOCK_Spi1      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_SPI1_SHIFT),   /*!< SPI1 clock */
-    kCLOCK_I2c2      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_I2C2_SHIFT),   /*!< I2C2 clock */
-    kCLOCK_Modem     = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_MODEM_MASTER_SHIFT), /*!< MODEM clock */
-    kCLOCK_Aes       = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_AES_SHIFT),          /*!< AES clock */
-    kCLOCK_Rfp       = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_RFP_SHIFT),          /*!< RFP clock */
-    kCLOCK_DMic      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_DMIC_SHIFT),         /*!< DMIC clock */
-    kCLOCK_Sha0      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_HASH_SHIFT),         /*!< SHA0 clock */
-    kCLOCK_Timer0    = CLK_GATE_DEFINE(ASYNC_CLK_CTRL0, 1),                                   /*!< Timer0 clock */
-    kCLOCK_Timer1    = CLK_GATE_DEFINE(ASYNC_CLK_CTRL0, 2),                                   /*!< Timer1 clock */
-    kCLOCK_MainClk   = (1 << 16),                                                             /*!< MAIN_CLK */
-    kCLOCK_CoreSysClk,                                                                        /*!< Core/system clock */
-    kCLOCK_BusClk,                                                                            /*!< AHB bus clock */
+    kCLOCK_I2c2      = CLK_GATE_DEFINE(AHB_CLK_CTRL1, 20U),                             /*!< I2C2 clock */
+#if defined(SUPPORT_FOR_BLE) && SUPPORT_FOR_BLE
+    kCLOCK_BLE = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_BLE_SHIFT), /*!< BLE clock */
+#endif
+    kCLOCK_Modem   = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_MODEM_MASTER_SHIFT), /*!< MODEM clock */
+    kCLOCK_Aes     = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_AES_SHIFT),          /*!< AES clock */
+    kCLOCK_Rfp     = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_RFP_SHIFT),          /*!< RFP clock */
+    kCLOCK_DMic    = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_DMIC_SHIFT),         /*!< DMIC clock */
+    kCLOCK_Sha0    = CLK_GATE_DEFINE(AHB_CLK_CTRL1, SYSCON_AHBCLKCTRL1_HASH_SHIFT),         /*!< SHA0 clock */
+    kCLOCK_Timer0  = CLK_GATE_DEFINE(ASYNC_CLK_CTRL0, 1),                                   /*!< Timer0 clock */
+    kCLOCK_Timer1  = CLK_GATE_DEFINE(ASYNC_CLK_CTRL0, 2),                                   /*!< Timer1 clock */
+    kCLOCK_MainClk = (1 << 16),                                                             /*!< MAIN_CLK */
+    kCLOCK_CoreSysClk,                                                                      /*!< Core/system clock */
+    kCLOCK_BusClk,                                                                          /*!< AHB bus clock */
     kCLOCK_Xtal32k,                                                             /*!< 32kHz crystal oscillator */
     kCLOCK_Xtal32M,                                                             /*!< 32MHz crystal oscillator */
     kCLOCK_Fro32k,                                                              /*!< 32kHz free running oscillator */
@@ -303,8 +323,14 @@ typedef enum _clock_attach_id
     kOSC32K_to_WKT_CLK = MUX_A(CM_WKTCLKSEL, 0), /*!< Select OSC 32K for WKT */
     kNONE_to_WKT_CLK   = MUX_A(CM_WKTCLKSEL, 3), /*!< No clock for WKT */
 
+#if defined(SUPPORT_FOR_15_4) && SUPPORT_FOR_15_4
     kXTAL32M_DIV2_to_ZIGBEE_CLK = MUX_A(CM_MODEMCLKSEL, 0), /*!< Select XTAL 32M for ZIGBEE */
     kNONE_to_ZIGBEE_CLK         = MUX_A(CM_MODEMCLKSEL, 1), /*!< No clock for ZIGBEE */
+#endif
+#if defined(SUPPORT_FOR_BLE) && SUPPORT_FOR_BLE
+    kXTAL32M_to_BLE_CLK = MUX_A(CM_MODEMCLKSEL, 2), /*!< Select XTAL 32M for BLE */
+    kNONE_to_BLE_CLK    = MUX_A(CM_MODEMCLKSEL, 3), /*!< No clock for BLE */
+#endif
 
     kMAIN_CLK_to_ASYNC_APB = MUX_A(CM_ASYNCAPB, 0), /*!< Select main clock for Asynchronous APB */
     kXTAL32M_to_ASYNC_APB  = MUX_A(CM_ASYNCAPB, 1), /*!< Select XTAL 32M for Asynchronous APB */
@@ -321,18 +347,18 @@ typedef enum _clock_attach_id
 typedef enum _clock_div_name
 {
     kCLOCK_DivNone       = 0,
-    kCLOCK_DivSystickClk = (offsetof(SYSCON_Type, SYSTICKCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivWdtClk     = (offsetof(SYSCON_Type, WDTCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivIrClk      = (offsetof(SYSCON_Type, IRCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivAhbClk     = (offsetof(SYSCON_Type, AHBCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivClkout     = (offsetof(SYSCON_Type, CLKOUTDIV) / sizeof(uint32_t)),
-    kCLOCK_DivSpifiClk   = (offsetof(SYSCON_Type, SPIFICLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivAdcClk     = (offsetof(SYSCON_Type, ADCCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivRtcClk     = (offsetof(SYSCON_Type, RTCCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivDmicClk    = (offsetof(SYSCON_Type, DMICCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivRtc1HzClk  = (offsetof(SYSCON_Type, RTC1HZCLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivTraceClk   = (offsetof(SYSCON_Type, TRACECLKDIV) / sizeof(uint32_t)),
-    kCLOCK_DivFrg        = (offsetof(SYSCON_Type, FRGCTRL) / sizeof(uint32_t))
+    kCLOCK_DivSystickClk = (offsetof(SYSCON_Type, SYSTICKCLKDIV) / sizeof(uint32_t)), /*!< SYSTICK clock divider */
+    kCLOCK_DivTraceClk   = (offsetof(SYSCON_Type, TRACECLKDIV) / sizeof(uint32_t)),   /*!< TRACE clock divider */
+    kCLOCK_DivWdtClk     = (offsetof(SYSCON_Type, WDTCLKDIV) / sizeof(uint32_t)),   /*!< Watchdog Timer clock divider */
+    kCLOCK_DivIrClk      = (offsetof(SYSCON_Type, IRCLKDIV) / sizeof(uint32_t)),    /*!< Infra Red clock divider */
+    kCLOCK_DivAhbClk     = (offsetof(SYSCON_Type, AHBCLKDIV) / sizeof(uint32_t)),   /*!< System clock divider */
+    kCLOCK_DivClkout     = (offsetof(SYSCON_Type, CLKOUTDIV) / sizeof(uint32_t)),   /*!< CLKOUT clock divider */
+    kCLOCK_DivSpifiClk   = (offsetof(SYSCON_Type, SPIFICLKDIV) / sizeof(uint32_t)), /*!< SPIFI clock divider */
+    kCLOCK_DivAdcClk     = (offsetof(SYSCON_Type, ADCCLKDIV) / sizeof(uint32_t)),   /*!< ADC clock divider */
+    kCLOCK_DivRtcClk     = (offsetof(SYSCON_Type, RTCCLKDIV) / sizeof(uint32_t)),   /*!< Real Time Clock divider */
+    kCLOCK_DivDmicClk    = (offsetof(SYSCON_Type, DMICCLKDIV) / sizeof(uint32_t)),  /*!< DMIC clock divider */
+    kCLOCK_DivRtc1HzClk  = (offsetof(SYSCON_Type, RTC1HZCLKDIV) / sizeof(uint32_t)), /*!< Real Time Clock divider */
+    kCLOCK_DivFrg        = (offsetof(SYSCON_Type, FRGCTRL) / sizeof(uint32_t))       /*!< FRG Clock divider */
 } clock_div_name_t;
 
 /*! @brief Clock source selections for the Main Clock */
@@ -439,17 +465,6 @@ typedef enum
     FRO64M_ENA = (1 << 3), /*!< FRO64M */
     FRO96M_ENA = (1 << 4)  /*!< FRO96M */
 } Fro_ClkSel_t;
-
-/*! @brief Board specific constant capacitance characteristics
- * Should be supplied by board manufacturer for best performance.
- * Capacitances are expressed in hundreds of pF
- */
-typedef struct
-{
-    uint32_t clk_XtalIecLoadpF_x100;    /*< XTAL Load capacitance */
-    uint32_t clk_XtalPPcbParCappF_x100; /*< XTAL PCB +ve parasitic capacitance */
-    uint32_t clk_XtalNPcbParCappF_x100; /*< XTAL PCB -ve parasitic capacitance */
-} ClockCapacitanceCompensation_t;
 
 /*******************************************************************************
  * API

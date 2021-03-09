@@ -90,6 +90,14 @@ typedef struct _iocon_group
 #define IOCON_IO_CLAMPING_NORMAL_MFIO (1 << 11)
 #define IOCON_IO_CLAMPING_COMBO_MFIO_I2C (1 << 12) /* Use this flag for PIO11 and PIO12 only */
 
+#define IOCON_PIO_DBG_FUNC_MASK        (0xF000U)
+#define IOCON_PIO_DBG_FUNC_SHIFT       (12U)
+#define IOCON_PIO_DBG_FUNC(x)          (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_DBG_FUNC_SHIFT)) & IOCON_PIO_DBG_FUNC_MASK)
+#define IOCON_PIO_DBG_MODE_MASK        (0x10000U)
+#define IOCON_PIO_DBG_MODE_SHIFT       (16U)
+#define IOCON_PIO_DBG_MODE(x)          (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_DBG_MODE_SHIFT)) & IOCON_PIO_DBG_MODE_MASK)
+
+
 #define IOCON_CFG(dbg_func) (IOCON_PIO_FUNC(0) | IOCON_MODE_PULLDOWN |\
                              IOCON_DIGITAL_EN | IOCON_INPFILT_OFF | \
                              IOCON_PIO_DBG_FUNC(dbg_func) | IOCON_PIO_DBG_MODE(1))

@@ -26,6 +26,10 @@
 #include "fsl_rtc.h"
 #endif
 
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+#include "fsl_ctimer.h"
+#endif
+
 /*****************************************************************************
 ******************************************************************************
 * Private macros
@@ -56,7 +60,11 @@
     (((BOARD_BOOTCLOCKRUN_CORE_CLOCK) % 1000000) == 0)
 #endif
 #endif
-
+#if (gTimerMgrUseLpcRtc_c || gTimerMgrUseWtimer_c)
+#define gTimerMgrCountDown_c 1
+#else
+#define gTimerMgrCountDown_c 0
+#endif
 /*****************************************************************************
 ******************************************************************************
 * Public memory declarations
@@ -137,6 +145,8 @@ void TMR_RTCAlarmNotify(void);
  *****************************************************************************/
 
 #if gTMR_Enabled_d
+
+static bool mInitialized;
 
 /*
  * \brief The previous time in ticks when the counter register was read
@@ -345,6 +355,28 @@ void TMR_RTCAlarmNotify(void)
     }
 }
 
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+/*! -------------------------------------------------------------------------
+ * \brief Initialize timestamp service using CTIMER
+ *---------------------------------------------------------------------------*/
+static void TMR_CTTimeStampInit(void)
+{
+    ctimer_config_t config;
+    CTIMER_GetDefaultConfig(&config);
+    config.prescale = BOARD_GetCtimerClock(CTIMER1) / 1000000; // To get 1us Resolution */
+    CTIMER_Init(CTIMER1, &config);
+    CTIMER_StartTimer(CTIMER1);
+}
+
+/*! -------------------------------------------------------------------------
+ * \brief Initialize timestamp service using CTIMER
+ *---------------------------------------------------------------------------*/
+static uint32_t TMR_CTGetTimestamp(void)
+{
+    return CTIMER_GetTimerCountValue(CTIMER1);
+}
+#endif
+
 #endif /*gTimestamp_Enabled_d*/
 
 #if (mTMR_PIT_Timestamp_Enabled_d) && (FSL_FEATURE_PIT_TIMER_COUNT < 3)
@@ -380,12 +412,10 @@ tmrTimerTicks64_t TmrTicksFromMilliseconds(tmrTimeInMilliseconds_t milliseconds)
  *---------------------------------------------------------------------------*/
 void TMR_Init(void)
 {
-    static uint8_t initialized = FALSE;
-
     /* Check if TMR is already initialized */
-    if( !initialized )
+    if( !mInitialized )
     {
-        initialized = TRUE;
+       mInitialized = TRUE;
 
         StackTimer_Init(StackTimer_ISR);
 
@@ -420,6 +450,11 @@ void TMR_Init(void)
             }
         }
 #endif
+    }
+    else
+    {
+       /* this is a post wake-up reinitialization  */
+       StackTimer_ReInit(StackTimer_ISR);
     }
 }
 
@@ -507,6 +542,14 @@ tmrErrCode_t TMR_FreeTimer(tmrTimerID_t timerID)
     return gTmrSuccess_c;
 }
 
+#ifndef ENABLE_RAM_VECTOR_TABLE
+void StackTimer_ISR_withParam(uint32_t param)
+{
+    StackTimer_ISR();
+    (void) param;
+}
+#endif
+
 /*! -------------------------------------------------------------------------
  * \brief Function called by driver ISR on channel match in interrupt context.
  *---------------------------------------------------------------------------*/
@@ -540,7 +583,7 @@ void StackTimer_ISR(void)
  *---------------------------------------------------------------------------*/
 bool_t TMR_IsTimerActive(tmrTimerID_t timerID)
 {
-    TMR_DBG_LOG("ID=%x", timerID);
+    //TMR_DBG_LOG("ID=%x", timerID); overly verbose
     return TMR_GetTimerStatus(timerID) == mTmrStatusActive_c;
 }
 
@@ -611,7 +654,6 @@ uint32_t TMR_GetRemainingTime(tmrTimerID_t tmrID)
  *---------------------------------------------------------------------------*/
 uint32_t TMR_GetFirstExpireTime(tmrTimerType_t timerType)
 {
-    TMR_DBG_LOG("type=%x", timerType);
     uint32_t min = 0xFFFFFFFF;
     uint32_t remainingTime;
     uint32_t timerID;
@@ -628,6 +670,7 @@ uint32_t TMR_GetFirstExpireTime(tmrTimerType_t timerType)
             }
         }
     }
+    TMR_DBG_LOG("type=%x next_exp=%d", timerType, min);
 
     return min;
 }
@@ -678,13 +721,16 @@ tmrErrCode_t TMR_StartTimer
     TMR_DBG_LOG("ID=%x ms=%d cb=%x", timerID, timeInMilliseconds, callback);
     tmrErrCode_t status;
     tmrTimerTicks64_t intervalInTicks;
-    tmrTimerTableEntry_t *th = &maTmrTimerTable[timerID];
 
     /* Stopping an already stopped timer is harmless. */
     status = TMR_StopTimer(timerID);
 
     if( status == gTmrSuccess_c )
     {
+        /* If TMR_StopTimer returned successfully the timerID
+         * was within valid range */
+        tmrTimerTableEntry_t *th = &maTmrTimerTable[timerID];
+
         intervalInTicks = TmrTicksFromMilliseconds(timeInMilliseconds);
         th->timestamp = StackTimer_GetCounterValue();
 
@@ -980,7 +1026,7 @@ void TMR_Task
             TmrIntRestoreAll();
 
             /* calculate difference between current and previous.  */
-#if (gTimerMgrUseLpcRtc_c)
+#if (gTimerMgrCountDown_c)
             /* For count down timer */
             ticksSinceLastHere = (previousTimeInTicks - currentTimeInTicks);
 #else
@@ -988,6 +1034,7 @@ void TMR_Task
             /* remember for next time */
             previousTimeInTicks = currentTimeInTicks;
 #endif
+            TMR_DBG_LOG("ticksSinceLastHere=%d", ticksSinceLastHere);
 
             /* Find the shortest active timer. */
             nextInterruptTime = mMaxToCountDown_c;
@@ -998,14 +1045,14 @@ void TMR_Task
                 tmrTimerTableEntry_t *th = &maTmrTimerTable[timerID];
                 TmrIntDisableAll();
                 status = TMR_GetTimerStatus(timerID);
-                /* If TMR_StartTimer() has been called for this timer, start it's count */
-                /* down as of now. */
-                if (TMR_IsTimerAllocated(timerID)) /* equivalent to status != 0 */
-                {
-                	TMR_DBG_LOG("timerID=%x status=%x", timerID, status);
-                }
+
+                /* If TMR_StartTimer() has been called for this timer, start it's count *
+                 * down as of now. */
                 if( status == mTmrStatusReady_c )
                 {
+                    TMR_DBG_LOG("ID=%x Ready->Active remainingTicks=%d",
+                                timerID,
+                                th->remainingTicks);
                     TMR_SetTimerStatus(timerID, mTmrStatusActive_c);
                     TmrIntRestoreAll();
                     if (nextInterruptTime > th->remainingTicks)
@@ -1015,25 +1062,27 @@ void TMR_Task
                 }
                 else if (status == mTmrStatusActive_c)
                 {
+                    TMR_DBG_LOG("ID=%x Active remainingTicks=%d",
+                                timerID,
+                                th->remainingTicks);
+
                     TmrIntRestoreAll();
-                    /* This timer is active. Decrement it's countdown.. */
+                    /* This timer is active. Decrement its countdown.. */
                     if (th->remainingTicks > ticksSinceLastHere)
                     {
                         TmrIntDisableAll();
                         th->remainingTicks -= ticksSinceLastHere;
                         th->timestamp = StackTimer_GetCounterValue();
-                        TmrIntRestoreAll();
                         if (nextInterruptTime > th->remainingTicks)
                         {
                             nextInterruptTime = th->remainingTicks;
                         }
+                        TmrIntRestoreAll();
                     }
                     else
                     {
                         /* If this is an interval timer, restart it. Otherwise, mark it as inactive. */
-                        if ( timerType & (gTmrSingleShotTimer_c |
-                                          gTmrSetMinuteTimer_c  |
-                                          gTmrSetSecondTimer_c) )
+                        if (!( timerType & gTmrIntervalTimer_c) )
                         {
                             th->remainingTicks = 0;
                             (void)TMR_StopTimer(timerID);
@@ -1055,7 +1104,7 @@ void TMR_Task
                         in case the timer gets stopped or restarted in the callback*/
                         if (th->pfCallBack)
                         {
-                            TMR_DBG_LOG("Expired cb=%x", th->pfCallBack);
+                            TMR_DBG_LOG("ID=%x Expired cb=%x", timerID, th->pfCallBack);
                             th->pfCallBack(th->param);
                         }
                     }
@@ -1075,7 +1124,7 @@ void TMR_Task
             ticksdiff = StackTimer_GetCounterValue();
 
             /* Number of ticks to be here */
-#if (gTimerMgrUseLpcRtc_c)
+#if (gTimerMgrCountDown_c)
             /* For count down timer */
             ticksdiff = (currentTimeInTicks - ticksdiff);
 #else
@@ -1099,7 +1148,7 @@ void TMR_Task
                 }
             }
             /* Update the compare register */
-#if !(gTimerMgrUseLpcRtc_c)
+#if !(gTimerMgrCountDown_c)
             nextInterruptTime += currentTimeInTicks;
 #endif
 
@@ -1222,17 +1271,20 @@ void TMR_SyncLpmTimers(uint32_t sleepDurationTmrTicks)
             if ( (TMR_GetTimerStatus(timerID) == mTmrStatusActive_c)
                 && (IsLowPowerTimer(timerType)) )
             {
+                tmrTimerTableEntry_t *th = &maTmrTimerTable[timerID];
                 /* Timer expired when MCU was in sleep mode??? */
-                if( maTmrTimerTable[timerID].remainingTicks > sleepDurationTmrTicks)
+                if( th->remainingTicks > sleepDurationTmrTicks)
                 {
-                    maTmrTimerTable[timerID].remainingTicks -= sleepDurationTmrTicks;
-
+                    th->remainingTicks -= sleepDurationTmrTicks;
                 }
                 else
                 {
-                    maTmrTimerTable[timerID].remainingTicks = 0;
+                    th->remainingTicks = 0;
                 }
-
+                TMR_DBG_LOG("SleepDuration[%d] ticks timerID=%x  remainingTicks=%d",
+                            sleepDurationTmrTicks,
+                            timerID,
+                            th->remainingTicks);
             }
 
         }/* end for (timerID = 0;.... */
@@ -1281,6 +1333,9 @@ void TMR_TimeStampInit(void)
     TMR_PITInit();
 #else
     TMR_RTCInit();
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+    TMR_CTTimeStampInit();
+#endif
 #endif
 }
 
@@ -1293,7 +1348,11 @@ uint64_t TMR_GetTimestamp(void)
 #if mTMR_PIT_Timestamp_Enabled_d
     return TMR_PITGetTimestamp();
 #else
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+    return TMR_CTGetTimestamp();
+#else
     return TMR_RTCGetTimestamp();
+#endif
 #endif
 }
 
@@ -1407,7 +1466,7 @@ void TMR_RTCInit(void)
 uint64_t TMR_RTCGetTimestamp(void)
 {
 #ifdef CPU_JN518X
-	uint64_t sec = (uint64_t)RTC_GetTimeSeconds(RTC);
+    uint64_t sec = (uint64_t)RTC_GetTimeSeconds(RTC);
     return sec * 1000000L;
 #else
     uint32_t seconds1, seconds2, prescaler0, prescaler1, prescaler2;

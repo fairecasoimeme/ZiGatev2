@@ -40,9 +40,9 @@
 #include "zcl.h"
 #include "Diagnostics.h"
 #include "zcl_options.h"
-#ifdef CLD_DIAGNOSTICS_ATTR_ID_AVERAGE_MAC_RETRY_PER_APS_MESSAGE_SENT
 #include "zps_mac_if_table.h"
-#endif
+#include "zps_apl_aps.h"
+
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
@@ -305,9 +305,6 @@ PUBLIC teZCL_Status eCLD_DiagnosticsUpdate(uint8 u8SourceEndPointId)
     teZCL_Status eStatus;
     tsZCL_EndPointDefinition *psEndPointDefinition;
     tsCLD_DiagnosticsCustomDataStructure *psCustomDataStructure;
-#if defined( CLD_DIAGNOSTICS_ATTR_ID_AVERAGE_MAC_RETRY_PER_APS_MESSAGE_SENT) || defined (CLD_DIAGNOSTICS_ATTR_ID_LAST_MESSAGE_LQI)
-    tsCLD_Diagnostics *psSharedStruct;
-#endif
     tsZCL_ClusterInstance *psClusterInstance;/* Find pointers to cluster */
     eStatus = eZCL_FindCluster(GENERAL_CLUSTER_ID_DIAGNOSTICS, u8SourceEndPointId, TRUE, &psEndPointDefinition, &psClusterInstance, (void*)&psCustomDataStructure);
     if(eStatus != E_ZCL_SUCCESS)
@@ -315,17 +312,129 @@ PUBLIC teZCL_Status eCLD_DiagnosticsUpdate(uint8 u8SourceEndPointId)
         return eStatus;
     }
 
+    ZPS_tsApsCounters *psApsCounters = ZPS_psApsGetCounters(ZPS_pvAplZdoGetAplHandle());
+    psApsCounters = psApsCounters;
+
+    tsCLD_Diagnostics *psSharedStruct = (tsCLD_Diagnostics*)psClusterInstance->pvEndPointSharedStructPtr;
+    psSharedStruct = psSharedStruct;
+
     /* get EP mutex */
     #ifndef COOPERATIVE
         eZCL_GetMutex(psEndPointDefinition);
     #endif
     
-    #if defined( CLD_DIAGNOSTICS_ATTR_ID_AVERAGE_MAC_RETRY_PER_APS_MESSAGE_SENT) || defined (CLD_DIAGNOSTICS_ATTR_ID_LAST_MESSAGE_LQI)
-         psSharedStruct = (tsCLD_Diagnostics*)psClusterInstance->pvEndPointSharedStructPtr;
-    #endif
     /*
      * Get all the Attributes Updated from the stack/nwk layer
      */
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_RX_BCAST
+        psSharedStruct->u32MacRxBcast = ZPS_psMacIFTGetTable()->pu32MacRxBcast[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_TX_BCAST
+        psSharedStruct->u32MacTxBcast = ZPS_psMacIFTGetTable()->pu32MacTxBcast[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_RX_UCAST
+        psSharedStruct->u32MacRxUcast = ZPS_psMacIFTGetTable()->pu32MacRxUcast[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_TX_UCAST
+        psSharedStruct->u32MacTxUcast = ZPS_psMacIFTGetTable()->pu32MacTxUcast[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_TX_UCAST_RETRY
+        psSharedStruct->u16MacTxUcastRetry = ZPS_psMacIFTGetTable()->pu32MacTxUcastRetry[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_MAC_TX_UCAST_FAIL
+        psSharedStruct->u16MacTxUcastFail = ZPS_psMacIFTGetTable()->pu32MacTxUcastFail[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_RX_BCAST
+        psSharedStruct->u16ApsRxBcast = psApsCounters->u16ApsRxBcast;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_BCAST
+        psSharedStruct->u16ApsTxBcast = psApsCounters->u16ApsTxBcast;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_RX_UCAST
+        psSharedStruct->u16ApsRxUcast = psApsCounters->u16ApsRxUcast;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_UCAST_SUCCESS
+        psSharedStruct->u16ApsTxUcastSuccess = psApsCounters->u16ApsTxUcastSuccess;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_UCAST_RETRY
+        psSharedStruct->u16ApsTxUcastRetry = psApsCounters->u16ApsTxUcastRetry;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_UCAST_FAIL
+        psSharedStruct->u16ApsTxUcastFail = psApsCounters->u16ApsTxUcastFail;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_ROUTE_DISC_INITIATED
+        psSharedStruct->u16RouteDiscInitiated = ZPS_psAplZdoGetNib()->u16RouteDiscInitiated;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_NEIGHBOR_ADDED
+        psSharedStruct->u16NeighborAdded = ZPS_psAplZdoGetNib()->u16NeighborAdded;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_NEIGHBOR_REMOVED
+        psSharedStruct->u16NeighborRemoved = ZPS_psAplZdoGetNib()->u16NeighborRemoved;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_NEIGHBOR_STALE
+        psSharedStruct->u16NeighborStale = ZPS_psAplZdoGetNib()->u16NeighborStale;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_JOIN_INDICATION
+        psSharedStruct->u16JoinIndication = ZPS_psAplZdoGetNib()->u16JoinIndication;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_NWK_FC_FAILURE
+        psSharedStruct->u16NWKFCFailure = ZPS_psAplZdoGetNib()->u16FCFailure;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_FC_FAILURE
+        psSharedStruct->u16APSFCFailure = psApsCounters->u16ApsFCFailure;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_UNAUTHORIZED_KEY
+        psSharedStruct->u16APSUnauthorizedKey = psApsCounters->u16ApsUnauthorizedKey;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_NWK_DECRYPT_FAILURE
+        psSharedStruct->u16NWKDecryptFailure = ZPS_psAplZdoGetNib()->u16DecryptFailure;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_DECRYPT_FAILURE
+        psSharedStruct->u16APSDecryptFailure = psApsCounters->u16ApsDecryptFailure;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_PACKET_BUFFER_ALLOCATE_FAILURE
+        psSharedStruct->u16PacketBufferAllocateFailure =
+                psApsCounters->u16PacketBufferAllocateFailure +
+                ZPS_psAplZdoGetNib()->u16PacketBufferAllocateFailure +
+                ZPS_psMacIFTGetTable()->pu16PacketBufferAllocateFailure[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_RELAYED_UCAST
+        psSharedStruct->u16RelayedUcast = ZPS_psAplZdoGetNib()->u16RelayedUcast;
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_PHY_TO_MAC_QUEUE_LIMIT_REACHED
+        psSharedStruct->u16PhyToMACQueueLimitReached = ZPS_psMacIFTGetTable()->pu16PhyToMacQueDrop[0];
+    #endif
+
+    #ifdef CLD_DIAGNOSTICS_ATTR_ID_PACKET_VALIDATE_DROP_COUNT
+        psSharedStruct->u16PacketValidateDropCount =
+                ZPS_psAplZdoGetNib()->u16PacketValidateDropCount +
+                ZPS_psMacIFTGetTable()->pu16PacketValidateDropCount[0];
+    #endif
+
     #ifdef CLD_DIAGNOSTICS_ATTR_ID_AVERAGE_MAC_RETRY_PER_APS_MESSAGE_SENT
         psSharedStruct->u16AverageMACRetryPerAPSMessageSent=ZPS_psMacIFTGetTable()->pu32MacTxUcastAvgRetry[0];
     #endif

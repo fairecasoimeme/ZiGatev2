@@ -50,6 +50,7 @@
 
 #include "dbg.h"
 
+#include "Log.h"
 
 #ifdef DEBUG_CLD_LEVEL_CONTROL
 #define TRACE_LEVEL_CONTROL    TRUE
@@ -173,8 +174,9 @@ PUBLIC  teZCL_Status eCLD_LevelControlCommandHandler(
     psCommon->sCallBackMessage.u8CommandId = sZCL_HeaderParams.u8CommandIdentifier;
 
     /* Handle messages appropriate for the cluster type (Client/Server) */
-    if(psClusterInstance->bIsServer)
-    {
+
+    //if(psClusterInstance->bIsServer)
+   // {
 
         // SERVER
         switch(sZCL_HeaderParams.u8CommandIdentifier)
@@ -215,7 +217,7 @@ PUBLIC  teZCL_Status eCLD_LevelControlCommandHandler(
 
         }
 
-    }
+   // }
 
 #if 0
     /* If immediate update required, do it now rather than wait for next ZCL timer tick */
@@ -293,6 +295,15 @@ PRIVATE  teZCL_Status eCLD_LevelControlHandleMoveToLevelCommand(
         DBG_vPrintf(TRACE_LEVEL_CONTROL, " Err:%d", eStatus);
         return eStatus;
     }
+
+    /* Message data for callback */
+    psCommon->sCallBackMessage.uMessage.psMoveToLevelCommandPayload = &sPayload;
+
+    /* call callback */
+    psEndPointDefinition->pCallBackFunctions(&psCommon->sCustomCallBackEvent);
+
+    return E_ZCL_SUCCESS;
+
 
     /* 3.10.2.2  Generic usage notes
      * If a move to level, move, step or stop command is received while the
@@ -436,6 +447,14 @@ PRIVATE  teZCL_Status eCLD_LevelControlHandleMoveCommand(
         return eStatus;
     }
 
+    /* Message data for callback */
+    psCommon->sCallBackMessage.uMessage.psMoveCommandPayload = &sPayload;
+
+    /* call callback */
+    psEndPointDefinition->pCallBackFunctions(&psCommon->sCustomCallBackEvent);
+
+    return E_ZCL_SUCCESS;
+
     /* 3.10.2.2  Generic usage notes
      * If a move to level, move, step or stop command is received while the
      * device is in its off state, i.e. the OnOff attribute of the on/off
@@ -576,6 +595,14 @@ PRIVATE  teZCL_Status eCLD_LevelControlHandleStepCommand(
         DBG_vPrintf(TRACE_LEVEL_CONTROL, " Err:%d", eStatus);
         return eStatus;
     }
+
+    /* Message data for callback */
+    psCommon->sCallBackMessage.uMessage.psStepCommandPayload = &sPayload;
+
+    /* call callback */
+    psEndPointDefinition->pCallBackFunctions(&psCommon->sCustomCallBackEvent);
+
+    return E_ZCL_SUCCESS;
 
     /* 3.10.2.2  Generic usage notes
      * If a move to level, move, step or stop command is received while the
@@ -723,6 +750,15 @@ PRIVATE  teZCL_Status eCLD_LevelControlHandleStopCommand(
         DBG_vPrintf(TRACE_LEVEL_CONTROL, " Err:%d", eStatus);
         return eStatus;
     }
+
+    /* Message data for callback */
+    psCommon->sCallBackMessage.uMessage.psStopCommandPayload = &sPayload;
+    
+    /* call callback */
+    psEndPointDefinition->pCallBackFunctions(&psCommon->sCustomCallBackEvent);
+
+    return E_ZCL_SUCCESS;
+
 
 #if ((defined CLD_ONOFF) && (defined ONOFF_SERVER))
     if(u8CommandIdentifier == E_CLD_LEVELCONTROL_CMD_STOP)

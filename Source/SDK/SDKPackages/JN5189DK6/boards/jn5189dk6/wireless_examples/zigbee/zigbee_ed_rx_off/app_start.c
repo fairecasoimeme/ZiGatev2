@@ -25,6 +25,7 @@
 #include "app_leds.h"
 #include "PWR_Interface.h"
 #include "pwrm.h"
+#include "app_reporting.h"
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
@@ -137,6 +138,7 @@ void vAppRegisterPWRCallbacks(void)
 void vAppPreSleep(void)
 {
     DBG_vPrintf(TRACE_APP, "sleeping \n");
+    vSetReportDataForMinRetention();
     /* If the power mode is with RAM held do the following
      * else not required as the entry point will init everything*/
      vSetOTAPersistedDatForMinRetention();

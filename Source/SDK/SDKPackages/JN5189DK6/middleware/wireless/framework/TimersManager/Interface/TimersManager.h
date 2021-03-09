@@ -15,6 +15,10 @@
 
 #include "EmbeddedTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*****************************************************************************
 ******************************************************************************
 * Public macros
@@ -49,10 +53,17 @@
 /*
  * \brief   Configures the timer task stack size.
  */
+#ifndef CPU_JN518X
 #ifndef gTmrTaskStackSize_c
 #define gTmrTaskStackSize_c 600U
 #endif
-
+#else
+#if !defined gTmrTaskStackSize_c || (gTmrTaskStackSize_c < 1000)
+ /* prevent stack overflow on JN5189/QN9090/K32W061 */
+#undef gTmrTaskStackSize_c
+#define gTmrTaskStackSize_c 1000U
+#endif
+#endif
 /*
  * \brief   Configures the timer task priority.
  */
@@ -772,6 +783,9 @@ uint64_t TMR_PITGetTimestamp(void);
 #define TMR_DBG_LOG(...)
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* #ifndef TMR_INTERFACE_H */
 

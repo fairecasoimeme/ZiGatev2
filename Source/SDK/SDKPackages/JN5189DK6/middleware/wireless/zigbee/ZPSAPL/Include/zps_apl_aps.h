@@ -99,9 +99,30 @@ typedef struct
   ZPS_tuAddress uAddress;
 } ZPS_tsInterPanAddress;
 
+/**
+ * @brief APS packet traffic statistics
+ *
+ * Counters for unicast and broadcast statistics in the APS layer
+ */
+typedef struct
+{
+    uint16 u16ApsRxBcast;                    /**< Diagnostics - APS layer RXed broadcast packets */
+    uint16 u16ApsTxBcast;                    /**< Diagnostics - APS layer TXed broadcast packets */
+    uint16 u16ApsRxUcast;                    /**< Diagnostics - APS layer RXed unicast packets */
+    uint16 u16ApsTxUcastSuccess;             /**< Diagnostics - APS layer TXed successfully unicast */
+    uint16 u16ApsTxUcastRetry;               /**< Diagnostics - APS layer TXed retried */
+    uint16 u16ApsTxUcastFail;                /**< Diagnostics - APS layer TXed failed */
+    uint16 u16ApsFCFailure;                  /**< Diagnostics - APS layer Frame Counter failures */
+    uint16 u16ApsUnauthorizedKey;            /**< Diagnostics - APS layer frames with unauthorized key */
+    uint16 u16ApsDecryptFailure;             /**< Diagnostics - APS layer frames failed to decrypt */
+    uint16 u16PacketBufferAllocateFailure;   /**< Diagnostics - packet buffer allocation failures */
+} ZPS_tsApsCounters;
+
 /****************************************************************************/
 /***        Exported Functions                                            ***/
 /****************************************************************************/
+
+PUBLIC ZPS_tsApsCounters *ZPS_psApsGetCounters(void *pvApl);
 
 /****************************************************************************/
 /***        External Variables                                            ***/

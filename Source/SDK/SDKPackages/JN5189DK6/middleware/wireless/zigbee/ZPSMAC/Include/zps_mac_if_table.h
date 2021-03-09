@@ -127,11 +127,17 @@ typedef struct
     MAC_tsMacInterface          *psMacInterfaces;
     uint32*                     pu32ChannelMaskList;
     uint32*                     pu32MacTxUcastAvgRetry;
-    uint32*                     pu32MacTxUcastAccRetry;
+    uint32*                     pu32MacTxUcastRetry;
     uint32*                     pu32MacTxUcastFail ;
+    uint32*                     pu32MacRxUcast ;
     uint32*                     pu32MacTxUcast ;
+    uint32*                     pu32MacRxBcast;
+    uint32*                     pu32MacTxBcast;
     uint32*                     pu32MacCCaFail;
     uint32*                     pu32ApsRetry;
+    uint16*                     pu16PacketValidateDropCount;
+    uint16*                     pu16PacketBufferAllocateFailure;
+    uint16*                     pu16PhyToMacQueDrop;
     bool_t*                     pbIgnoreBroadcasts;
     uint8                       u8NumInterfaces;
 } MAC_tsMacInterfaceTable;

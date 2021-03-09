@@ -93,19 +93,22 @@ void APP_taskAtSerial( void)
  * Processes the received character
  *
  * PARAMETERS:      Name            Usage
- * uint8_t            u8Char          Character
+ * uint8_t          u8Char          Character
  *
  * RETURNS:
  * None
  ****************************************************************************/
 static void vProcessRxChar(uint8_t u8Char)
 {
+    const uint8_t ASCII_CR = 0x0D;
+    const uint8_t ASCII_LF = 0x0A;
+    static uint8_t u8PreviousIsCR = 0;
 
     if ((u8Char >= 'a' && u8Char <= 'z'))
     {
         u8Char -= ('a' - 'A');
     }
-    if ((sCommand.u8Pos < COMMAND_BUF_SIZE)  && (u8Char != 0x0d))
+    if ((sCommand.u8Pos < COMMAND_BUF_SIZE)  && (u8Char != ASCII_CR) && (u8Char != ASCII_LF))
     {
         sCommand.au8Buffer[sCommand.u8Pos++] = u8Char;
     }
@@ -116,9 +119,27 @@ static void vProcessRxChar(uint8_t u8Char)
         sCommand.u8Pos = 0;
     }
 
-    if (u8Char == 0x0d)
+    /* Handles CR, LF or CRLF line breaks */
+    if (u8Char == ASCII_CR)
     {
         vProcessCommand();
+        u8PreviousIsCR = 1;
+    }
+    else if (u8Char == ASCII_LF)
+    {
+        if (u8PreviousIsCR)
+        {
+            /* CRLF, so skip the LF line break */
+            u8PreviousIsCR = 0;
+        }
+        else
+        {
+            vProcessCommand();
+        }
+    }
+    else
+    {
+        u8PreviousIsCR = 0;
     }
 }
 

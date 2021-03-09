@@ -137,7 +137,7 @@ extern uint64_t u64jn518x_MacAddress;
 /*** radio driver types/macros/prototypes                                 ***/
 /****************************************************************************/
 
-#define RADIO_TEST_JN518X_VERSION (2041)
+#define RADIO_TEST_JN518X_VERSION (2042)
 
 // For ATE usage uncomment following line
 //#define ATE_USAGE
@@ -323,6 +323,9 @@ void vRadio_Test_Jn518x_Disable_ITs_RFT1778(void);
 void vRadio_Test_Jn518x_Register_ISR_MAC_Handler(void * vISRforMAC);
 
 void vRadio_Test_Reset_RadioConfig(void);
+
+void vRadio_Test_Print_ATE_DCO_Flash_Data(void);
+
 
 #ifdef TRACE_RX_TX
 #define ITRXSTART 0x0080

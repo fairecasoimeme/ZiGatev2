@@ -18,7 +18,9 @@
 #include "SecLib.h"
 #include "MemManager.h"
 #include "app_coordinator.h"
+#ifndef DUAL_MODE_APP
 #include "app_serial_commands.h"
+#endif
 #include "app_buttons.h"
 #include "app_main.h"
 #include "app_leds.h"
@@ -64,6 +66,7 @@ extern const uint8_t gUseRtos_c;
 
 extern void vAppMain(void);
 
+#ifndef DUAL_MODE_APP
 /****************************************************************************
  *
  * NAME: main_task
@@ -105,6 +108,7 @@ void main_task (uint32_t parameter)
         }
     }
 }
+#endif
 
 /****************************************************************************
  *

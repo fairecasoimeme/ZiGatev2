@@ -118,8 +118,14 @@ void APP_vInitialiseEndDevice(void)
    /* Restore any report data that is previously saved to flash */
    eStatusReportReload = eRestoreReports();
    ZPS_psAplAibGetAib()->bUseInstallCode = BDB_JOIN_USES_INSTALL_CODE_KEY;
+
+   APP_SetHighTxPowerMode();
+
    /* Initialise ZBPro stack */
    ZPS_eAplAfInit();
+
+   APP_SetMaxTxPower();
+
    /* Initialise ZCL */
    APP_ZCL_vInitialise();
    /* Initialise other software modules

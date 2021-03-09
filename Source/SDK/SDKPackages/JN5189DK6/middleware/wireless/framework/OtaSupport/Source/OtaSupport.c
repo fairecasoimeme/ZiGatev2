@@ -18,6 +18,7 @@
 #include "MemManager.h"
 #include "FunctionLib.h"
 #include "Panic.h"
+#include "OtaUtils.h"
 
 #include "Flash_Adapter.h"
 #include "fsl_os_abstraction.h"
@@ -58,12 +59,9 @@
 #define BIT(x) (1<<(x))
 #endif
 
-#if 0
-#define OTA_MaskInt         OSA_DisableIRQGlobal()
-#define OTA_UnMaskInt       OSA_EnableIRQGlobal()
-#else
-#define OTA_MaskInt
-#define OTA_UnMaskInt
+
+#if gOtaEepromPostedOperations_d && ( gEepromParams_bufferedWrite_c == 1)
+#error "gEepromParams_bufferedWrite_c and  gOtaEepromPostedOperations_d are incompatible"
 #endif
 
 /******************************************************************************
@@ -103,27 +101,8 @@ while the loading of image from external EEPROM to internal Flash is in progress
 
 /* Offset value of stated_size in boot block */
 #define APP_STATED_SIZE_OFFSET  (uint32_t)(&((BOOT_BLOCK_T *)0)->stated_size)
-#define TARGET_ADDRESS_OFFSET  (uint32_t)(&((BOOT_BLOCK_T *)0)->target_address)
-
-#define SELECTED_IMG_ADDRESS     (uint32_t*)(0x9e820)
 
 #define THUMB_ENTRY(x)                 (void*)((x) | 1)
-typedef struct {
-    IMAGE_CERT_T certificate;
-    uint8_t signature[SIGNATURE_LEN];
-} ImageCertificate_t;
-
-typedef struct {
-    uint8_t signature[SIGNATURE_LEN];
-} ImageSignature_t;
-
-#define SIGNATURE_WRD_LEN (SIGNATURE_LEN / 4)
-#define CRC_FINALIZE(x) ((x) ^ ~0UL)
-
-#define ROM_API_crc_update             THUMB_ENTRY(0x0300229c)
-#define ROM_API_boot_CheckVectorSum    THUMB_ENTRY(0x03000648)
-
-
 
 #if gExternalFlashIsCiphered_d /* CPU_JN8X feature */
 #define ROM_API_efuse_AESKeyPresent      THUMB_ENTRY(0x030016ec)
@@ -185,11 +164,6 @@ typedef struct {
 
 #endif /* gOtaEepromPostedOperations_d */
 
-typedef enum {
-    CIPHER_NONE,
-    CIPHER_EFUSE_KEY,
-    CIPHER_SW_KEY
-} ExtFlashCipherMode_t;
 
 typedef struct {
 #if (gEepromType_d != gEepromDevice_None_c) && (!gEnableOTAServer_d || (gEnableOTAServer_d && gUpgradeImageOnCurrentDevice_d))
@@ -214,7 +188,7 @@ typedef struct {
     int q_sz;
     int q_max;
 #endif
-    ExtFlashCipherMode_t ciphered_mode;
+    eEncryptionKeyType ciphered_mode;
 #if gExternalFlashIsCiphered_d
     uint8_t aes_key[16];
 #endif
@@ -381,7 +355,25 @@ otaResult_t OTA_RegisterToFsci( uint32_t fsciInterface, otaServer_AppCB_t *pCB)
 }
 #endif
 
+/*****************************************************************************
+*  OTA_AlignOnReset
+*\brief  Called each time on wake, reset or abort of OTA to align internal parameters
+* \param[in] none:
+*
+* \return
+* none
+*
+* 
+********************************************************************************** */
+void OTA_AlignOnReset(void)
+{
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
+    OTA_DBG_LOG("");
 
+#if ( gEepromParams_bufferedWrite_c == 1)
+    mCurrentWriteOffset  = gEepromParams_StartOffset_c;
+#endif
+}
 
 /*****************************************************************************
 *  OTA_StartImage
@@ -473,10 +465,9 @@ int OTA_TransactionResume(void)
     while ( OTA_IsTransactionPending()                      /* There are queued flash operations pending in queue */
             && (nb_treated < MAX_CONSECUTIVE_TRANSACTIONS)) /* ... but do not schedule too many in a same pass */
     {
-        OTA_MaskInt;
+        ;
         if (EEPROM_isBusy())
         {
-            OTA_UnMaskInt;
             /* There were transactions pending but we consumed none */
             mHandle.cnt_idle_op ++;
             if (mHandle.cnt_idle_op > mHandle.max_cnt_idle)
@@ -486,7 +477,6 @@ int OTA_TransactionResume(void)
             }
             break;
         }
-        OTA_UnMaskInt;
         nb_treated ++;
         /* Use MSG_GetHead so as to leave Msg in queue so that op_type or sz can be transformed when operation completes
          * (in particular for block erasure) */
@@ -520,9 +510,7 @@ int OTA_TransactionResume(void)
         {
             int remain_sz = (int)pMsg->sz;
             uint32_t erase_addr = pMsg->flash_addr;
-            OTA_MaskInt;
             EEPROM_EraseArea(&erase_addr, (int32_t *) &remain_sz, true);
-            OTA_UnMaskInt;
 
             pMsg->flash_addr = erase_addr;
             pMsg->sz = remain_sz;
@@ -538,9 +526,7 @@ int OTA_TransactionResume(void)
             break;
         }
         case FLASH_OP_ERASE_NEXT_BLOCK:
-            OTA_MaskInt;
             EEPROM_EraseNextBlock(pMsg->flash_addr, pMsg->sz);
-            OTA_UnMaskInt;
             pMsg->op_type = FLASH_OP_ERASE_NEXT_BLOCK_COMPLETE;
             break;
         case FLASH_OP_ERASE_NEXT_BLOCK_COMPLETE:
@@ -556,10 +542,8 @@ int OTA_TransactionResume(void)
 
         case FLASH_OP_ERASE_BLOCK:
         case FLASH_OP_ERASE_SECTOR:
-            OTA_MaskInt;
             if (EEPROM_EraseBlock(pMsg->flash_addr, pMsg->sz) == ee_ok)
             {
-                OTA_UnMaskInt;
                 OTA_MsgDequeue();
                 MSG_Free(pMsg);
             }
@@ -581,6 +565,7 @@ int OTA_TransactionResume(void)
 *****************************************************************************/
 void OTA_WritePendingData(void)
 {
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
     FLASH_TransactionOp_t * pMsg = mHandle.cur_transaction;
 
     do {
@@ -593,11 +578,10 @@ void OTA_WritePendingData(void)
 
         OTA_DBG_LOG("Submitted page Addr=%x size=%d", pMsg->flash_addr, pMsg->sz);
 
+        while (EEPROM_isBusy());
         /* Always take head of queue : we just queued something so we know it is not empty */
         OTA_TransactionResume();
-        OTA_MaskInt;
         while (EEPROM_isBusy());
-        OTA_UnMaskInt;
 
     } while (0);
 }
@@ -609,6 +593,7 @@ void OTA_WritePendingData(void)
 *****************************************************************************/
 int OTA_TransactionQueuePurge(void)
 {
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
     int nb_purged = 0;
     while ( OTA_IsTransactionPending())
     {
@@ -620,7 +605,13 @@ int OTA_TransactionQueuePurge(void)
         MSG_Free(pMsg);
         nb_purged ++;
     }
-    mHandle.cur_transaction = NULL;
+
+    if (mHandle.cur_transaction != NULL)
+    {
+        MEM_BufferFree(mHandle.cur_transaction);
+        OTA_DEBUG_TRACE("mHandle.cur_transaction = NULL\n");
+        mHandle.cur_transaction = NULL;
+    }
 
     return nb_purged;
 }
@@ -654,6 +645,7 @@ otaResult_t OTA_PullImageChunk(uint8_t* pData, uint16_t length, uint32_t *pImage
             && mAbsoluteOffset <= (mHandle.EepromAddressWritten + PROGRAM_PAGE_SZ)
             && (mAbsoluteOffset + length) <= (mHandle.EepromAddressWritten + PROGRAM_PAGE_SZ+1))
         {
+            OTA_DBG_LOG("OTA_PullImageChunk pull from RAM, %x\n", mHandle.EepromAddressWritten);
             /* The asked buffer is still in RAM */
             FLib_MemCpy(pData, mHandle.cur_transaction->buf+(mAbsoluteOffset-PROGRAM_PAGE_SZ), length);
         }
@@ -661,6 +653,7 @@ otaResult_t OTA_PullImageChunk(uint8_t* pData, uint16_t length, uint32_t *pImage
             && (mAbsoluteOffset + length) > mHandle.OtaImageLengthWritten
             && (mAbsoluteOffset + length) <= (mHandle.EepromAddressWritten + PROGRAM_PAGE_SZ+1))
         {
+            OTA_DBG_LOG("OTA_PullImageChunk pull from FLASH and RAM\n");
             uint16_t lenInFlash = (length-mHandle.OtaImageLengthWritten);
             uint16_t lenInRam = (length - lenInFlash);
             /* The asked buffer is in Flash and in RAM */
@@ -676,6 +669,7 @@ otaResult_t OTA_PullImageChunk(uint8_t* pData, uint16_t length, uint32_t *pImage
         /* The asked buffer is in Flash */
 #endif
         {
+            OTA_DBG_LOG("OTA_PullImageChunk pull from FLASH\n");
 #if gExternalFlashIsCiphered_d
             OTA_ReadDecipher(length, mAbsoluteOffset, pData);
 #else
@@ -717,7 +711,29 @@ otaResult_t OTA_PushImageChunkBlocking(uint8_t* pData, uint16_t length, uint32_t
     do
     {
 #if gOtaEepromPostedOperations_d
-        OTA_DBG_LOG("==> Blocking Addr=%x NoOfBytes=%d pImageOffset = 0x%x\r\n", mHandle.CurrentEepromAddress , length, *pImageOffset);
+        OTA_DBG_LOG("==> Blocking Addr=%x NoOfBytes=%d pImageOffset = 0x%x pImageLength = 0x%x", mHandle.CurrentEepromAddress , length, *pImageOffset, *pImageLength);
+        OTA_DBG_LOG("==> Blocking pImageLength = 0x%x", *pImageLength);
+
+#if gEepromSupportReset
+        if (pImageOffset != NULL
+            && pImageLength != NULL
+            && *pImageOffset != mHandle.CurrentEepromAddress)
+        {
+            /* Re-align all indexes if a reset happened, the offset saved must be aligned on PROGRAM_PAGE_SZ */
+            if (*pImageOffset%PROGRAM_PAGE_SZ != 0)
+                break;
+            else
+            {
+                /* Restore the sector to prepare further writes */
+                if (EEPROM_SectorAlignmentAfterReset(gBootData_Image_Offset_c + *pImageOffset) != ee_ok)
+                    break;
+                mHandle.CurrentEepromAddress = gBootData_Image_Offset_c + *pImageOffset;
+                mHandle.OtaImageCurrentLength = mHandle.CurrentEepromAddress;
+                mHandle.OtaImageLengthWritten = mHandle.CurrentEepromAddress;
+                mHandle.EepromAddressWritten = mHandle.CurrentEepromAddress;
+            }
+        }
+#endif
         if (OTA_MakeHeadRoomForNextBlock(length, NULL, 0) != gOtaSuccess_c)
         {
             OTA_DBG_LOG("OTA_MakeHeadRoomForNextBlock Failure\n");
@@ -728,11 +744,12 @@ otaResult_t OTA_PushImageChunkBlocking(uint8_t* pData, uint16_t length, uint32_t
         OTA_TransactionResume();
         OTA_DBG_LOG("==> Unlocking Addr=%x \r\n", mHandle.CurrentEepromAddress);
         status = OTA_PushImageChunk(pData, length, pImageLength, 0);
+        OTA_DBG_LOG("OTA_PushImageChunk status = %d\r\n",status);
 #else
         status = OTA_PushImageChunk(pData, length, pImageLength, pImageOffset);
 #endif
     } while (0);
-
+    //assert(status == gOtaSuccess_c);
     return status;
 }
 
@@ -770,7 +787,10 @@ otaResult_t OTA_PushImageChunk(uint8_t* pData, uint16_t length, uint32_t* pImage
 
         /* Check if the chunk does not extend over the boundaries of the image */
         if(mHandle.OtaImageCurrentLength + length > mHandle.OtaImageTotalLength)
+        {
+            OTA_DBG_LOG("OtaImageCurrentLength=%x OtaImageTotalLength=%x \n", mHandle.OtaImageCurrentLength, mHandle.OtaImageTotalLength);
             RAISE_ERROR(status, gOtaInvalidParam_c);
+        }
 
         OTA_ProgressDisplay(mHandle.OtaImageCurrentLength + length);
         /* Received a chunk with offset */
@@ -835,6 +855,7 @@ otaResult_t OTA_PushImageChunk(uint8_t* pData, uint16_t length, uint32_t* pImage
                 pMsg = MEM_BufferAllocWithId(sizeof(FLASH_TransactionOp_t),
                                              gOtaMemPoolId_c,
                                              (void*)__get_LR());
+                OTA_DBG_LOG("pMsg addr = %x mHandle addr = %x\n", pMsg, &mHandle);
                 if (pMsg == NULL)
                 {
                     panic(ID_PANIC(1,1), (uint32_t) OTA_PushImageChunk, 0, 0);
@@ -884,6 +905,7 @@ otaResult_t OTA_PushImageChunk(uint8_t* pData, uint16_t length, uint32_t* pImage
         Update operation parameters */
         mHandle.CurrentEepromAddress  += length;
         mHandle.OtaImageCurrentLength += length;
+        OTA_DEBUG_TRACE("OtaImageCurrentLength=%x \n", mHandle.OtaImageCurrentLength);
 
         /* Return the currently written length of the OTA image to the caller */
         if(pImageLength != NULL)
@@ -940,13 +962,10 @@ otaResult_t OTA_CommitImage(uint8_t* pBitmap)
         uint8_t start_marker[gBootData_Marker_Size_c] = {gBootData_StartMarker_Value_c};
 
         /* Write the Start marker at the beginning of the internal storage. */
-        OTA_MaskInt;
         if(EEPROM_WriteData(gBootData_Marker_Size_c, gBootData_StartMarker_Offset_c,&start_marker) != ee_ok)
         {
-            OTA_UnMaskInt;
             RAISE_ERROR(status, gOtaExternalFlashError_c);
         }
-        OTA_UnMaskInt;
 #endif /* gEepromDevice_InternalFlash_c */
         /* To write image length into the EEPROM */
         if(EEPROM_WriteData(sizeof(uint32_t), gBootData_ImageLength_Offset_c,(uint8_t *)&mHandle.OtaImageCurrentLength) != ee_ok)
@@ -1010,13 +1029,13 @@ void OTA_SetNewImageFlag(void)
   #else  /* gEepromType_d == gEepromDevice_InternalFlash_c */
         uint8_t flags;
         switch (mHandle.ciphered_mode) {
-        case CIPHER_NONE:
+        case eCipherKeyNone:
             flags = BIT(0); /* bootable bit - image in plain text */
             break;
-        case CIPHER_EFUSE_KEY:
+        case eEfuseKey:
             flags = (BIT(0) | BIT(7)); /* bootable bit + AES ciphering with fused key */
             break;
-        case CIPHER_SW_KEY:
+        case eSoftwareKey:
             flags = (BIT(0) | BIT(6)); /* bootable bit + AES ciphering with SW key */
             break;
         default:
@@ -1060,6 +1079,77 @@ void OTA_SetNewImageFlag(void)
 #endif /* (gEepromType_d != gEepromDevice_None_c) && (!gEnableOTAServer_d || (gEnableOTAServer_d && gUpgradeImageOnCurrentDevice_d)) */
 }
 
+/*! *********************************************************************************
+* \brief        Image validation + authenfication if a root certificate is found
+ *              and authentication level > 0
+*
+*  Return:
+                 Authenticate pass or not, gOtaImageAuthPass_c/gOtaImageAuthFail_c
+********************************************************************************** */
+otaImageAuthResult_t OTA_ImageAuthenticate()
+{
+    IMAGE_CERT_T rootCert;
+    IMAGE_CERT_T *pRootCert = &rootCert;
+    uint16_t authLevelVal = 0;
+    otaImageAuthResult_t result = gOtaImageAuthFail_c;
+    uint8_t *pParam = NULL;
+    uint32_t imgAddrOta = gBootData_Image_Offset_c;
+    OtaUtils_EEPROM_ReadData pFunctionEepromRead = (OtaUtils_EEPROM_ReadData) EEPROM_ReadData;
+#if gEepromType_d == gEepromDevice_InternalFlash_c
+    bool_t imgIsRemappable = TRUE;
+    OtaUtils_ReadBytes pFunctionRead = OtaUtils_ReadFromInternalFlash;
+#else
+    bool_t imgIsRemappable = FALSE;
+    OtaUtils_ReadBytes pFunctionRead = OtaUtils_ReadFromUnencryptedExtFlash;
+#if gExternalFlashIsCiphered_d
+    sOtaUtilsSoftwareKey softKey;
+    switch (mHandle.ciphered_mode) {
+        case eEfuseKey:
+            pFunctionRead = OtaUtils_ReadFromEncryptedExtFlashEfuseKey;
+            break;
+        case eSoftwareKey:
+            pFunctionRead = OtaUtils_ReadFromEncryptedExtFlashSoftwareKey;
+            softKey.pSoftKeyAes = &mHandle.aes_key[0];
+            pParam = (uint8_t *) &softKey;
+            break;
+        default:
+            break;
+    }
+#endif
+#endif
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
+    OTA_DBG_LOG("");
+
+    do
+    {
+        authLevelVal = psector_Read_ImgAuthLevel();
+        if(authLevelVal > 0)
+        {
+            if (OtaUtils_ReconstructRootCert(pRootCert, psector_GetPage0Handle(), NULL) != gOtaUtilsSuccess_c)
+                break;
+        }
+        else
+        {
+            pRootCert = NULL;
+        }
+
+        if (OtaUtils_ValidateImage(pFunctionRead,
+                                      pParam,
+                                      pFunctionEepromRead,
+                                      imgAddrOta,
+                                      0,
+                                      pRootCert,
+                                      TRUE,
+                                      imgIsRemappable) == IMAGE_INVALID_ADDR)
+        {
+            break;
+        }
+        result = gOtaImageAuthPass_c;
+    }
+    while (0);
+
+    return result;
+}
 
 /*! *********************************************************************************
 * \brief  Cancels the process of writing a new image to the external EEPROM.
@@ -1081,8 +1171,18 @@ void OTA_CancelImage(void)
     OTA_TransactionQueuePurge();
 #endif
 #if ( gEepromParams_bufferedWrite_c == 1)
-    OTA_SetInvalidateFlag(FALSE);
-    mCurrentWriteOffset  = gEepromParams_StartOffset_c;
+    OTA_AlignOnReset();
+#endif
+}
+
+/*! *********************************************************************************
+* \brief  Resets the Current Eeprom Address to its initial value
+*
+********************************************************************************** */
+void OTA_ResetCurrentEepromAddress(void)
+{
+#if (gEepromType_d != gEepromDevice_None_c) && (!gEnableOTAServer_d || (gEnableOTAServer_d && gUpgradeImageOnCurrentDevice_d))
+    mHandle.CurrentEepromAddress = gBootData_Image_Offset_c;
 #endif
 }
 
@@ -1120,12 +1220,13 @@ uint16_t OTA_CrcCompute(uint8_t *pData, uint16_t lenData, uint16_t crcValueOld)
 
 otaResult_t OTA_ClientInit(void)
 {
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
     otaResult_t res = gOtaSuccess_c;
 
     mHandle.LoadOtaImageInEepromInProgress = FALSE;
     mHandle.OtaImageTotalLength = 0;
     mHandle.OtaImageCurrentLength = 0;
-    mHandle.CurrentEepromAddress = 0;
+    OTA_ResetCurrentEepromAddress();
     mHandle.NewImageReady = FALSE;
 
 #if gEnableOTAServer_d || gUpgradeImageOnCurrentDevice_d
@@ -1150,9 +1251,9 @@ otaResult_t OTA_ClientInit(void)
     MSG_InitQueue(&mHandle.op_queue);
 #endif
 #if gExternalFlashIsCiphered_d
-  mHandle.ciphered_mode =  (efuse_AESKeyPresent()) ? CIPHER_EFUSE_KEY : CIPHER_SW_KEY;
+  mHandle.ciphered_mode =  (efuse_AESKeyPresent()) ? eEfuseKey : eSoftwareKey;
 #else
-  mHandle.ciphered_mode =  CIPHER_NONE;
+  mHandle.ciphered_mode =  eCipherKeyNone;
 #endif
     res = OTA_InitExternalMemory();
     return res;
@@ -1193,6 +1294,21 @@ otaResult_t OTA_InitExternalMemory(void)
     return status;
 }
 
+/*! *********************************************************************************
+* \brief  De-initializes the image storage (external memory or internal flash)
+*
+* \return  error code.
+*
+********************************************************************************** */
+otaResult_t OTA_DeInitExternalMemory(void)
+{
+    otaResult_t status = gOtaExternalFlashError_c;
+    if (EEPROM_DeInit() == ee_ok)
+    {
+        status = gOtaSuccess_c;
+    }
+    return status;
+}
 
 /*! *********************************************************************************
 * \brief  This function is called in order to erase the image storage
@@ -1231,7 +1347,7 @@ otaResult_t OTA_MakeHeadRoomForNextBlock(uint32_t size, ota_op_completion_cb_t c
 
 #if gOtaEepromPostedOperations_d
 #if  (gEepromType_d != gEepromDevice_None_c) && (gEepromType_d != gEepromDevice_InternalFlash_c)
-    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
+    OTA_DEBUG_TRACE("%s = size = %d C = %d\r\n", __FUNCTION__, size, mHandle.CurrentEepromAddress);
 
     FLASH_TransactionOp_t * pMsg;
 
@@ -1283,12 +1399,10 @@ otaResult_t OTA_EraseBlock(uint32_t address)
 #if (gEepromType_d != gEepromDevice_None_c)
     otaResult_t status = gOtaSuccess_c;
 
-    OTA_MaskInt;
     if( EEPROM_EraseBlock(address, gEepromParams_SectorSize_c)!= ee_ok )
     {
         status = gOtaExternalFlashError_c;
     }
-    OTA_UnMaskInt;
 
     return status;
 #else
@@ -1392,117 +1506,6 @@ static bool_t OTA_SetNewPsectorOTAEntry(uint32_t imgAddr, uint8_t flag)
 }
 #endif /* gEepromType_d != gEepromDevice_InternalFlash_c || defined(SOTA_ENABLED) */
 
-
-
-#if (gEepromType_d != gEepromDevice_InternalFlash_c)
-uint32_t OTA_ImageValidate(uint32_t image_addr, void * imgValidationArgs)
-{
-
-    ImageValidationArg_t *args = (ImageValidationArg_t*)imgValidationArgs;
-
-    typedef uint32_t (*crc_update_t)(uint32_t crc, const void* data, size_t data_len);
-    typedef uint32_t (*boot_CheckVectorSum_t)(const IMG_HEADER_T *image);
-    const static crc_update_t crc_update = (crc_update_t)ROM_API_crc_update;
-    const static boot_CheckVectorSum_t boot_CheckVectorSum = (boot_CheckVectorSum_t)ROM_API_boot_CheckVectorSum;
-    uint32_t result_addr = IMAGE_INVALID_ADDR;
-    const IMG_HEADER_T *imageHeader = (IMG_HEADER_T *)image_addr;
-    do {
-        BOOT_BLOCK_T *psBootBlock;
-        TRY
-        {
-            uint8_t * start = (uint8_t*)image_addr;
-            uint8_t * end   = start + sizeof(IMG_HEADER_T);
-            if (FLASH_BlankCheck(FLASH, start, end) == FLASH_DONE)
-                break;
-            if ((imageHeader->imageSignature < IMAGE_SIGNATURE) ||
-            		(imageHeader->imageSignature >= (IMAGE_SIGNATURE+8)))
-                break;
-            uint32_t run_addr;
-
-            /* Check that entry point is within tested archive */
-            run_addr = (imageHeader->vectors[1] & ~0xfffUL);
-            if (!args->in_ota_check)
-            {
-                if (run_addr != image_addr) break;
-            }
-            if (imageHeader->bootBlockOffset % sizeof(uint32_t) ) break;
-
-            if (imageHeader->bootBlockOffset + sizeof(BOOT_BLOCK_T) >= UPPER_TEXT_LIMIT) break;
-
-            psBootBlock = (BOOT_BLOCK_T *)(imageHeader->bootBlockOffset + image_addr);
-
-            if (!(  (psBootBlock->header_marker >= BOOT_BLOCK_HDR_MARKER) &&
-                    (psBootBlock->header_marker <= BOOT_BLOCK_HDR_MARKER+2))) break;
-            if (psBootBlock->target_addr != run_addr) break;
-            if (run_addr < args->min_valid_addr) break;
-            if (psBootBlock->stated_size < (imageHeader->bootBlockOffset + sizeof(BOOT_BLOCK_T))) break;
-
-            ImageSignature_t * img_signature = NULL;
-
-            if (psBootBlock->certificate_offset != 0)
-            {
-                ImageCertificate_t * img_cert;
-                /* If there is a certificate is must comply with the expectations */
-                /* There must be a trailing ImageAuthTrailer_t appended to boot block */
-                img_cert = (ImageCertificate_t *)(image_addr + psBootBlock->certificate_offset);
-
-                if (img_cert->certificate.certificate_marker != CERTIFICATE_MARKER) break;
-                /* Accesses to certificate header, certificate signature and image signature fields
-                 * indirectly allow their correct presence via the Bus Fault TRY-CATCH.
-                 */
-                if (img_cert->certificate.public_key[0] == img_cert->certificate.public_key[SIGNATURE_WRD_LEN-1])
-                {
-                    break;
-                }
-                const uint32_t * cert_sign = (uint32_t*)&img_cert->signature[0];
-                if (cert_sign[0] == cert_sign[SIGNATURE_WRD_LEN-1])
-                {
-                    break;
-                }
-                img_signature = (ImageSignature_t *)(img_cert + 1);
-            }
-            else
-            {
-                img_signature = (ImageSignature_t *)(psBootBlock + 1);
-            }
-            if (args->root_cert != NULL)
-            {
-                if (img_signature == NULL) break;
-                const uint32_t * img_sign = (uint32_t*)&img_signature->signature[0];
-                if (img_sign[0] == img_sign[SIGNATURE_WRD_LEN-1])
-                {
-                    break;
-                }
-            }
-
-            /* compute CRC of the header */
-            uint32_t crc = ~0UL;
-            crc = crc_update(crc, imageHeader, sizeof(IMG_HEADER_T)-sizeof(imageHeader->header_crc));
-            crc = CRC_FINALIZE(crc);
-
-            if (imageHeader->header_crc != crc) break;
-
-            if (boot_CheckVectorSum(imageHeader) != 0) break;
-            if (args->root_cert != NULL)
-            {
-                /* If the root certificate is passed, it means the authentication is mandated */
-                if (!secure_VerifyImage(image_addr, (const IMAGE_CERT_T*)args->root_cert)) break;
-            }
-            result_addr = run_addr;
-        }
-        CATCH (BUS_EXCEPTION)
-        {
-            break;
-        }
-        YRT;
-    } while (0);
-
-    return result_addr;
-}
-
-
-#endif
-
 #if gExternalFlashIsCiphered_d
 static otaResult_t OTA_CipherWrite(uint16_t NoOfBytes, uint32_t Addr, uint8_t *outbuf)
 {
@@ -1540,14 +1543,14 @@ static otaResult_t OTA_CipherWrite(uint16_t NoOfBytes, uint32_t Addr, uint8_t *o
 
         /* Perform ciphering in place */
         switch (mHandle.ciphered_mode) {
-        case CIPHER_EFUSE_KEY:
+        case eEfuseKey:
             efuse_LoadUniqueKey();
             aesLoadKeyFromOTP(AES_KEY_128BITS);
             aesMode(AES_MODE_ECB_ENCRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
             aesProcess((uint32_t*)&outbuf[0], (uint32_t*)&outbuf[0], nb_blocks);
             check_ok = true;
             break;
-        case CIPHER_SW_KEY:
+        case eSoftwareKey:
             aesLoadKeyFromSW(AES_KEY_128BITS, (uint32_t*)&mHandle.aes_key);
             aesMode(AES_MODE_ECB_ENCRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
             aesProcess((uint32_t*)&outbuf[0], (uint32_t*)&outbuf[0], nb_blocks);
@@ -1591,130 +1594,29 @@ static otaResult_t OTA_CipherWrite(uint16_t NoOfBytes, uint32_t Addr, uint8_t *o
 
 static otaResult_t OTA_ReadDecipher(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
 {
-
-    otaResult_t status = gOtaError_c;
-    uint8_t alignedBufferStart[16];
-    uint8_t alignedBufferEnd[16];
-    uint16_t nbByteToRead = NoOfBytes;
-    uint8_t *pBuf = inbuf;
-
-    uint32_t lastAddrToRead = Addr+NoOfBytes-1;
-
-    /* Encrypted reads require to have an addr aligned on 16 bytes */
-    uint16_t nbByteToAlignStart = Addr % 16;
-    uint16_t nbByteToAlignEnd = (16*(lastAddrToRead/16) + 15) - lastAddrToRead;
-    uint16_t nbByteToMoveInAlignedBufferStart = 0;
-    uint16_t nbByteToMoveInAlignedBufferEnd = 0;
-    uint16_t nbByteToReadBeforeEndAlignBuffer = 0;
-
-    Addr -= nbByteToAlignStart;
-
-    do {
-
-        /* Get the number of block that we will need to read */
-        if ((nbByteToRead + nbByteToAlignStart + nbByteToAlignEnd)%16 != 0)
+    otaResult_t result = gOtaError_c;
+    OtaUtils_EEPROM_ReadData pFunctionEepromRead = (OtaUtils_EEPROM_ReadData) EEPROM_ReadData;
+    OtaUtils_ReadBytes pFunctionRead = OtaUtils_ReadFromUnencryptedExtFlash;
+    sOtaUtilsSoftwareKey softKey;
+    uint8_t *pParam = NULL;
+    switch (mHandle.ciphered_mode) {
+        case eEfuseKey:
+            pFunctionRead = OtaUtils_ReadFromEncryptedExtFlashEfuseKey;
             break;
-        int nb_blocks =  (nbByteToRead + nbByteToAlignStart + nbByteToAlignEnd)/16;
-
-        if (nbByteToAlignStart)
-        {
-            if (EEPROM_ReadData(sizeof(alignedBufferStart),  Addr, &alignedBufferStart[0]) != ee_ok)
-            {
-                break;
-            }
-            else
-            {
-                Addr+= sizeof(alignedBufferStart);
-            }
-        }
-
-        /* Check if we need to read more bytes */
-        if (Addr < lastAddrToRead)
-        {
-            if (nbByteToAlignStart)
-            {
-                nbByteToMoveInAlignedBufferStart = sizeof(alignedBufferStart) - nbByteToAlignStart;
-                pBuf += nbByteToMoveInAlignedBufferStart;
-            }
-
-            if (nbByteToAlignEnd)
-            {
-                nbByteToMoveInAlignedBufferEnd = sizeof(alignedBufferEnd) - nbByteToAlignEnd;
-            }
-            nbByteToReadBeforeEndAlignBuffer = nbByteToRead - nbByteToMoveInAlignedBufferStart - nbByteToMoveInAlignedBufferEnd;
-            if (nbByteToReadBeforeEndAlignBuffer%16 != 0)
-                break;
-            if (EEPROM_ReadData(nbByteToReadBeforeEndAlignBuffer,  Addr, pBuf) != ee_ok)
-            {
-                break;
-            }
-            Addr += nbByteToReadBeforeEndAlignBuffer;
-            if (nbByteToAlignEnd && EEPROM_ReadData(sizeof(alignedBufferEnd),  Addr, alignedBufferEnd) != ee_ok)
-            {
-                break;
-            }
-        }
-        else
-        {
-            /* The asked buffer is too small and can fit in alignedBufferStart */
-            nbByteToAlignEnd = 0;
-        }
-
-        if (mHandle.ciphered_mode == CIPHER_EFUSE_KEY)
-        {
-            efuse_LoadUniqueKey();
-            aesLoadKeyFromOTP(AES_KEY_128BITS);
-        }
-        else if ( mHandle.ciphered_mode == CIPHER_SW_KEY)
-        {
-            aesLoadKeyFromSW(AES_KEY_128BITS, (uint32_t*)&mHandle.aes_key);
-        }
-        else
-        {
+        case eSoftwareKey:
+            pFunctionRead = OtaUtils_ReadFromEncryptedExtFlashSoftwareKey;
+            softKey.pSoftKeyAes = &mHandle.aes_key[0];
+            pParam = (uint8_t *) &softKey;
             break;
-        }
+        default:
+            break;
+    }
+    if (pFunctionRead(NoOfBytes, Addr, inbuf, pParam, pFunctionEepromRead) == gOtaUtilsSuccess_c)
+    {
+        result = gOtaSuccess_c;
+    }
 
-        aesMode(AES_MODE_ECB_DECRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
-        if (nbByteToAlignStart)
-        {
-            aesProcess((void*)alignedBufferStart, (void*)alignedBufferStart,  1);
-            nb_blocks -=1;
-        }
-        if (nbByteToAlignEnd)
-        {
-            aesProcess((void*)pBuf, (void*)pBuf,  nb_blocks-1);
-            aesProcess((void*)alignedBufferEnd, (void*)alignedBufferEnd,  1);
-        }
-        else
-        {
-            aesProcess((void*)pBuf, (void*)pBuf,  nb_blocks);
-        }
-
-        /* Fill missing pBuf bytes */
-        pBuf-=nbByteToMoveInAlignedBufferStart;
-
-        if (nbByteToAlignStart)
-        {
-            uint16_t i;
-            uint16_t t=0;
-            for (i=nbByteToAlignStart; i<sizeof(alignedBufferStart); i++)
-            {
-                pBuf[t++] = alignedBufferStart[i];
-            }
-        }
-
-        if (nbByteToAlignEnd)
-        {
-            uint16_t i;
-            for (i=0; i<nbByteToMoveInAlignedBufferEnd; i++)
-            {
-                *(pBuf+nbByteToMoveInAlignedBufferStart+nbByteToReadBeforeEndAlignBuffer+i) = alignedBufferEnd[i];
-            }
-        }
-
-        status = gOtaSuccess_c;
-    } while (0);
-    return status;
+    return result;
 
 }
 
@@ -1807,9 +1709,7 @@ static otaResult_t OTA_CheckVerifyFlash(uint8_t * pData, uint32_t flash_addr, ui
         {
             readLen = sizeof(readData);
         }
-        OTA_MaskInt;
         EEPROM_ReadData(readLen, flash_addr + i, readData);
-        OTA_UnMaskInt;
 
         if( !FLib_MemCmp(&pData[i], readData, readLen) )
         {
@@ -1885,15 +1785,12 @@ static otaResult_t OTA_WriteToFlash(uint16_t NoOfBytes, uint32_t Addr, uint8_t *
 {
     otaResult_t status = gOtaSuccess_c;
     do {
-        OTA_MaskInt;
         /* Try to write the data chunk into the external EEPROM */
         if(EEPROM_WriteData(NoOfBytes, Addr, outbuf) != ee_ok)
         {
             OTA_DBG_LOG("OTA_WriteToFlash - FAILURE");
-            OTA_UnMaskInt;
             RAISE_ERROR(status, gOtaExternalFlashError_c);
         }
-        OTA_UnMaskInt;
 
 #if (gOtaVerifyWrite_d > 0)
         status = OTA_CheckVerifyFlash(outbuf, Addr, NoOfBytes);
@@ -2208,6 +2105,7 @@ otaResult_t OTA_InvalidateImageHeader( bool_t bCurrentImage, uint32_t Offset )
     uint32_t    i = 0;
     otaResult_t status = gOtaSuccess_c;
     uint8_t StandaloneBuffer[gEepromParams_SectorSize_c];
+    OTA_DEBUG_TRACE("%s\r\n", __FUNCTION__);
     if (!bCurrentImage)
     {
         mCurrentWriteOffset  = gEepromParams_CurrentOffset;
@@ -2223,11 +2121,14 @@ otaResult_t OTA_InvalidateImageHeader( bool_t bCurrentImage, uint32_t Offset )
     }
     else
     {
+    	OTA_DEBUG_TRACE("StandaloneBuffer = [");
         while( i < gInvalidateHeaderLength )
         {
             StandaloneBuffer[i] ^= 0xFB;
+            OTA_DEBUG_TRACE("0x%x, ", StandaloneBuffer[i]);
             i++;
         }
+        OTA_DEBUG_TRACE("]\r\n");
         EEPROM_WriteData(gEepromParams_SectorSize_c, Offset, StandaloneBuffer);
 #if ( gEepromParams_bufferedWrite_c == 1)
         OTA_SetInvalidateFlag(FALSE);
@@ -2243,6 +2144,7 @@ otaResult_t OTA_InvalidateImageHeader( bool_t bCurrentImage, uint32_t Offset )
 *****************************************************************************/
 void OTA_SetInvalidateFlag ( bool_t bInvalidateFlag )
 {
+    OTA_DEBUG_TRACE("%s bInvalidateFlag = %d\r\n", __FUNCTION__, bInvalidateFlag);
     mHandle.gOtaInvalidateHeader = bInvalidateFlag;
 }
 #endif

@@ -599,6 +599,12 @@ void OSA_TimeResetMsec(void);
  */
 void OSA_InstallIntHandler(uint32_t IRQNumber, void (*handler)(void));
 
+/*!
+ * @brief Init the OSA time.
+ *
+ */
+void OSA_TimeInit(void);
+
 #ifdef  __cplusplus
 }
 #endif

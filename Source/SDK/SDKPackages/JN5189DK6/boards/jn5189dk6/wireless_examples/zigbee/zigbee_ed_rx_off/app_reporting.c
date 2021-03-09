@@ -51,7 +51,7 @@ static tsReports asSavedReports[NUMBER_OF_REPORTS];
 /* define the default reports */
 tsReports asDefaultReports[NUMBER_OF_REPORTS] = \
 {\
-    {GENERAL_CLUSTER_ID_ONOFF, {0, E_ZCL_BOOL, E_CLD_ONOFF_ATTR_ID_ONOFF, MIN_REPORT_INTERVAL,MAX_REPORT_INTERVAL,0,{0}}}
+    {GENERAL_CLUSTER_ID_ONOFF, {0, E_ZCL_BOOL, E_CLD_ONOFF_ATTR_ID_ONOFF, MIN_REPORT_INTERVAL,MAX_REPORT_INTERVAL,0,{0}}, 0}
 };
 
 
@@ -218,6 +218,79 @@ void vSaveReportableRecord(  uint16 u16ClusterID,
 
 
 }
+
+static uint32 * vGetLastFiredUTCTimeReportAddress(tsReports * pReport, uint8 endpointId)
+{
+    uint32 *pLastFiredUTCTimeReport = NULL;
+    tsZCL_ReportRecord *psHeadReportRecord =  (tsZCL_ReportRecord *)psDLISTgetHead(&psZCL_Common->lReportAllocList);
+
+    do
+    {
+        if (psHeadReportRecord == NULL)
+            break;
+        /* if cluster id matches, then do check */
+        if((pReport->u16ClusterID == psHeadReportRecord->psClusterInstance->psClusterDefinition->u16ClusterEnum)
+            &&
+           (endpointId == psHeadReportRecord->psEndPointDefinition->u8EndPointNumber))
+        {
+            if((psHeadReportRecord->sAttributeReportingConfigurationRecord.u16AttributeEnum == pReport->sAttributeReportingConfigurationRecord.u16AttributeEnum)
+                &&
+                (psHeadReportRecord->sAttributeReportingConfigurationRecord.u8DirectionIsReceived == pReport->sAttributeReportingConfigurationRecord.u8DirectionIsReceived))
+            {
+                pLastFiredUTCTimeReport = &psHeadReportRecord->u32LastFiredUTCTime;
+                break;
+            }
+        }
+        // get next
+        psHeadReportRecord = (tsZCL_ReportRecord *)psDLISTgetNext((DNODE *)(psHeadReportRecord));
+    }
+    while(psHeadReportRecord!=NULL);
+
+    return pLastFiredUTCTimeReport;
+}
+
+void vSetReportDataForMinRetention(void)
+{
+    int i;
+    tsReports * pReport = NULL;
+    uint32 *pLastFiredUTCTimeReport = NULL;
+    for (i=0; i<NUMBER_OF_REPORTS; i++)
+    {
+        pReport = &asSavedReports[i];
+        pLastFiredUTCTimeReport = vGetLastFiredUTCTimeReportAddress(pReport, APP_u8GetDeviceEndpoint());
+        if (pLastFiredUTCTimeReport != NULL)
+        {
+            pReport->u32LastFiredUTCTime = *pLastFiredUTCTimeReport;
+        }
+
+    }
+}
+
+void vRestoreReportAfterSleep(void)
+{
+    int i;
+    tsReports * pReport = NULL;
+    uint32 *pLastFiredUTCTimeReport = NULL;
+    PDM_teStatus eStatusReportReload = eRestoreReports();
+    /*Load the reports from the PDM or the default ones depending on the PDM load record status*/
+    if(eStatusReportReload !=PDM_E_STATUS_OK )
+    {
+         /*Load Defaults if the data was not correct*/
+         vLoadDefaultConfigForReportable();
+    }
+    /*Make the reportable attributes */
+    vMakeSupportedAttributesReportable();
+
+    for (i=0; i<NUMBER_OF_REPORTS; i++)
+    {
+        pReport = &asSavedReports[i];
+        pLastFiredUTCTimeReport = vGetLastFiredUTCTimeReportAddress(pReport, APP_u8GetDeviceEndpoint());
+        if (pLastFiredUTCTimeReport != NULL)
+            *pLastFiredUTCTimeReport = pReport->u32LastFiredUTCTime;
+    }
+
+}
+
 /****************************************************************************/
 /***        END OF FILE                                                   ***/
 /****************************************************************************/

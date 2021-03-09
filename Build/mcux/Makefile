@@ -150,9 +150,10 @@ CFLAGS	+= -DDEBUG_NWK_RECOVERY
 CFLAGS	+= -DDEBUG_ZB_CONTROLBRIDGE_TASK
 CFLAGS  += -DTRACE_APPSTART
 CFLAGS  += -DTRACE_APP
+#CFLAGS  += -DDEBUG_BDB
 #CFLAGS  += -DDEBUG_PDM_EXTENDED
 #CFLAGS += -DDEBUG_SERIAL_LINK
-CFLAGS += -DDEBUG_CLD_ONOFF
+#CFLAGS += -DDEBUG_CLD_ONOFF
 endif 
 
 ifeq ($(NETWORK_RECOVERY), 1)
@@ -236,6 +237,7 @@ APPSRC += pdum_apdu.S
 APPSRC += app_ota_server.c
 APPSRC += temp_sensor_drv.c
 APPSRC += fsl_adc.c
+APPSRC += board_utility.c
 
 ifeq ($(NETWORK_RECOVERY), 1)
 APPSRC += app_network_recovery.c

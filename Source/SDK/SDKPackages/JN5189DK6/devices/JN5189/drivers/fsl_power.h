@@ -376,6 +376,20 @@ bool POWER_BodVbatConfig(pm_bod_cfg_t * bod_cfg_p);
  */
 void POWER_ApplyLdoActiveVoltage(pm_ldo_volt_t ldoVolt);
 
+/*!
+ * @brief brief Set the DCDC output to 1.3v
+ *
+ * @return none
+ */
+void POWER_SetDcdc1v3(void);
+
+/*!
+ * @brief brief Set the DCDC output to 1.8v
+ *
+ * @return none
+ */
+void POWER_SetDcdc1v8(void);
+
 /* @} */
 
 #ifdef __cplusplus

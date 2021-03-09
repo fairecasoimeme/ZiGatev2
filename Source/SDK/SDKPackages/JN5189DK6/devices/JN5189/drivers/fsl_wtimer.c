@@ -194,6 +194,10 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
         *(timer_param_l->wkt_load_msb_reg) = 0;
     }
 
+    /* handle as a critical  section because if an interrupt that triggers immediately after the timer enable can cause
+       a lock in the while below if the interrupt calls WTIMER_StopTimer */
+    DisableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
+
     /* enable the timer */
     SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_ena_mask;
 
@@ -201,6 +205,8 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
     {
         __asm volatile("nop");
     }
+
+    EnableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
 
     PRINTF("<<-- vAHI_WakeTimerStart[%d] : STAT=%x WKT_INTSTAT=%x\n", timer_id, SYSCON->WKT_STAT, SYSCON->WKT_INTSTAT);
 }

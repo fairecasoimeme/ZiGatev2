@@ -40,9 +40,7 @@
 /****************************************************************************/
 
 #include "zps_nwk_sec.h"
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 #include <zps_apl_zdo.h>
-#endif
 
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
@@ -166,8 +164,8 @@ typedef struct
 {
     uint32 u32OutgoingFrameCounter;
     uint16 u16ExtAddrLkup;
-    uint8  u8BitMapSecLevl;
     uint8  au8LinkKey[ZPS_SEC_KEY_LENGTH];
+    uint8  u8BitMapSecLevl;
 } ZPS_tsAplApsKeyDescriptorEntry;
 
 typedef struct
@@ -251,7 +249,6 @@ extern const void *zps_g_pvAib_extensions;
 /***        Inlined Functions                                            ***/
 /****************************************************************************/
 
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 
 ZPS_AIB_INLINE ZPS_tsAplAib *ZPS_psAplAibGetAib(void) ALWAYS_INLINE;
 ZPS_AIB_INLINE ZPS_tsAplAib *ZPS_psAplAibGetAib(void)
@@ -326,52 +323,6 @@ ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetDeviceApsKeyType(uint64 u64IeeeAddress
 {
     return zps_eAplAibSetDeviceApsKeyType(ZPS_pvAplZdoGetAplHandle(), u64IeeeAddress, u8KeyType);
 }
-#else
-
-ZPS_AIB_INLINE ZPS_tsAplAib *ZPS_psAplAibGetAib(void *pvApl) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_tsAplAib *ZPS_psAplAibGetAib(void *pvApl)
-{
-    return zps_psAplAibGetAib(pvApl);
-}
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsUseExtendedPanId(void *pvApl, uint64 u64UseExtPanId) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsUseExtendedPanId(void *pvApl, uint64 u64UseExtPanId)
-{
-    return zps_eAplAibSetApsUseExtendedPanId(pvApl, u64UseExtPanId);
-}
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsChannelMask(void *pvApl,uint32 u32ChannelMask) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsChannelMask(void *pvApl,uint32 u32ChannelMask)
-{
-    return zps_eAplAibSetApsChannelMask(pvApl, u32ChannelMask);
-}
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsChannelMaskByMacID(void *pvApl, uint16 u16MacID, uint32 u32ChannelMask) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsChannelMaskByMacID(void *pvApl, uint16 u16MacID, uint32 u32ChannelMask)
-{
-    return zps_eAplAibSetApsChannelMaskByMacID(pvApl, u16MacID, u32ChannelMask);
-}
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsDesignatedCoordinator(void *pvApl, bool bDesignatedCoordinator) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsDesignatedCoordinator(void *pvApl, bool bDesignatedCoordinator)
-{
-    return zps_eAplAibSetApsDesignatedCoordinator(pvApl, bDesignatedCoordinator);
-}
-
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsUseInsecureJoin(void *pvApl, bool bUseInsecureJoin) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsUseInsecureJoin(void *pvApl, bool bUseInsecureJoin)
-{
-    return zps_eAplAibSetApsUseInsecureJoin(pvApl, bUseInsecureJoin);
-}
-
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsTrustCenterAddress(void *pvApl, uint64 u64TcAddress) ALWAYS_INLINE;
-ZPS_AIB_INLINE ZPS_teStatus ZPS_eAplAibSetApsTrustCenterAddress(void *pvApl, uint64 u64TcAddress)
-{
-    return zps_eAplAibSetApsTrustCenterAddress(pvApl, u64TcAddress);
-}
-#endif
-
 /****************************************************************************/
 /****************************************************************************/
 /****************************************************************************/

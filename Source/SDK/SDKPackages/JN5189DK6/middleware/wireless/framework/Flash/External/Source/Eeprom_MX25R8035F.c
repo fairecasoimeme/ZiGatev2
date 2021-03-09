@@ -71,6 +71,7 @@
 #define  EEPROM_RDID            0x9F
 #define  EEPROM_RES             0xAB
 #define  EEPROM_REMS            0x90
+#define  EEPROM_DP              0xB9
 
 /* Read Commands */
 #define  EEPROM_READ            0x03
@@ -108,16 +109,26 @@
 #endif
 
 /* Commands (see command array below) */
-#define CMD_SPIFI_READ               (0)
-#define CMD_SPIFI_PROGRAM_PAGE       (1)
-#define CMD_SPIFI_GET_STATUS         (2)
-#define CMD_SPIFI_ERASE_SECTOR       (3)
-#define CMD_SPIFI_ERASE_BLOCK_32K    (4)
-#define CMD_SPIFI_ERASE_ALL          (5)
-#define CMD_SPIFI_WRITE_ENABLE       (6)
-#define CMD_SPIFI_WRITE_REGISTER     (7)
-#define CMD_SPIFI_ERASE_BLOCK_64K    (8)
-#define CMD_SPIFI_NUM                (9)
+#define CMD_SPIFI_DREAD              (0)
+#define CMD_SPIFI_DPROGRAM_PAGE      (1)
+#define CMD_SPIFI_QREAD              (2)
+#define CMD_SPIFI_QPROGRAM_PAGE      (3)
+#define CMD_SPIFI_GET_STATUS         (4)
+#define CMD_SPIFI_ERASE_SECTOR       (5)
+#define CMD_SPIFI_ERASE_BLOCK_32K    (6)
+#define CMD_SPIFI_ERASE_ALL          (7)
+#define CMD_SPIFI_WRITE_ENABLE       (8)
+#define CMD_SPIFI_WRITE_REGISTER     (9)
+#define CMD_SPIFI_ERASE_BLOCK_64K    (10)
+#define CMD_SPIFI_READ_ID            (11)
+#define CMD_SPIFI_DP                 (12)
+#define CMD_SPIFI_RES                (13)
+#define CMD_SPIFI_NUM                (14)
+
+// Flash type: including XT25F08B and MX25R8035F
+#define FLASH_MX25R8035F_ID     0x1428C2
+#define FLASH_XT25F08B_ID       0x14400B
+#define FLASH_UNKNOWN_ID        0xffffff
 
 /******************************************************************************
 *******************************************************************************
@@ -132,6 +143,27 @@ static ee_err_t EEPROM_WritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Out
 static void     EEPROM_WriteEnable(void);
 #endif
 static uint32_t EEPROM_ReadStatusReq(void);
+static uint32_t EEPROM_ReadIDReq(void);
+static uint32_t EEPROM_ReadResReq(void);
+
+
+
+#define MX25_SR_WIP_POS 0     /* Write In Progress */
+#define MX25_SR_WEL_POS 1     /* Write Enable Latch */
+#define MX25_SR_BP_POS 2      /* Level of Protected block  */
+#define MX25_SR_BP_WIDTH 4
+#define MX25_SR_BP_MASK       (((1<<MX25_SR_BP_WIDTH)-1) << MX25_SR_BP_POS)
+#define MX25_SR_QE_POS 6      /* Non Volatile  */
+
+
+#define MX25_CR1_TB_POS 3     /* Top-Bottom protection selected */
+#define MX25_CR1_DC_POS 6     /* Dummy Cycle */
+
+#define MX25_CR2_LH_POS 1      /* LowPower / HighPerformance  */
+
+#define MX25R8035_CFG_STATUS_QUAD_MODE   BIT(MX25_SR_QE_POS)
+
+#define MX25R8035_CFG_REG2_HI_PERF_MODE  (BIT(MX25_CR2_LH_POS) << 16)
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -139,9 +171,11 @@ static uint32_t EEPROM_ReadStatusReq(void);
 *************************************************************************************
 ********************************************************************************** */
 
-
+static uint8_t initialized = 0;
 
 static spifi_command_t command[CMD_SPIFI_NUM] = {
+    {EEPROM_PAGE_SIZE, false, kSPIFI_DataInput,  1, kSPIFI_CommandDataQuad,     kSPIFI_CommandOpcodeAddrThreeBytes, EEPROM_DREAD},       /* DREAD (1I/2O)*/
+    {EEPROM_PAGE_SIZE, false, kSPIFI_DataOutput, 0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeAddrThreeBytes, EEPROM_WRITE_PAGE},  /* pp  (dual page program)*/
     {EEPROM_PAGE_SIZE, false, kSPIFI_DataInput,  1, kSPIFI_CommandDataQuad,     kSPIFI_CommandOpcodeAddrThreeBytes, EEPROM_QREAD},       /* QREAD (1I/4O) */
     {EEPROM_PAGE_SIZE, false, kSPIFI_DataOutput, 0, kSPIFI_CommandOpcodeSerial, kSPIFI_CommandOpcodeAddrThreeBytes, EEPROM_WRITE_QPAGE}, /* 4PP (quad page program) */
     {               1, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_RDSR},        /* Read status register */
@@ -151,6 +185,10 @@ static spifi_command_t command[CMD_SPIFI_NUM] = {
     {               0, false, kSPIFI_DataOutput, 0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_WREN},        /* Write enable */
     {               3, false, kSPIFI_DataOutput, 0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_WRSR},        /* Write Status register */
     {               0, false, kSPIFI_DataOutput, 0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeAddrThreeBytes, EEPROM_ERASE_64K},   /* Block 64k erase */
+    {               3, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_RDID},        /* Read ID register */
+    {               0, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_DP},          /* Low Power */
+    {               4, false, kSPIFI_DataInput,  0, kSPIFI_CommandAllSerial,    kSPIFI_CommandOpcodeOnly,           EEPROM_RES},         /* Read  Electronic Signature */
+
 };       /* Write status register */
 
 #if defined gFlashBlockBitmap_d
@@ -160,6 +198,12 @@ typedef struct {
 
 static EepromContext_t mHandle;
 #endif
+
+#if gEepromSupportReset
+static uint8_t sectorRamBuffer[gEepromParams_SectorSize_c];
+#endif
+
+static uint32_t eEpromFlashID = FLASH_UNKNOWN_ID;
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -175,8 +219,8 @@ static EepromContext_t mHandle;
 ********************************************************************************** */
 ee_err_t EEPROM_Init(void)
 {
-    static uint8_t initialized = 0;
     ee_err_t status = ee_ok;
+    bool_t resReqCalled = FALSE;
 
 #if defined gFlashBlockBitmap_d
     uint32_t i;
@@ -190,7 +234,7 @@ ee_err_t EEPROM_Init(void)
 
     if (!initialized)
     {
-    	EEPROM_DBG_LOG("");
+        EEPROM_DBG_LOG("");
 
         spifi_config_t config = {0};
 
@@ -199,25 +243,98 @@ ee_err_t EEPROM_Init(void)
 
         /* Initialize SPIFI base driver */
         SPIFI_GetDefaultConfig(&config);
+
+        if (CHIP_USING_SPIFI_DUAL_MODE())
+        {
+            config.dualMode = kSPIFI_DualMode;
+        }
         SPIFI_Init(SPIFI, &config);
 
-        /* Enable quad mode and high performance mode */
         EEPROM_WriteEnable();
-        SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_WRITE_REGISTER]);
-        SPIFI_WritePartialWord(SPIFI,
-                               0x020040, /* bit 6 says to go to Quad operation */
-                               command[CMD_SPIFI_WRITE_REGISTER].dataLen);
 
+        if (eEpromFlashID == FLASH_UNKNOWN_ID)
+        {
+            /* Read the Electronic Signature
+             * It allows to release from Power-Down in case of FLASH_XT25F08B_ID
+             */
+            EEPROM_ReadResReq();
+            eEpromFlashID = EEPROM_ReadIDReq();
+            resReqCalled = TRUE;
+        }
+
+        switch (eEpromFlashID)
+        {
+            case FLASH_XT25F08B_ID:
+                /* Read the Electronic Signature
+                 * It allows to release from Power-Down in case of FLASH_XT25F08B_ID
+                 */
+                if (!resReqCalled)
+                {
+                    EEPROM_ReadResReq();
+                }
+                command[CMD_SPIFI_WRITE_REGISTER].dataLen = 2;
+                SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_WRITE_REGISTER]);
+                SPIFI_WriteDataHalfword(SPIFI, 0x0200);
+                break;
+            case FLASH_MX25R8035F_ID:
+            {
+                SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_WRITE_REGISTER]);
+                /* Enable ultra low power mode */
+                uint32_t cfg_word = 0x000000; /* 24 bit register */
+
+                if (config.dualMode == kSPIFI_QuadMode)
+                {
+                    /* insert dummy cycles for Quad mode operation */
+                    cfg_word |= MX25R8035_CFG_STATUS_QUAD_MODE;
+                }
+#ifdef gSpiFiHiPerfMode_d
+                cfg_word |= MX25R8035_CFG_REG2_HI_PERF_MODE;
+#endif
+                SPIFI_WritePartialWord(SPIFI,
+                                       cfg_word,
+                                       command[CMD_SPIFI_WRITE_REGISTER].dataLen);
+            }
+            break;
+            default:
+                status = ee_error;
+                break;
+        }
+
+        if (status != ee_ok)
+        {
+            SPIFI_Deinit(SPIFI);
+            SYSCON->AHBCLKCTRLSET[0] = SYSCON_AHBCLKCTRLSET0_SPIFI_CLK_SET_MASK;
+            BOARD_SetSpiFi_LowPowerEnter();
+        }
+        else
+        {
+            initialized = 1;
+        }
         while (EEPROM_isBusy());
-
-
-        initialized = 1;
     }
 
     return status;
 }
 
-
+/******************************************************************************
+* NAME: EEPROM_DeInit
+* DESCRIPTION: De-Initializes the EEPROM peripheral
+* PARAMETERS: None
+* RETURN: ee_ok - if the EEPROM has been de-initialized successfully
+*         ee_error - otherwise
+******************************************************************************/
+ee_err_t EEPROM_DeInit(void)
+{
+    if (initialized)
+    {
+        SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_DP]);
+        SPIFI_Deinit(SPIFI);
+        SYSCON->AHBCLKCTRLSET[0] = SYSCON_AHBCLKCTRLSET0_SPIFI_CLK_SET_MASK;
+        BOARD_SetSpiFi_LowPowerEnter();
+        initialized = 0;
+    }
+    return ee_ok;
+}
 
 /*! *********************************************************************************
 * \brief   Erase all memory to 0xFF
@@ -396,7 +513,7 @@ ee_err_t EEPROM_EraseArea(uint32_t *Addr, int32_t *size, bool non_blocking)
             }
             if (!skip)
             {
-            	EEPROM_DBG_LOG("Erasing block Addr=%x sz=%d", erase_addr, sz);
+                EEPROM_DBG_LOG("Erasing block Addr=%x sz=%d", erase_addr, sz);
                 status = EEPROM_EraseBlock(erase_addr, sz);
                 if (status != ee_ok) break;
             }
@@ -443,8 +560,38 @@ ee_err_t EEPROM_EraseNextBlock(uint32_t Addr, uint32_t size)
             if (status != ee_ok) break;
             //while (EEPROM_isBusy());
         }
+        status = ee_ok;;
+    } while (0);
+    return status;
+}
+
+ee_err_t EEPROM_SectorAlignmentAfterReset(uint32_t Addr)
+{
+    ee_err_t status = ee_error;
+#if gEepromSupportReset
+    uint32_t nbBytesToCopy =0;
+    do
+    {
+        /* The address given should be aligned on EEPROM_PAGE_SIZE */
+        if (Addr % EEPROM_PAGE_SIZE != 0)
+            break;
+        nbBytesToCopy = Addr % gEepromParams_SectorSize_c;
+        /* If the address is aligned on gEepromParams_SectorSize_c, nothing to do */
+        if (nbBytesToCopy != 0)
+        {
+            /* copy only the necessary bytes in RAM*/
+            if (EEPROM_ReadData(nbBytesToCopy, Addr-nbBytesToCopy, sectorRamBuffer) != ee_ok)
+                break;
+            /* Erase the sector */
+            if (EEPROM_EraseBlock(Addr-nbBytesToCopy, EEPROM_SECTOR_SIZE) != ee_ok)
+                break;
+            /* Write the necessary bytes */
+            if (EEPROM_WriteData(nbBytesToCopy, Addr-nbBytesToCopy, sectorRamBuffer) != ee_ok)
+                break;
+        }
         status = ee_ok;
     } while (0);
+#endif
     return status;
 }
 
@@ -509,7 +656,14 @@ void EEPROM_SetRead(void)
     SPIFI_SetCommandAddress(SPIFI, FSL_FEATURE_SPIFI_START_ADDR );
 
     /* Enable read */
-    SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_READ]);
+    if (CHIP_USING_SPIFI_DUAL_MODE())
+    {
+        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_DREAD]);
+    }
+    else
+    {
+        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_QREAD]);
+    }
 }
 
 
@@ -533,7 +687,14 @@ ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
     SPIFI_SetCommandAddress(SPIFI, FSL_FEATURE_SPIFI_START_ADDR + Addr);
 
     /* Enable read */
-    SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_READ]);
+    if (CHIP_USING_SPIFI_DUAL_MODE())
+    {
+        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_DREAD]);
+    }
+    else
+    {
+        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_QREAD]);
+    }
     uint8_t * flash_addr = (uint8_t*)(FSL_FEATURE_SPIFI_START_ADDR + Addr);
 
     FLib_MemCpy((void *)inbuf, (void *)flash_addr, NoOfBytes);
@@ -576,6 +737,43 @@ static uint32_t EEPROM_ReadStatusReq(void)
     {
     }
     return SPIFI_ReadPartialWord(SPIFI, command[CMD_SPIFI_GET_STATUS].dataLen);
+}
+
+/*! *********************************************************************************
+* \brief   Read ID register
+*
+* \return ID register.
+*
+********************************************************************************** */
+static uint32_t EEPROM_ReadIDReq(void)
+{
+    SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_READ_ID]);
+    while ((SPIFI->STAT & SPIFI_STAT_INTRQ_MASK) == 0U)
+    {
+    }
+    return SPIFI_ReadPartialWord(SPIFI, command[CMD_SPIFI_READ_ID].dataLen);
+}
+
+/*! *********************************************************************************
+* \brief   Read Electronic Signature
+*
+* \return Electronic Signature.
+*
+********************************************************************************** */
+static uint32_t EEPROM_ReadResReq(void)
+{
+    uint32_t result = 0;
+    SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_RES]);
+    while ((SPIFI->STAT & SPIFI_STAT_INTRQ_MASK) == 0U)
+    {
+    }
+    result = SPIFI_ReadPartialWord(SPIFI, command[CMD_SPIFI_RES].dataLen);
+    /*
+     * The spec of FLASH_XT25F08B_ID requires a time duration of a least 20us before accepting
+     * any new command after a release from Power-Down
+     */
+    CLOCK_uDelay(21);
+    return result;
 }
 
 /*! *********************************************************************************
@@ -632,7 +830,7 @@ static ee_err_t EEPROM_PrepareForWrite(uint32_t NoOfBytes, uint32_t Addr)
 
 void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 {
-	EEPROM_DBG_LOG("Addr=%x", Addr);
+    EEPROM_DBG_LOG("Addr=%x", Addr);
 #ifdef gFlashBlockBitmap_d
     int sector_index;
     uint32_t startBlk, endBlk;
@@ -649,10 +847,18 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 #endif /* gFlashBlockBitmap_d */
     EEPROM_WriteEnable();
     SPIFI_SetCommandAddress(SPIFI, Addr + FSL_FEATURE_SPIFI_START_ADDR);
-    command[CMD_SPIFI_PROGRAM_PAGE].dataLen = NoOfBytes;
-    SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_PROGRAM_PAGE]);
-    SPIFI_WriteBuffer(SPIFI, Outbuf, NoOfBytes);
 
+    if (CHIP_USING_SPIFI_DUAL_MODE())
+    {
+        command[CMD_SPIFI_DPROGRAM_PAGE].dataLen = NoOfBytes;
+        SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_DPROGRAM_PAGE]);
+    }
+    else
+    {
+        command[CMD_SPIFI_QPROGRAM_PAGE].dataLen = NoOfBytes;
+        SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_QPROGRAM_PAGE]);
+    }
+    SPIFI_WriteBuffer(SPIFI, Outbuf, NoOfBytes);
 }
 
 /*! *********************************************************************************
@@ -667,7 +873,7 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 ********************************************************************************** */
 static ee_err_t EEPROM_WritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 {
-	EEPROM_DBG_LOG("");
+    EEPROM_DBG_LOG("");
 
     if (NoOfBytes > 0)
     {

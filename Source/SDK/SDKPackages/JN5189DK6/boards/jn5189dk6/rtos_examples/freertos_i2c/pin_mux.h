@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -62,9 +62,6 @@ void BOARD_InitBootPins(void);
 /*!
  * @brief IO_CLAMP disabled */
 #define IOCON_PIO_IO_CLAMP_DI 0x00u
-/*!
- * @brief Selects pull-down function */
-#define IOCON_PIO_MODE_PULLDOWN 0x18u
 /*!
  * @brief Selects pull-up function */
 #define IOCON_PIO_MODE_PULLUP 0x00u

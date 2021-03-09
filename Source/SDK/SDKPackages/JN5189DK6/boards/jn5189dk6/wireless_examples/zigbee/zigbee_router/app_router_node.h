@@ -28,7 +28,9 @@ void APP_vInitialiseRouter(void);
 void APP_vFactoryResetRecords(void);
 void APP_taskRouter(void);
 teNodeState eGetNodeState(void);
+#ifdef CLD_OTA
 tsOTA_PersistedData sGetOTACallBackPersistdata(void);
+#endif
 
 /****************************************************************************/
 /***        External Variables                                            ***/

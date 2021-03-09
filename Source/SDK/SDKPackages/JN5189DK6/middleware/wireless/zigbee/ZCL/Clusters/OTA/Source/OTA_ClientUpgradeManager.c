@@ -226,7 +226,7 @@ PUBLIC  void vOtaInitStateMachine(tsOTA_Common *psCustomData)
 #ifdef APP0
            g_u16OtaPageIndex = 0;
 #else
-           OTA_CancelImage();
+    OTA_AlignOnReset();
 #endif
 #endif
 }
@@ -251,6 +251,15 @@ PUBLIC  void vOtaClientUpgMgrMapStates(
 {
     switch(eStatus)
     {
+        case E_CLD_OTA_STATUS_RESET:
+            psCustomData->sOTACallBackMessage.sPersistedData.u32FunctionPointer =
+                            (uint32)vOtaUpgManClientStateIdle;
+#if (defined KSDK2)
+#ifdef APP0
+            g_u16OtaPageIndex = 0;
+#endif
+#endif
+            break;
         case E_CLD_OTA_STATUS_NORMAL:
             psCustomData->sOTACallBackMessage.sPersistedData.u32FunctionPointer =
                 (uint32)vOtaUpgManClientStateIdle;
@@ -437,8 +446,6 @@ PRIVATE  void vOtaUpgManClientStateIdle(
 
     if (bPollRequired)
     {
-        /* persisted data changed send event to the  application to save it*/
-        eOtaSetEventTypeAndGiveCallBack(psOTA_Common, E_CLD_OTA_INTERNAL_COMMAND_SAVE_CONTEXT,psEndPointDefinition);
 
         /* request has been sent make sure we poll for the response too otherwise might miss it
            only valid for end device*/
@@ -1961,8 +1968,7 @@ PRIVATE bool_t bOtaHandleBlockResponseIdle( tsOTA_Common *psOTA_Common,
             u32ZCL_GetUTCTime() + (sBlockResponse.uMessage.sWaitForData.u32RequestTime - sBlockResponse.uMessage.sWaitForData.u32CurrentTime);
     }
 
-    /* Set Client Image Upgrade Status Attribute as Download in Progress */
-    psOTA_Common->sOTACallBackMessage.sPersistedData.sAttributes.u8ImageUpgradeStatus = E_CLD_OTA_STATUS_DL_IN_PROGRESS;
+
     eOTA_RestoreClientData(psEndPointDefinition->u8EndPointNumber,
                            &psOTA_Common->sOTACallBackMessage.sPersistedData,
                            FALSE);

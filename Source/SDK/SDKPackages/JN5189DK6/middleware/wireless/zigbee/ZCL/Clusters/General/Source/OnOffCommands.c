@@ -237,7 +237,7 @@ PUBLIC  teZCL_Status eCLD_OnOffCommandReceive(
                                      pu8TransactionSequenceNumber,
                                      0,
                                      0,
-                                     E_ZCL_ACCEPT_EXACT);
+                                     E_ZCL_ACCEPT_LESS);
 
 }
 
@@ -277,7 +277,7 @@ PUBLIC teZCL_Status eCLD_OnOffCommandOffWithEffectReceive(
                                      pu8TransactionSequenceNumber,
                                      asPayloadDefinition,
                                      sizeof(asPayloadDefinition) / sizeof(tsZCL_RxPayloadItem),
-                                     E_ZCL_ACCEPT_EXACT);
+                                     E_ZCL_ACCEPT_LESS);
 
 }
 #endif
@@ -319,10 +319,33 @@ PUBLIC teZCL_Status eCLD_OnOffCommandOnWithTimedOffReceive(
                                      pu8TransactionSequenceNumber,
                                      asPayloadDefinition,
                                      sizeof(asPayloadDefinition) / sizeof(tsZCL_RxPayloadItem),
-                                     E_ZCL_ACCEPT_EXACT);
+                                     E_ZCL_ACCEPT_LESS);
 
 }
 #endif
+
+
+PUBLIC teZCL_Status eCLD_OnOffCommandLoratapReceive(
+                ZPS_tsAfEvent               *pZPSevent,
+                uint8                       *pu8TransactionSequenceNumber,
+                tsCLD_OnOffCustomDataStructure *psPayload)
+{
+
+	uint16 u16ActualQuantity;
+
+    tsZCL_RxPayloadItem asPayloadDefinition[] = {
+            {1, &u16ActualQuantity, E_ZCL_UINT8,   &psPayload->u8Dummy},
+                                                 };
+
+    return eZCL_CustomCommandReceive(pZPSevent,
+                                     pu8TransactionSequenceNumber,
+                                     asPayloadDefinition,
+                                     sizeof(asPayloadDefinition) / sizeof(tsZCL_RxPayloadItem),
+                                     E_ZCL_DISABLE_DEFAULT_RESPONSE);
+
+}
+
+
 #endif /* ONOFF_SERVER */
 /****************************************************************************/
 /***        END OF FILE                                                   ***/

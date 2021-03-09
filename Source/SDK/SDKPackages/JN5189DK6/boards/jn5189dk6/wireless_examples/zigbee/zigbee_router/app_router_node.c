@@ -8,7 +8,11 @@
 #include "bdb_api.h"
 #include "app_common.h"
 #include "PDM.h"
+
+#ifdef CLD_OTA
 #include "app_ota_client.h"
+#endif
+
 #include "PDM_IDs.h"
 #include "app_zcl_task.h"
 #include "app_reporting.h"
@@ -21,6 +25,9 @@
 #include "app_router_node.h"
 #include "zigbee_config.h"
 #include "app_main.h"
+#ifdef LNT_MODE_APP
+#include "RNG_Interface.h"
+#endif
 /****************************************************************************/
 /***        Include files                                                 ***/
 /****************************************************************************/
@@ -54,7 +61,11 @@
 static void vAppHandleAfEvent( BDB_tsZpsAfEvent *psZpsAfEvent);
 static void vAppHandleZdoEvents( BDB_tsZpsAfEvent *psZpsAfEvent);
 static void APP_vBdbInit(void);
+
+#ifndef LNT_MODE_APP
 static void vDeletePDMOnButtonPress(uint8_t u8ButtonDIO);
+#endif
+
 static void vPrintAPSTable(void);
 
 /****************************************************************************/
@@ -88,9 +99,9 @@ void APP_vInitialiseRouter(void)
 {
     uint16 u16ByteRead;
     PDM_teStatus eStatusReportReload;
-
+#ifdef CLD_OTA
     vLoadOTAPersistedData();
-
+#endif
     sDeviceDesc.eNodeState = E_STARTUP;
     PDM_eReadDataFromRecord(PDM_ID_APP_ROUTER,
                             &sDeviceDesc,
@@ -102,8 +113,12 @@ void APP_vInitialiseRouter(void)
 
     ZPS_psAplAibGetAib()->bUseInstallCode = BDB_JOIN_USES_INSTALL_CODE_KEY;
 
+    APP_SetHighTxPowerMode();
+
     /* Initialise ZBPro stack */
     ZPS_eAplAfInit();
+
+    APP_SetMaxTxPower();
 
     /* Initialise ZCL */
     APP_ZCL_vInitialise();
@@ -113,8 +128,11 @@ void APP_vInitialiseRouter(void)
      */
     APP_vBdbInit();
 
+#ifndef LNT_MODE_APP
+    /* DK6 specific code */
     /* Delete PDM if required */
     vDeletePDMOnButtonPress(APP_BOARD_SW0_PIN);
+#endif
     DBG_vPrintf(TRACE_APP, "Start Up State %d On Network %d\r\n",
             sDeviceDesc.eNodeState,
             sBDB.sAttrib.bbdbNodeIsOnANetwork);
@@ -128,6 +146,11 @@ void APP_vInitialiseRouter(void)
     /*Make the reportable attributes */
     vMakeSupportedAttributesReportable();
     vPrintAPSTable();
+
+#ifdef LNT_MODE_APP
+#include "lnt_init.h"
+    lnt_init();
+#endif
 }
 
 /****************************************************************************
@@ -155,12 +178,14 @@ void APP_vBdbCallback(BDB_tsBdbEvent *psBdbEvent)
             break;
 
         case BDB_EVENT_INIT_SUCCESS:
-
             DBG_vPrintf(TRACE_APP,"APP: BDB_EVENT_INIT_SUCCESS\r\n");
             if (sDeviceDesc.eNodeState == E_STARTUP)
             {
-                eStatus = BDB_eNsStartNwkSteering();
-                DBG_vPrintf(TRACE_APP, "BDB Try Steering status %d\r\n",eStatus);
+                if (!APP_Start_BDB_OOB())
+                {
+                    eStatus = BDB_eNsStartNwkSteering();
+                    DBG_vPrintf(TRACE_APP, "BDB Try Steering status %d\r\n",eStatus);
+                }
             }
             else
             {
@@ -168,16 +193,43 @@ void APP_vBdbCallback(BDB_tsBdbEvent *psBdbEvent)
                 sDeviceDesc.eNodeState = E_RUNNING;
                 PDM_eSaveRecordData(PDM_ID_APP_ROUTER,&sDeviceDesc,sizeof(tsDeviceDesc));
             }
-
             break;
 
         case BDB_EVENT_NO_NETWORK:
             DBG_vPrintf(TRACE_APP,"APP: BDB No Networks\r\n");
-            eStatus = BDB_eNsStartNwkSteering();
+#ifdef LNT_MODE_APP
+            extern uint8 u8LntTimerTick;
+            ZTIMER_eStart(u8LntTimerTick, ZTIMER_TIME_SEC((10 + (uint8)RND_u32GetRand(0, 10))));
+            break;
+#endif
+        case BDB_EVENT_OOB_FAIL:
+        case BDB_EVENT_REJOIN_FAILURE:
+            if (BDB_bIsBaseIdle())
+            {
+                if (!APP_Start_BDB_OOB())
+                {
+                    eStatus = BDB_eNsStartNwkSteering();
+                }
+            }
             break;
 
         case BDB_EVENT_NWK_STEERING_SUCCESS:
             DBG_vPrintf(TRACE_APP,"APP: NwkSteering Success \r\n");
+#ifdef LNT_MODE_APP
+            int lnt_BleAdvDisabled();
+            void lnt_EnableBleAdv();
+            void BleApp_Start();
+            /* start BLE adv after joining ZB network */
+            if (lnt_BleAdvDisabled())
+            {
+                lnt_EnableBleAdv();
+                BleApp_Start();
+            }
+#endif
+        case BDB_EVENT_OOB_FORM_SUCCESS:
+        case BDB_EVENT_OOB_JOIN_SUCCESS:
+        case BDB_EVENT_REJOIN_SUCCESS:
+            APP_ClearOOBInfo();
             sDeviceDesc.eNodeState = E_RUNNING;
             PDM_eSaveRecordData(PDM_ID_APP_ROUTER,&sDeviceDesc,sizeof(tsDeviceDesc));
             u32Togglems = 250;
@@ -466,8 +518,10 @@ void APP_vFactoryResetRecords(void)
     ZPS_vSetKeys();
     /* save everything */
     sDeviceDesc.eNodeState = E_STARTUP;
+#ifdef CLD_OTA
     vResetOTADiscovery();
     vOTAResetPersist();
+#endif
     PDM_eSaveRecordData(PDM_ID_APP_ROUTER,&sDeviceDesc,sizeof(tsDeviceDesc));
     ZPS_vSaveAllZpsRecords();
 }
@@ -513,6 +567,7 @@ static void APP_vBdbInit(void)
  * void
  *
  ****************************************************************************/
+#ifndef LNT_MODE_APP
 static void vDeletePDMOnButtonPress(uint8_t u8ButtonDIO)
 {
     bool_t bDeleteRecords = FALSE;
@@ -553,6 +608,7 @@ static void vDeletePDMOnButtonPress(uint8_t u8ButtonDIO)
         } else { DBG_vPrintf(TRACE_APP, "RESET: Sent Leave\r\n"); }
     }
 }
+#endif
 
 /****************************************************************************
  *
@@ -614,11 +670,12 @@ teNodeState eGetNodeState(void)
  * tsOTA_PersistedData
  *
  ****************************************************************************/
-
+#ifdef CLD_OTA
 tsOTA_PersistedData sGetOTACallBackPersistdata(void)
 {
     return sBaseDevice.sCLD_OTA_CustomDataStruct.sOTACallBackMessage.sPersistedData;
 }
+#endif
 /****************************************************************************
  *
  * NAME: APP_u8GetDeviceEndpoint

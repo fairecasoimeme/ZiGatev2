@@ -1,6 +1,6 @@
 /*
-* Copyright (c) 2014 - 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2019 NXP
+* Copyright 2008-2010 Jennic Ltd
+* Copyright 2010-2020 NXP
 * All rights reserved.
 *
 * SPDX-License-Identifier: BSD-3-Clause
@@ -22,6 +22,16 @@ extern "C" {
 /****************************************************************************/
 /***        Macro/Type Definitions                                        ***/
 /****************************************************************************/
+
+#if (defined JENNIC_CHIP_FAMILY_JN516x) || (defined JENNIC_CHIP_FAMILY_JN517x)
+/* Buffers do not need to be in a specific section */
+#define MAC_BUFFER_SECTION
+#else
+/* Place buffers in a specific section - memory preserved during sleep mode */
+#define MAC_BUFFER_SECTION __attribute__ ((section (".mac_buffer")))
+#endif
+
+
 typedef struct
 {
     uint32 u32L;  /**< Low word */
@@ -147,9 +157,11 @@ typedef enum
 /* Flags for transmit status, as returned by u32MMAC_GetTxErrors */
 typedef enum
 {
-    E_MMAC_TXSTAT_CCA_BUSY  = 0x01, /* Channel wasn't free */
-    E_MMAC_TXSTAT_NO_ACK    = 0x02, /* Ack requested but not seen */
-    E_MMAC_TXSTAT_ABORTED   = 0x04  /* Transmission aborted by user */
+    E_MMAC_TXSTAT_CCA_BUSY = 0x01, /* Channel wasn't free */
+    E_MMAC_TXSTAT_NO_ACK   = 0x02, /* Ack requested but not seen */
+    E_MMAC_TXSTAT_ABORTED  = 0x04, /* Transmission aborted by user */
+    E_MMAC_TXSTAT_TXTO     = 0x20, /* Radio transmission timeout */
+    E_MMAC_TXSTAT_TXPCTO   = 0x40  /* Modem transmission timeout */
 } teTxStatus;
 
 /* Flags for interrupt status, as returned to handler registered with
@@ -215,6 +227,8 @@ PUBLIC void vMMAC_SetRxExtendedAddr(tsExtAddr *psMacAddr);
 PUBLIC void vMMAC_SetRxStartTime(uint32 u32Time);
 PUBLIC void vMMAC_StartMacReceive(tsMacFrame *psFrame, teRxOption eOptions);
 PUBLIC void vMMAC_StartPhyReceive(tsPhyFrame *psFrame, teRxOption eOptions);
+PUBLIC void vMMAC_SetRxFrame(tsRxFrameFormat *pRxFrame);
+PUBLIC void vMMAC_SetRxProm(uint32_t u32Prom);
 PUBLIC bool_t bMMAC_RxDetected(void);
 PUBLIC uint32 u32MMAC_GetRxErrors(void);
 PUBLIC uint32 u32MMAC_GetRxTime(void);
@@ -227,8 +241,16 @@ PUBLIC void vMMAC_SetTxStartTime(uint32 u32Time);
 PUBLIC void vMMAC_SetCcaMode(teCcaMode eCcaMode);
 PUBLIC void vMMAC_StartMacTransmit(tsMacFrame *psFrame, teTxOption eOptions);
 PUBLIC void vMMAC_StartPhyTransmit(tsPhyFrame *psFrame, teTxOption eOptions);
+PUBLIC void vMMAC_SetTxPend(bool_t bTxPend);
 PUBLIC uint32 u32MMAC_GetTxErrors(void);
 PUBLIC bool_t bMMAC_PowerStatus(void);
+
+#if defined (JENNIC_CHIP_FAMILY_JN518x)
+/* Must be called before vMMAC_Enable() */
+PUBLIC void vMMAC_SetTxPowerMode(bool_t mode);
+#undef CHIP_IS_HITXPOWER_CAPABLE
+#define CHIP_IS_HITXPOWER_CAPABLE() ((CHIP_K32W041AM == Chip_GetType()) || (CHIP_K32W041A == Chip_GetType()))
+#endif
 
 /****************************************************************************/
 /***        Exported Variables                                            ***/

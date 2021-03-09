@@ -148,4 +148,15 @@ standard names. */
 #define xPortPendSVHandler PendSV_Handler
 #define xPortSysTickHandler SysTick_Handler
 
+#if defined(configGENERATE_RUN_TIME_STATS) & configGENERATE_RUN_TIME_STATS
+#if defined( __ICCARM__ ) || defined( __CC_ARM ) || defined( __GNUC__ )
+extern void RTOS_AppConfigureTimerForRuntimeStats(void);
+extern uint32_t RTOS_AppGetRuntimeCounterValue(void);
+
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() (RTOS_AppConfigureTimerForRuntimeStats())
+#define portGET_RUN_TIME_COUNTER_VALUE()         (RTOS_AppGetRuntimeCounterValue())
+#endif /* defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__) */
+#endif /* (configGENERATE_RUN_TIME_STATS) & configGENERATE_RUN_TIME_STATS */
+
+
 #endif /* FREERTOS_CONFIG_H */

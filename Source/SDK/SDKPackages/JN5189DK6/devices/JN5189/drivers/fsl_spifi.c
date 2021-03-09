@@ -241,7 +241,7 @@ void SPIFI_WritePartialWord(SPIFI_Type *base, uint32_t data, uint8_t partial_wri
             break;
 
        case 2:
-            SPIFI_Write8bitWord(base, (uint16_t)data);
+            SPIFI_Write16bitWord(base, (uint16_t)data);
             break;
 
         case 3:

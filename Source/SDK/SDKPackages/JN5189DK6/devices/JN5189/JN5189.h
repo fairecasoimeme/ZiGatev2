@@ -12,13 +12,13 @@
 **
 **     Reference manual:    JN5189UM_Rev.1.2 20 December 2018
 **     Version:             rev. 1.0, 2018-07-31
-**     Build:               b191225
+**     Build:               b200804
 **
 **     Abstract:
 **         CMSIS Peripheral Access Layer for JN5189
 **
 **     Copyright 1997-2016 Freescale Semiconductor, Inc.
-**     Copyright 2016-2019 NXP
+**     Copyright 2016-2020 NXP
 **     All rights reserved.
 **
 **     SPDX-License-Identifier: BSD-3-Clause
@@ -2120,16 +2120,6 @@ typedef struct {
 /*! CR1INT - Interrupt flag for capture channel 1 event.
  */
 #define CTIMER_IR_CR1INT(x)                      (((uint32_t)(((uint32_t)(x)) << CTIMER_IR_CR1INT_SHIFT)) & CTIMER_IR_CR1INT_MASK)
-#define CTIMER_IR_CR2INT_MASK                    (0x40U)
-#define CTIMER_IR_CR2INT_SHIFT                   (6U)
-/*! CR2INT - Interrupt flag for capture channel 2 event.
- */
-#define CTIMER_IR_CR2INT(x)                      (((uint32_t)(((uint32_t)(x)) << CTIMER_IR_CR2INT_SHIFT)) & CTIMER_IR_CR2INT_MASK)
-#define CTIMER_IR_CR3INT_MASK                    (0x80U)
-#define CTIMER_IR_CR3INT_SHIFT                   (7U)
-/*! CR3INT - Interrupt flag for capture channel 3 event.
- */
-#define CTIMER_IR_CR3INT(x)                      (((uint32_t)(((uint32_t)(x)) << CTIMER_IR_CR3INT_SHIFT)) & CTIMER_IR_CR3INT_MASK)
 /*! @} */
 
 /*! @name TCR - Timer Control Register. The TCR is used to control the Timer Counter functions. The Timer Counter can be disabled or reset through the TCR. */
@@ -3803,6 +3793,7 @@ typedef struct {
 #define FLEXCOMM_BASE_PTRS                       { FLEXCOMM0, FLEXCOMM1, FLEXCOMM2, FLEXCOMM3, FLEXCOMM4, FLEXCOMM5, FLEXCOMM6 }
 /** Interrupt vectors for the FLEXCOMM peripheral type */
 #define FLEXCOMM_IRQS                            { FLEXCOMM0_IRQn, FLEXCOMM1_IRQn, FLEXCOMM2_IRQn, FLEXCOMM3_IRQn, FLEXCOMM4_IRQn, FLEXCOMM5_IRQn, FLEXCOMM6_IRQn }
+
 /*!
  * @}
  */ /* end of group FLEXCOMM_Peripheral_Access_Layer */
@@ -6047,11 +6038,11 @@ typedef struct {
 #define INPUTMUX_DMA_ITRIG_INMUX_INP_MASK        (0x1FU)
 #define INPUTMUX_DMA_ITRIG_INMUX_INP_SHIFT       (0U)
 /*! INP - Trigger input number (decimal value) for DMA channel n (n = 0 to 17). 0: ADC0 Sequence A
- *    interrupt; 1: ADC0 Sequence B interrupt; 2: Timer CT32B0 Match 0; 3: Timer CT32B0 Match 1; 4:
- *    Timer CT32B1 Match 0; 5: Timer CT32B1 Match 1; 6: Pin interrupt 0; 7: Pin interrupt 1; 8: Pin
- *    interrupt 2; 9: Pin interrupt 3; 10: AES RX; 11: AES TX; 12: Hash RX; 13: Hash TX; 14: DMA
- *    output trigger mux 0; 15: DMA output trigger mux 1; 16: DMA output trigger mux 2; 17: DMA output
- *    trigger mux 3; 18- 31: reserved.
+ *    interrupt; 1: Reserved; 2: Timer CT32B0 Match 0; 3: Timer CT32B0 Match 1; 4: Timer CT32B1 Match
+ *    0; 5: Timer CT32B1 Match 1; 6: Pin interrupt 0; 7: Pin interrupt 1; 8: Pin interrupt 2; 9:
+ *    Pin interrupt 3; 10: AES RX; 11: AES TX; 12: Hash RX; 13: Hash TX; 14: DMA output trigger mux 0;
+ *    15: DMA output trigger mux 1; 16: DMA output trigger mux 2; 17: DMA output trigger mux 3; 18-
+ *    31: reserved.
  */
 #define INPUTMUX_DMA_ITRIG_INMUX_INP(x)          (((uint32_t)(((uint32_t)(x)) << INPUTMUX_DMA_ITRIG_INMUX_INP_SHIFT)) & INPUTMUX_DMA_ITRIG_INMUX_INP_MASK)
 /*! @} */
@@ -6189,8 +6180,8 @@ typedef struct {
 #define IOCON_PIO_ECS(x)                         (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_ECS_SHIFT)) & IOCON_PIO_ECS_MASK)
 #define IOCON_PIO_EHS_MASK                       (0x20U)
 #define IOCON_PIO_EHS_SHIFT                      (5U)
-/*! EHS - Speed selection bit. When IO is in GPIO mode set high for high speed GPIO, low for low
- *    speed GPIO. For IIC mode this bit has no effect and the IO is always in low speed.
+/*! EHS - Speed selection. When IO is in GPIO mode set 1 for high speed GPIO, 0 for low speed GPIO.
+ *    For IIC mode, this bit has no effect and the IO is always in low speed.
  *  0b0..low speed for GPIO mode or i2c mode.
  *  0b1..High speed for GPIO mode.
  */
@@ -6204,14 +6195,14 @@ typedef struct {
 #define IOCON_PIO_SLEW0(x)                       (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_SLEW0_SHIFT)) & IOCON_PIO_SLEW0_MASK)
 #define IOCON_PIO_INVERT_MASK                    (0x40U)
 #define IOCON_PIO_INVERT_SHIFT                   (6U)
-/*! INVERT - Input polarity.
+/*! INVERT - Input Polarity.
  *  0b0..Disabled. Input function is not inverted.
- *  0b1..Enabled. Input is function inverted.
+ *  0b1..Enabled. Input function is inverted.
  */
 #define IOCON_PIO_INVERT(x)                      (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_INVERT_SHIFT)) & IOCON_PIO_INVERT_MASK)
 #define IOCON_PIO_DIGIMODE_MASK                  (0x80U)
 #define IOCON_PIO_DIGIMODE_SHIFT                 (7U)
-/*! DIGIMODE - Select Analog/Digital mode. 0 Analog mode. 1 Digital mode. When in analog mode, the
+/*! DIGIMODE - Select Analog/Digital Mode. 0 Analog mode. 1 Digital mode. When in analog mode, the
  *    receiver path in the IO cell is disabled. In this mode, it is essential that the digital
  *    function (e.g. GPIO) is not configured as an output. Otherwise it may conflict with analog stuff
  *    (loopback of digital on analog input). In other words, the digital output is not automatically
@@ -6223,16 +6214,16 @@ typedef struct {
 #define IOCON_PIO_DIGIMODE(x)                    (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_DIGIMODE_SHIFT)) & IOCON_PIO_DIGIMODE_MASK)
 #define IOCON_PIO_FILTEROFF_MASK                 (0x100U)
 #define IOCON_PIO_FILTEROFF_SHIFT                (8U)
-/*! FILTEROFF - Controls input glitch filter.
- *  0b0..Filter enabled. Noise pulses below approximately 10 ns are filtered out.
+/*! FILTEROFF - Controls Input Glitch Filter.
+ *  0b0..Filter enabled. Noise pulses below approximately 1 ns are filtered out.
  *  0b1..Filter disabled. No input filtering is done.
  */
 #define IOCON_PIO_FILTEROFF(x)                   (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_FILTEROFF_SHIFT)) & IOCON_PIO_FILTEROFF_MASK)
 #define IOCON_PIO_FSEL_MASK                      (0x200U)
 #define IOCON_PIO_FSEL_SHIFT                     (9U)
 /*! FSEL - Control Input Glitch Filter.
- *  0b0..In IIC mode: Noise pulses below approximately 50ns are filtered out. In GPIO mode: A 3ns filter is used.
- *  0b1..In IIC mode: Noise pulses below approximately 10ns are filtered out. In GPIO mode: A 3ns filter is used.
+ *  0b0..Noise pulses below approximately 50ns are filtered out.
+ *  0b1..Noise pulses below approximately 10 ns are filtered out. If IO is in GPIO mode this control bit is irrelevant, a 3 ns filter is used.
  */
 #define IOCON_PIO_FSEL(x)                        (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_FSEL_SHIFT)) & IOCON_PIO_FSEL_MASK)
 #define IOCON_PIO_SLEW1_MASK                     (0x200U)
@@ -6251,7 +6242,7 @@ typedef struct {
 #define IOCON_PIO_OD(x)                          (((uint32_t)(((uint32_t)(x)) << IOCON_PIO_OD_SHIFT)) & IOCON_PIO_OD_MASK)
 #define IOCON_PIO_SSEL_MASK                      (0x800U)
 #define IOCON_PIO_SSEL_SHIFT                     (11U)
-/*! SSEL - This bit controls the IO clamping function.
+/*! SSEL - IO Clamping Function
  *  0b0..This bit controls the IO clamping function is disabled.
  *  0b1..This bit controls the IO clamping function is enabled.
  */
@@ -7767,7 +7758,7 @@ typedef struct {
 #define PMC_FRO192M_DIVSEL_SHIFT                 (20U)
 /*! DIVSEL - Mode of operation (which clock to output). Each bit enables a clocks as shown. Enables
  *    are additive meaning that two or more clocks can be enabled together. xxxx1: 12MHz enabled;
- *    xxx1x: 32MHz enabled; xx1xx: 48MHz enabled; x1xxx: 64MHz enabled; 1xxxx: Not applicable.
+ *    xxx1x: 32MHz enabled; xx1xx: 48MHz enabled; x1xxx: Not applicable; 1xxxx: Not applicable.
  */
 #define PMC_FRO192M_DIVSEL(x)                    (((uint32_t)(((uint32_t)(x)) << PMC_FRO192M_DIVSEL_SHIFT)) & PMC_FRO192M_DIVSEL_MASK)
 /*! @} */
@@ -14881,6 +14872,68 @@ typedef struct {
 #define STARTER STARTERS
 #define STARTERSET STARTERSETS
 #define STARTERCLR STARTERCLRS
+
+/*
+ * Macros below define the chip type.
+ */
+#define CHIP_K32W041A  (0x0)
+#define CHIP_K32W041AM (0x1)
+#define CHIP_K32W061   (0x2)
+#define CHIP_K32W041   (0x3)
+#define CHIP_QN9030    (0x4)
+#define CHIP_QN9090    (0x5)
+#define CHIP_JN5188    (0x6)
+#define CHIP_JN5189    (0x7)
+#define CHIP_OTHERS    (0xFF)
+
+#define CHIP_USING_SPIFI_DUAL_MODE() (CHIP_K32W041AM == Chip_GetType())
+
+/*!
+ * @brief Get the chip type.
+ *
+ * @return chip type, 0x0: K32W041A, 0x1: K32W041AM, 0x2: K32W061, 0x3: K32W041,
+ *                    0x4: QN9030, 0x5: QN9090, 0x6: JN5188, 0x7: JN5189,
+ *                    0xFF: other type.
+ */
+static inline uint32_t Chip_GetType(void)
+{
+    uint32_t chipType, ret = CHIP_OTHERS;
+
+    chipType = *((uint32_t *)0x9FC60) & 0x0FFFFFFF;
+
+    switch (chipType)
+    {
+        case 32042UL:
+            ret = CHIP_K32W041A;
+            break;
+        case 32043UL:
+            ret = CHIP_K32W041AM;
+            break;
+        case 32061UL:
+            ret = CHIP_K32W061;
+            break;
+        case 32041UL:
+            ret = CHIP_K32W041;
+            break;
+        case 5188UL:
+            ret = CHIP_JN5188;
+            break;
+        case 5189UL:
+            ret = CHIP_JN5189;
+            break;
+        case 9030UL:
+            ret = CHIP_QN9030;
+            break;
+        case 9090UL:
+            ret = CHIP_QN9090;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 
 /*!
  * @}

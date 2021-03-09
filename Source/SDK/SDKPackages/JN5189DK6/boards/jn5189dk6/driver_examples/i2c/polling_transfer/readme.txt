@@ -6,8 +6,8 @@ The slave checks the data it receives and shows the log.
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================

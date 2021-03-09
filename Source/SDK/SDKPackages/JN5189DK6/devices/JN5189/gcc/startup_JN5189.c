@@ -146,7 +146,6 @@ void PWM8_IRQHandler(void) ALIAS(IntDefaultHandler);
 void PWM9_IRQHandler(void) ALIAS(IntDefaultHandler);
 void PWM10_IRQHandler(void) ALIAS(IntDefaultHandler);
 void FLEXCOMM6_DriverIRQHandler(void) ALIAS(IntDefaultHandler);
-void RTC_IRQHandler(void) ALIAS(IntDefaultHandler);
 void NFCTag_IRQHandler(void) ALIAS(IntDefaultHandler);
 void MAILBOX_IRQHandler(void) ALIAS(IntDefaultHandler);
 void ADC_SEQA_IRQHandler(void) ALIAS(IntDefaultHandler);
@@ -196,6 +195,7 @@ void DMIC0_IRQHandler(void) __attribute__((weak));
 void HWVAD0_IRQHandler(void) __attribute__((weak));
 void CIC_IRB_IRQHandler(void) __attribute__((weak));
 void SHA_IRQHandler(void) __attribute__((weak));
+void RTC_IRQHandler(void) __attribute__((weak));
 
 //*****************************************************************************
 //
@@ -310,7 +310,7 @@ __attribute__((used, section(".isr_vector"))) void (*const g_pfnVectors[])(void)
 // ResetISR() function in order to cope with MCUs with multiple banks of
 // memory.
 //*****************************************************************************
-void data_init(unsigned int romstart, unsigned int start, unsigned int len) __attribute__((optimize("-O3")));
+void data_init(unsigned int romstart, unsigned int start, unsigned int len);
 __attribute__((section(".after_vectors"))) void data_init(unsigned int romstart, unsigned int start, unsigned int len)
 {
     unsigned int *pulSrc  = (unsigned int *)romstart;
@@ -324,7 +324,7 @@ __attribute__((section(".after_vectors"))) void data_init(unsigned int romstart,
     }
 }
 
-void bss_init(unsigned int start, unsigned int len) __attribute__((optimize("-O3")));
+void bss_init(unsigned int start, unsigned int len);
 __attribute__((section(".after_vectors"))) void bss_init(unsigned int start, unsigned int len)
 {
     unsigned int *pulDest = (unsigned int *)start;
@@ -379,6 +379,8 @@ __attribute__((naked, section(".after_vectors.reset"))) void ResetISR(void)
 
 __attribute__((used, section(".after_vectors"))) void ResetISR2(void)
 {
+    /* Force clock to switch to FRO32M to speed up initialization */
+    SYSCON -> MAINCLKSEL = 3;
     if (WarmMain)
     {
         unsigned int warm_start;
@@ -791,3 +793,7 @@ __attribute__((weak)) void FLEXCOMM6_IRQHandler(void)
     FLEXCOMM6_DriverIRQHandler();
 }
 
+__attribute__((weak)) void RTC_IRQHandler(void)
+{
+    IntDefaultHandler();
+}

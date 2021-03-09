@@ -312,6 +312,7 @@ typedef enum
 #define ZPS_NWK_NT_ACTV_MATCH_ZED      0x08 /**< Match end device */
 
 #define ZPS_NWK_NT_ACTV_MATCH_EXT_ADDR_CHILD     (ZPS_NWK_NT_ACTV_MATCH_EXT_ADDR | ZPS_NWK_NT_ACTV_MATCH_CHILD)
+#define ZPS_NWK_NT_ACTV_MATCH_EXT_ADDR_ZED       (ZPS_NWK_NT_ACTV_MATCH_EXT_ADDR | ZPS_NWK_NT_ACTV_MATCH_ZED)
 #define ZPS_NWK_NT_ACTV_MATCH_NWK_ADDR_CHILD     (ZPS_NWK_NT_ACTV_MATCH_NWK_ADDR | ZPS_NWK_NT_ACTV_MATCH_CHILD)
 #define ZPS_NWK_NT_ACTV_MATCH_NWK_ADDR_ZED_CHILD (ZPS_NWK_NT_ACTV_MATCH_NWK_ADDR | ZPS_NWK_NT_ACTV_MATCH_CHILD | ZPS_NWK_NT_ACTV_MATCH_ZED)
 
@@ -702,9 +703,27 @@ typedef struct
     uint8  u8ConcentratorDiscoveryTime;                     /**< nwkConcentratorDiscoveryTime */
     uint8  u8SequenceNumber;                                /**< nwkSequenceNumber */
     uint16 u16ManagerAddr;                                  /**< nwkManagerAddr */
-    uint16 u16TxTotal;                                      /**< nwkTxTotal */
     uint16 u16VsFixedAlcAddr;                               /**< Vendor specific - fixed allocated address */
     uint64 u64VsLastPanIdConflict;                          /**< Vendor specific - EPID of other network in last Pan Id conflict detection */
+    uint16 u16TxTotal;                                      /**< nwkTxTotal */
+    uint16 u16RouteDiscInitiated;                           /**< Diagnostics - counter of initiated Route Disc and Route request identifier */
+    uint16 u16NeighborAddedDisc;                            /**< Diagnostics - neighbor add operations in Discovery context */
+    uint16 u16NeighborAdded;                                /**< Diagnostics - neighbor add operations */
+    uint16 u16NeighborRemoved;                              /**< Diagnostics - neighbor remove operations */
+    uint16 u16NeighborStale;                                /**< Diagnostics - neighbor stale detections */
+    uint16 u16JoinIndication;                               /**< Diagnostics - join indication operations */
+    uint16 u16RelayedUcast;                                 /**< Diagnostics - unicast packets relayed */
+    uint16 u16FCFailure;                                    /**< Diagnostics - Frame Counter failures */
+    uint16 u16DecryptFailure;                               /**< Diagnostics - frames failed to decrypt */
+    uint16 u16PacketValidateDropCount;                      /**< Diagnostics - packets dropped as invalid */
+    uint16 u16PacketBufferAllocateFailure;                  /**< Diagnostics - packet buffer allocation failures */
+    uint16 u16LinkStatSuccess;                              /**< Diagnostics - Link Status sent successfully */
+    uint16 u16LinkStatFailure;                              /**< Diagnostics - Link Status failure */
+    uint8  u8LinkStatusLastError;                           /**< Last known status of a scheduled Link Status */
+    uint32 u32LinkStatusLastTimestamp;                      /**< Last timestamp of a successful TXed Link Status */
+    uint16 u16RReqRetry;                                    /**< TX Route Request broadcast retries */
+    uint16 u16RReqProcDropped;                              /**< RX Route Request processing dropped */
+    uint16 u16RReqProcCompleted;                            /**< RX Route Request processing completed */
 
     /**** Tables ****/
     zps_tsNwkSlist       sActvSortedList;                   /**< Linked list of sorted NT entries */
@@ -771,7 +790,14 @@ ZPS_bNwkNibNtActvMatch(void *pvNwk,
                        uint64 u64ExtAddr,
                        ZPS_tsNwkActvNtEntry **ppsActvNtEntry);
 
-PUBLIC bool_t ZPS_bNwkNibNtActvFindChild (
+PUBLIC bool_t
+ZPS_bNwkNibNtActvUnusedChild (
+	void *pvNwk,
+	uint8 *i,
+	uint8 j);
+
+PUBLIC bool_t
+ZPS_bNwkNibNtActvFindChild (
     void *pvNwk,
     bool_t bFindChildEntry,
     uint8 u8MatchMask,

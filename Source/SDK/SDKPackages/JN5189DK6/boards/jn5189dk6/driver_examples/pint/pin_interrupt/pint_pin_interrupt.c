@@ -19,7 +19,7 @@
  ******************************************************************************/
 #define NUMBER_BUTTONS_ON_BOARD 2
 #define DEMO_PINT_PIN_INT0_SRC kINPUTMUX_GpioPort0Pin4ToPintsel
-#define DEMO_PINT_PIN_INT1_SRC kINPUTMUX_GpioPort0Pin19ToPintsel
+#define DEMO_PINT_PIN_INT1_SRC kINPUTMUX_GpioPort0Pin7ToPintsel
 
 /*******************************************************************************
  * Prototypes

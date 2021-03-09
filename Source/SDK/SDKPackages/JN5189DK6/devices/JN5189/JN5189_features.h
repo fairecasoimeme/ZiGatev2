@@ -135,9 +135,13 @@
 /* CTIMER module features */
 
 /* @brief CTIMER capture 3 interrupt. */
-#define FSL_FEATURE_CTIMER_HAS_IR_CR3INT (1)
+#define FSL_FEATURE_CTIMER_HAS_IR_CR3INT (0)
+/* @brief CTIMER has no interrupt flag for capture channel 2. */
+#define FSL_FEATURE_CTIMER_HAS_NO_IR_CR2INT (1)
 /* @brief CTIMER has no capture channel. */
-#define FSL_FEATURE_CTIMER_HAS_NO_INPUT_CAPTURE (1)
+#define FSL_FEATURE_CTIMER_HAS_NO_INPUT_CAPTURE (0)
+/* @brief CTIMER has no capture channel 2. */
+#define FSL_FEATURE_CTIMER_HAS_NO_CCR_CAP2 (1)
 
 /* DMA module features */
 
@@ -166,7 +170,7 @@
 /* FLEXCOMM module features */
 
 /* @brief Has no reset in FLEXCOMM register. */
-#define FSL_FEATURE_FLEXCOMM_HAS_NO_RESET (1)
+#define FSL_FEATURE_FLEXCOMM_HAS_NO_RESET (0)
 /* @brief USART availability on the SoC. */
 #define FSL_FEATURE_SOC_FLEXCOMM_USART_COUNT (FSL_FEATURE_SOC_USART_COUNT)
 /* @brief SPI are FLEXCOMM on the SoC. */
@@ -225,10 +229,6 @@
 #define FSL_FEATURE_SPIFI_END_ADDR (0x103FFFFF)
 /* @brief SPIFI DATALEN bitfile in CMD register */
 #define FSL_FEATURE_SPIFI_DATALEN_CTRL (1)
-
-/* SYSCON module features */
-
-/* No feature definitions */
 
 /* WWDT module features */
 

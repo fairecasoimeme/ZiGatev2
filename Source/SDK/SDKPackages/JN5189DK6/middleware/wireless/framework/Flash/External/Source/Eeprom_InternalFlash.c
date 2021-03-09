@@ -106,6 +106,20 @@ ee_err_t EEPROM_Init(void)
 #endif
     return ee_ok;
 }
+
+/******************************************************************************
+* NAME: EEPROM_DeInit
+* DESCRIPTION: De-Initializes the EEPROM peripheral
+* PARAMETERS: None
+* RETURN: ee_ok - if the EEPROM has been de-initialized successfully
+*         ee_error - otherwise
+*******************************************************************************/
+ee_err_t EEPROM_DeInit(void)
+{
+    /* Empty for now */
+    return ee_ok;
+}
+
 #if ( gEepromParams_bufferedWrite_c == 0)
 /*****************************************************************************
 *  EEPROM_ChipErase
@@ -416,6 +430,11 @@ ee_err_t EEPROM_EraseNextBlock(uint32_t Addr, uint32_t size)
     return status;
 }
 
+ee_err_t EEPROM_SectorAlignmentAfterReset(uint32_t Addr)
+{
+    /* empty implementation for now */
+    return ee_error;
+}
 
 /*****************************************************************************
 *  EEPROM_WriteData

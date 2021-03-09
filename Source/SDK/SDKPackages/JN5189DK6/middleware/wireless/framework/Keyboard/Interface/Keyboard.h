@@ -13,6 +13,9 @@
 #ifndef _KEYBOARD_INTERFACE_H_
 #define _KEYBOARD_INTERFACE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Name: gKeyBoardSupported_d
@@ -394,5 +397,8 @@ void KBD_SwitchPressedOnWakeUp(void);
 #define KBD_DBG_LOG(...)
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _KEYBOARD_INTERFACE_H_ */

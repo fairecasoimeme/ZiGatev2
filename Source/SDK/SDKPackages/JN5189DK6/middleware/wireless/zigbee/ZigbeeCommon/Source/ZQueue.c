@@ -122,6 +122,8 @@ PUBLIC bool_t ZQ_bQueueSend ( void*          pvQueueHandle,
             FLib_MemCpy(pMsg, (void*)pvItemToQueue, psQueueHandle->u32ItemSize);
             /* Put a message in a queue. */
             MSG_Queue(&psQueueHandle->list, pMsg);
+            /* Increase power manager activity count */
+            PWRM_eStartActivity();     
             OSA_InterruptEnable();
             return TRUE;
         }   
@@ -167,6 +169,8 @@ PUBLIC bool_t ZQ_bQueueReceive ( void*    pvQueueHandle,
         void* pMsg = MSG_DeQueue(&psQueueHandle->list);
         FLib_MemCpy( pvItemFromQueue, pMsg, psQueueHandle->u32ItemSize );
         MSG_Free(pMsg);
+        /* Decrease power manager activity count */
+        PWRM_eFinishActivity();
     }
     else
     {

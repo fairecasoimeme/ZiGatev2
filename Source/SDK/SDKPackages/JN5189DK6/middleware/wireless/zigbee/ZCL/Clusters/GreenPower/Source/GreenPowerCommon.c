@@ -2867,9 +2867,9 @@ void vGP_SendDeviceAnnounce(uint16 u16AliasShortAddr, uint64 u64IeeeAddr)
 PUBLIC uint8 u8GP_GetDataReqHandle(tsGP_GreenPowerCustomData  *psGpCustomDataStructure)
 {
     psGpCustomDataStructure->u8GPDataReqHandle++;
-    if( psGpCustomDataStructure->u8GPDataReqHandle == 0x90)
+    if( psGpCustomDataStructure->u8GPDataReqHandle == ZPS_NWK_GP_MAX_HANDLE)
     {
-        psGpCustomDataStructure->u8GPDataReqHandle = 0x81;
+        psGpCustomDataStructure->u8GPDataReqHandle = ZPS_NWK_GP_BASE_HANDLE + 1;
     }
     return psGpCustomDataStructure->u8GPDataReqHandle;
 }

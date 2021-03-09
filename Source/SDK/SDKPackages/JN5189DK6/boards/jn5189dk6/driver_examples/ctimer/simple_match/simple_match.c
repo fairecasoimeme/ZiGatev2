@@ -1,5 +1,6 @@
 /*
- * Copyright 2018 NXP
+ * Copyright (c) 2016, Freescale Semiconductor, Inc.
+ * Copyright 2016-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -23,6 +24,8 @@
 #define CTIMER_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
 #define LED_PORT 0
 #define LED_PIN 0
+#define BOARD_HAS_NO_CTIMER_OUTPUT_PIN_CONNECTED_TO_LED 1
+#define CTIMER_EMT_OUT kCTIMER_External_Match_3
 
 /*******************************************************************************
  * Prototypes
@@ -31,8 +34,8 @@ void delay(uint32_t d);
 
 
 /*******************************************************************************
-* Variables
-******************************************************************************/
+ * Variables
+ ******************************************************************************/
 
 /*******************************************************************************
  * Code
@@ -68,7 +71,11 @@ int main(void)
     BOARD_InitPins();
 
     delay(10000);
-    LED_RED1_INIT(1);
+
+#if defined(BOARD_HAS_NO_CTIMER_OUTPUT_PIN_CONNECTED_TO_LED)
+    LED_RED1_INIT(LOGIC_LED_OFF);
+#endif
+
     PRINTF("CTimer match example to toggle the output on a match\r\n");
 
     CTIMER_GetDefaultConfig(&config);
@@ -76,22 +83,21 @@ int main(void)
     CTIMER_Init(CTIMER, &config);
 
     matchConfig.enableCounterReset = true;
-    matchConfig.enableCounterStop = false;
-    matchConfig.matchValue = CTIMER_CLK_FREQ / 2;
-    matchConfig.outControl = kCTIMER_Output_Toggle;
-    matchConfig.outPinInitState = true;
-    matchConfig.enableInterrupt = false;
+    matchConfig.enableCounterStop  = false;
+    matchConfig.matchValue         = CTIMER_CLK_FREQ / 2;
+    matchConfig.outControl         = kCTIMER_Output_Toggle;
+    matchConfig.outPinInitState    = true;
+    matchConfig.enableInterrupt    = false;
     CTIMER_SetupMatch(CTIMER, CTIMER_MAT_OUT, &matchConfig);
     CTIMER_StartTimer(CTIMER);
 
     while (1)
     {
+#if defined(BOARD_HAS_NO_CTIMER_OUTPUT_PIN_CONNECTED_TO_LED)
         /* No timer match output pin connected to a LED
         * toggle LED manually according to match status
         */
-        uint32_t mask;
-        mask = (1 << (CTIMER_EMR_EM0_SHIFT + CTIMER_MAT_OUT));
-        if (CTIMER->EMR & mask)
+        if (CTIMER_GetOutputMatchStatus(CTIMER, CTIMER_EMT_OUT))
         {
             LED_RED1_ON();
         }
@@ -99,5 +105,6 @@ int main(void)
         {
             LED_RED1_OFF();
         }
+#endif
     }
 }

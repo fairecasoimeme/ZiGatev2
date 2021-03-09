@@ -1007,6 +1007,7 @@ PRIVATE void vZCL_HandleDataIndication(ZPS_tsAfEvent *pZPSevent)
                 else
                 {    
                 	vLog_Printf(1,LOG_DEBUG,"psClusterInstance->psClusterDefinition->u16ClusterEnum : %d\n",psClusterInstance->psClusterDefinition->u16ClusterEnum);
+                	vLog_Printf(1,LOG_DEBUG,"psClusterInstance->bIsServer : %d\n",psClusterInstance->bIsServer);
                 	//FRED Specific 
 					if(
                 			(psClusterInstance->psClusterDefinition->u16ClusterEnum == LIGHTING_CLUSTER_ID_COLOUR_CONTROL)
@@ -1023,6 +1024,8 @@ PRIVATE void vZCL_HandleDataIndication(ZPS_tsAfEvent *pZPSevent)
 						eCallbackReturn = psClusterInstance->pCustomcallCallBackFunction(pZPSevent,
 																						 psZCL_EndPointDefinition,
 																						 psClusterInstance);
+
+
 
                 	}
                 }

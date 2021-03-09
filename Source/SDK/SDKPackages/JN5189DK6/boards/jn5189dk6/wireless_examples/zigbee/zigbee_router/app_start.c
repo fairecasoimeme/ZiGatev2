@@ -69,7 +69,12 @@ void vAppMain(void)
 
     /* Initialise LEDs and buttons */
     APP_vLedInitialise();
+
+#ifndef LNT_MODE_APP
+    /* DK6 specific code */
     APP_bButtonInitialise();
+#endif
+
 	APP_vInitResources();
     APP_vInitZigbeeResources();
     APP_vInitialise();

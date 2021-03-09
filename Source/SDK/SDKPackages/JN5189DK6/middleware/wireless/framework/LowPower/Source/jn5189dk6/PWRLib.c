@@ -1,39 +1,11 @@
 /*! *********************************************************************************
-* The Clear BSD License
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017, 2019 NXP
+* Copyright 2016-2017, 2019-2020 NXP
 * All rights reserved.
 *
 * \file
 *
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the disclaimer
-* below) provided that the following conditions are met:
-*
-* * Redistributions of source code must retain the above copyright notice,
-*   this list of conditions and the following disclaimer.
-*
-* * Redistributions in binary form must reproduce the above copyright notice,
-*   this list of conditions and the following disclaimer in the documentation
-*   and/or other materials provided with the distribution.
-*
-* * Neither the name of the copyright holder nor the names of its contributors
-*   may be used to endorse or promote products derived from this software
-*   without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
 
 /*****************************************************************************
@@ -53,6 +25,7 @@
 #include "fsl_power.h"
 #include "rom_lowpower.h"
 #include "fsl_flash.h"
+
 #if gSupportBle
 #include "ble_general.h"
 #include "controller_interface.h"
@@ -62,8 +35,24 @@
 #include "fsl_debug_console.h"
 
 extern uint32_t                   __base_RAM0;
-extern uint32_t                   _end_fw_retention;
+extern uint32_t                   __base_RAM1;
+
 extern uint32_t                   _end_boot_resume_stack;
+
+#if defined(__IAR_SYSTEMS_ICC__)
+#pragma location = ".s_end_fw_retention"
+static uint32_t                   _end_fw_retention;
+#pragma section="HEAP"
+#define heapStartAddr (uint32_t)__section_begin("HEAP")
+#define heapEndAddr   (uint32_t)__section_end("HEAP")
+#else
+extern uint32_t                   _end_fw_retention;
+extern uint32_t                   _pvHeapStart;
+extern uint32_t                   _pvHeapLimit;
+#define heapStartAddr (uint32_t)&_pvHeapStart
+#define heapEndAddr   (uint32_t)&_pvHeapLimit
+#endif
+
 
 #define RESUME_STACK_POINTER      ((uint32_t)&_end_boot_resume_stack)
 #define PWR_JUMP_BUF_SIZE         10
@@ -73,6 +62,8 @@ typedef PWR_Register PWR_jmp_buf[PWR_JUMP_BUF_SIZE];
 
 void PWR_longjmp(PWR_jmp_buf __jmpb, int __retval);
 int PWR_setjmp(PWR_jmp_buf __jmpb);
+
+uint32_t PWRLib_u32RamBanksSpanned(uint32_t u32Start, uint32_t u32Length);
 
 PWR_jmp_buf                   pwr_CPUContext;
 
@@ -94,30 +85,58 @@ PWR_jmp_buf                   pwr_CPUContext;
 #define BIT(x)                        (1 << (x))
 #endif
 
+#ifndef KB
+#define KB(x)                        ((x) << 10)
+#endif
+
 /* The RAM starts at 0x04000000 but for our purposes we only care
    about it from __base_RAM0 onwards, as the area before this is used by boot
    code data that does not have to be preserved through sleep. Thus the start
    address for bank 0 is taken as __base_RAM0 */
-#define PWR_SRAM_BANK0_BASE          (0x04000000)
-#define PWR_SRAM_BANK0_START_ADDR    ((uint32_t)&__base_RAM0)
-#define PWR_SRAM_BANK1_START_ADDR    (PWR_SRAM_BANK0_BASE + ( 16 << 10 ))
-#define PWR_SRAM_BANK2_START_ADDR    (PWR_SRAM_BANK1_START_ADDR + ( 16 << 10 ))
-#define PWR_SRAM_BANK3_START_ADDR    (PWR_SRAM_BANK2_START_ADDR + ( 16 << 10 ))
-#define PWR_SRAM_BANK4_START_ADDR    (PWR_SRAM_BANK3_START_ADDR + ( 16 << 10 ))
-#define PWR_SRAM_BANK5_START_ADDR    (PWR_SRAM_BANK4_START_ADDR + (  8 << 10 ))
-#define PWR_SRAM_BANK6_START_ADDR    (PWR_SRAM_BANK5_START_ADDR + (  8 << 10 ))
-#define PWR_SRAM_BANK7_START_ADDR    (PWR_SRAM_BANK6_START_ADDR + (  4 << 10 ))
+#define PWR_SRAM0_BASE                (0x04000000)
+#define PWR_SRAM0_BANK0_BASE          PWR_SRAM0_BASE
+#define PWR_SRAM0_BANK0_START_ADDR    ((uint32_t)&__base_RAM0)
+#define PWR_SRAM0_BANK1_START_ADDR    (PWR_SRAM0_BANK0_BASE + KB(16))
+#define PWR_SRAM0_BANK2_START_ADDR    (PWR_SRAM0_BANK1_START_ADDR + KB(16))
+#define PWR_SRAM0_BANK3_START_ADDR    (PWR_SRAM0_BANK2_START_ADDR + KB(16))
+#define PWR_SRAM0_BANK4_START_ADDR    (PWR_SRAM0_BANK3_START_ADDR + KB(16))
+#define PWR_SRAM0_BANK5_START_ADDR    (PWR_SRAM0_BANK4_START_ADDR + KB(8))
+#define PWR_SRAM0_BANK6_START_ADDR    (PWR_SRAM0_BANK5_START_ADDR + KB(8))
+#define PWR_SRAM0_BANK7_START_ADDR    (PWR_SRAM0_BANK6_START_ADDR + KB(4))
+#define PWR_SRAM0_BANK7_END_ADDR      (PWR_SRAM0_BANK7_START_ADDR + KB(4))
+#define PWR_SRAM0_END                 PWR_SRAM0_BANK7_END_ADDR
 
-const uint32_t pm_ram_bank_addr[] =
+#define PWR_SRAM1_BASE              (0x04020000)
+#define PWR_SRAM1_BANK0_START_ADDR  PWR_SRAM1_BASE
+#define PWR_SRAM1_BANK1_START_ADDR  (PWR_SRAM1_BANK0_START_ADDR + KB(16))
+#define PWR_SRAM1_BANK2_START_ADDR  (PWR_SRAM1_BANK1_START_ADDR + KB(16))
+#define PWR_SRAM1_BANK3_START_ADDR  (PWR_SRAM1_BANK2_START_ADDR + KB(16))
+#define PWR_SRAM1_BANK3_END_ADDR    (PWR_SRAM1_BANK3_START_ADDR + KB(16))
+#define PWR_SRAM1_END               PWR_SRAM1_BANK3_END_ADDR
+
+typedef struct {
+    uint32_t start_address;
+    uint32_t size;
+} sram_bank_desc_t;
+
+const sram_bank_desc_t pm_sram0_bank_desc[] =
 {
-    PWR_SRAM_BANK0_START_ADDR,
-    PWR_SRAM_BANK1_START_ADDR,
-    PWR_SRAM_BANK2_START_ADDR,
-    PWR_SRAM_BANK3_START_ADDR,
-    PWR_SRAM_BANK4_START_ADDR,
-    PWR_SRAM_BANK5_START_ADDR,
-    PWR_SRAM_BANK6_START_ADDR,
-    PWR_SRAM_BANK7_START_ADDR,
+    {PWR_SRAM0_BANK0_START_ADDR, KB(16)},
+    {PWR_SRAM0_BANK1_START_ADDR, KB(16)},
+    {PWR_SRAM0_BANK2_START_ADDR, KB(16)},
+    {PWR_SRAM0_BANK3_START_ADDR, KB(16)},
+    {PWR_SRAM0_BANK4_START_ADDR, KB(8)},
+    {PWR_SRAM0_BANK5_START_ADDR, KB(8)},
+    {PWR_SRAM0_BANK6_START_ADDR, KB(4)},
+    {PWR_SRAM0_BANK7_START_ADDR, KB(4)}
+};
+
+const sram_bank_desc_t pm_sram1_bank_desc[] =
+{
+    {PWR_SRAM1_BANK0_START_ADDR, KB(16)},   /* Bank 8 */
+    {PWR_SRAM1_BANK1_START_ADDR, KB(16)},   /* Bank 9 */
+    {PWR_SRAM1_BANK2_START_ADDR, KB(16)},   /* Bank 10 */
+    {PWR_SRAM1_BANK3_START_ADDR, KB(16)},   /* Bank 11 */
 };
 
 
@@ -192,7 +211,7 @@ void PWRLib_EnterSleep_WithFlashControllerPowerDown(void)
     __asm("nop");
     __asm("nop");
     __asm("nop");
-    
+
 #if (gPWR_FlashControllerPowerDownInWFI == 2)
     {
        uint32_t ldo_flash_core_reg       = PMC -> LDOFLASHCORE;
@@ -276,6 +295,67 @@ void PWRLib_Init(void)
 {
 }
 
+static uint32_t PWRLib_SetRamBanksRetention(void)
+{
+    uint32_t bank_mask = 0;
+    register uint32_t stack_top;
+    GET_MSP(stack_top);
+
+    /*  retrieve HEAP limits */
+
+    /* Set retention for all data from start of SRAM0 up to retention limit */
+    /* Assess the RAM banks to be held in sleep mode based on _end_fw_retention
+     * linker script symbol.
+     * */
+    bank_mask |= PWRLib_u32RamBanksSpanned(pm_sram0_bank_desc[0].start_address,
+                                           (uint32_t)&_end_fw_retention - pm_sram0_bank_desc[0].start_address);
+
+    /*
+     * If the retention policy is to conserve RAM from bottom to end_of_fw_retention.
+     */
+
+    int32_t heap_sz = (heapEndAddr - heapStartAddr);
+
+    if (heap_sz > 0)
+    {
+        bank_mask |= PWRLib_u32RamBanksSpanned(heapStartAddr, heap_sz);
+    }
+    /* SRAM0 bank 7 must be held in retention no matter how other data are mapped because the 32 bytes of
+     * boot persistent data need to be preserved and it dwells at the top of bank7 @0x04015fe0.
+     * Consequently the remainder of SRAM0 bank7 will be retained.
+     * The top of the stack of the Startup Task (with RTOS) or of the bare metal thread,
+     * is usually anchored at the bottom of the boot interface data @0x04015fe0 to grow downwards.
+     * However, the implementer may chose to place this stack at the border of the preceding bank (bank6),
+     * indeed only the top of the Startup task need to be retained. In that case, there would be a benefit
+     * to place hand-picked data in the ~3.5kbyte space between the top of this stack and the bottom of the
+     * boot persistent data.
+     * The SP position at Power Down time need to be evaluated at run-time. So retention mask may be amended
+     * later.
+     * */
+    bank_mask |= PWRLib_u32RamBanksSpanned(PWR_SRAM0_END-32, 32);
+    /* PM_CFG_SRAM_ALL_RETENTION can be used to set all SRAM banks in retention */
+#if gLoggingActive_d
+    /* Usually the log ring is occupying the remainder of the available space in SRAM1 till
+     * top. Anyhow it needs to be held in retention
+     * */
+    uint32_t log_ring_addr;
+    uint32_t log_ring_sz;
+    DbgLogGetStartAddrAndSize(&log_ring_addr, &log_ring_sz);
+    if (log_ring_sz!= 0)
+    {
+        bank_mask |= PWRLib_u32RamBanksSpanned(log_ring_addr, log_ring_sz);
+    }
+#endif
+    /* Need to keep the startup task's stack in retention down to current stack position */
+    /* The most part of the retained mask has already been set at PWR_Init call but the stack
+     * pointer might have gone past the bottom of the original bank */
+    if (stack_top < PWR_SRAM0_BANK7_START_ADDR)
+    {
+        bank_mask |= PWRLib_u32RamBanksSpanned(stack_top, PWR_SRAM0_END-stack_top);
+    }
+    return bank_mask;
+}
+
 /*---------------------------------------------------------------------------
  * Name: PWRLib_SetDeepSleepMode
  * Description:
@@ -315,7 +395,6 @@ uint8_t PWRLib_GetDeepSleepMode(void)
                  - ARM core enters Sleep Mode
                  - ARM core is clock gated (HCLK = OFF)
                  - peripherals are functional
-
  * Parameters: -
  * Return: -
  *---------------------------------------------------------------------------*/
@@ -325,7 +404,10 @@ void PWRLib_MCU_Enter_Sleep(void)
 {
     PWR_DBG_LOG("");
     OSA_DisableIRQGlobal();
-    BOARD_DbgLpIoSet(0, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+    BOARD_DbgIoSet(0, 0);
+#endif
+
 #if gPWR_FreqScalingWFI
     /* FRO 12MHz */
     SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_FRO12M);
@@ -338,15 +420,20 @@ void PWRLib_MCU_Enter_Sleep(void)
         memset (&p_lowpower_cfg, 0, sizeof(LPC_LOWPOWER_T));
 
         p_lowpower_cfg.CFG   |= LOWPOWER_CFG_WFI_NOT_WFE_MASK;
-        BOARD_LpIoDbgSet(3, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+        BOARD_DbgIoSet(3, 1);
+#endif
         Chip_LOWPOWER_PowerCycleCpuAndFlash(&p_lowpower_cfg);
 #else
-        BOARD_DbgLpIoSet(3, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+        BOARD_DbgIoSet(3, 1);
+#endif
 
         PWRLib_EnterSleep_WithFlashControllerPowerDown();
 #endif
-        BOARD_DbgLpIoSet(3, 0);
-
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+        BOARD_DbgIoSet(3, 0);
+#endif
     }
     else
     {
@@ -374,7 +461,9 @@ void PWRLib_MCU_Enter_Sleep(void)
 #endif
 #endif
 
-    BOARD_DbgLpIoSet(0, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+    BOARD_DbgIoSet(0, 1);
+#endif
 
     OSA_EnableIRQGlobal();
 }
@@ -407,7 +496,7 @@ void PWR_UpdateWakeupReason(void)
 
     /* Timer - RTC */
     if (NVIC_GetPendingIRQ(WAKE_UP_TIMER0_IRQn) ||
-        NVIC_GetPendingIRQ(WAKE_UP_TIMER0_IRQn))
+        NVIC_GetPendingIRQ(WAKE_UP_TIMER1_IRQn))
     {
         PWR_DBG_LOG("WAKE_UP_TIMERx_IRQn");
         PWRLib_MCU_WakeupReason.Bits.FromTMR = 1U;
@@ -451,17 +540,7 @@ void PWR_UpdateWakeupReason(void)
 
 void PWR_ClearWakeupReason(void)
 {
-    PWRLib_MCU_WakeupReason.Bits.FromKeyBoard = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromTMR = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromRTC_Sec = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromACmp0 = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromACmp1 = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromUSART0 = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromUSART1 = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromBOD = 0U;
-    PWRLib_MCU_WakeupReason.Bits.FromCap_Sense = 0U;
-    PWRLib_MCU_WakeupReason.Bits.Unused = 0U;
+    PWRLib_MCU_WakeupReason.AllBits = 0UL;
 }
 
 
@@ -488,41 +567,23 @@ void WarmMain(void)
 void PWRLib_EnterPowerDownMode(pwrlib_pd_cfg_t *pd_cfg)
 {
     PWR_DBG_LOG("");
-    register uint32_t stack_top;
     pm_power_config_t power_config;
     uint32_t pwrlib_pm_ram_config;
-    int i;
-    GET_MSP(stack_top);
 
     power_config.pm_wakeup_src = pd_cfg->wakeup_src;
+
+    pwrlib_pm_ram_config = PWRLib_SetRamBanksRetention();
+
+    pd_cfg->sleep_cfg |= pwrlib_pm_ram_config;
+
 #if gSupportBle
     power_config.pm_wakeup_src |= (POWER_WAKEUPSRC_BLE_OSC_EN
                                    | POWER_WAKEUPSRC_RTC ); /* POWER_WAKEUPSRC_BLE_WAKE_TIMER */
+
     /* BLE always assumes RFP retention registers retained */
     power_config.pm_config = pd_cfg->sleep_cfg | PM_CFG_XTAL32M_AUTOSTART  | PM_CFG_RADIO_RET;
 #else
     power_config.pm_config = pd_cfg->sleep_cfg | PM_CFG_XTAL32M_AUTOSTART;
-#endif
-
-    /* Assess the RAM bank to be hold in sleep mode based on _end_noinit linker script symbol and SP register */
-    i = 0;
-    pwrlib_pm_ram_config = 0U;
-
-    while ( pm_ram_bank_addr[i] < (uint32_t)&_end_fw_retention )
-    {
-        pwrlib_pm_ram_config |= ((1 << PM_CFG_SRAM_BANK_BIT_BASE) << i) ;
-        i++;
-    }
-
-    for (i = sizeof(pm_ram_bank_addr) / sizeof(uint32_t) - 1; i >= 0; i--)
-    {
-        power_config.pm_config |= ((1 << PM_CFG_SRAM_BANK_BIT_BASE) << i);
-        if ( pm_ram_bank_addr[i] <= stack_top )
-            break;
-    }
-    power_config.pm_config |= pwrlib_pm_ram_config;
-#if gLoggingActive_d
-    power_config.pm_config |= PM_CFG_SRAM_ALL_RETENTION;
 #endif
 
     power_config.pm_wakeup_io           = pd_cfg->wakeup_io & (BIT(22)-1) ;
@@ -575,3 +636,78 @@ void PWRLib_EnterDeepDownMode(pwrlib_pd_cfg_t *pd_cfg)
     POWER_EnterPowerMode( PM_DEEP_DOWN, &power_config );
 }
 
+uint32_t PWRLib_u32RamBanksSpanned(uint32_t u32Start, uint32_t u32Length)
+{
+    uint32_t u32RamBanks = 0;
+    uint32_t u32End = u32Start + u32Length - 1U;
+    int iStartBank = 0;
+    int iEndBank = 0;
+
+    /* Bounds checking: returns 0 if any of these tests fail */
+    if (   (u32Start  >= PWR_SRAM0_BASE)
+        && (u32Start  <  PWR_SRAM0_END)
+        && (u32End    >= PWR_SRAM0_BASE)
+        && (u32End    <  PWR_SRAM0_END)
+        && (u32Length >  0U)
+       )
+    {
+        /* Assess the RAM bank(s) spanned by the specified RAM range.
+           Loops result in iStartBank and iEndBank having values between
+           1 and 8, for banks 0 to 7 */
+        iStartBank = 1U;
+
+        while ((iStartBank < sizeof(pm_sram0_bank_desc)/sizeof(sram_bank_desc_t))
+                && (pm_sram0_bank_desc[iStartBank].start_address <= u32Start))
+        {
+            iStartBank++;
+        }
+
+        iEndBank = iStartBank;
+        while ((iEndBank < sizeof(pm_sram0_bank_desc)/sizeof(sram_bank_desc_t))
+                && (pm_sram0_bank_desc[iEndBank].start_address <= u32End))
+        {
+            iEndBank++;
+        }
+
+
+    }
+    else if (   (u32Start  >= PWR_SRAM1_BASE)
+                && (u32Start  <  PWR_SRAM1_END)
+                && (u32End    >= PWR_SRAM1_BASE)
+                && (u32End    <  PWR_SRAM1_END)
+                && (u32Length >  0U)
+       )
+    {
+        /* Assess the RAM bank(s) spanned by the specified RAM range,
+           if they belong to SRAM1
+           Loops result in iStartBank and iEndBank having values between
+           1 and 4 */
+        iStartBank = 1U;
+
+        while ((iStartBank < sizeof(pm_sram1_bank_desc)/sizeof(sram_bank_desc_t))
+                && (pm_sram1_bank_desc[iStartBank].start_address <= u32Start))
+        {
+            iStartBank++;
+        }
+
+        iEndBank = iStartBank;
+        while ((iEndBank < sizeof(pm_sram1_bank_desc)/sizeof(sram_bank_desc_t))
+                && (pm_sram1_bank_desc[iEndBank].start_address <= u32End))
+        {
+            iEndBank++;
+        }
+
+        /* The shift for the mask starts after SRAM0 */
+        iEndBank += sizeof(pm_sram0_bank_desc)/sizeof(sram_bank_desc_t);
+        iStartBank += sizeof(pm_sram0_bank_desc)/sizeof(sram_bank_desc_t);
+
+    }
+    if (iStartBank != 0)
+    {
+        /* Create bitmask with bits (iEndBank-1):(iStartBank-1) set */
+        u32RamBanks = (1U << iEndBank) - 1U;
+        u32RamBanks ^= (1U << (iStartBank - 1U)) - 1U;
+    }
+
+    return u32RamBanks;
+}

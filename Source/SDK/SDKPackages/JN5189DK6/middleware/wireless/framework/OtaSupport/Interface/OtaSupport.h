@@ -326,6 +326,12 @@ otaResult_t OTA_CommitImage(uint8_t* pBitmap);
 void OTA_CancelImage(void);
 
 /*! *********************************************************************************
+* \brief  Resets the Current Eeprom Address to its initial value
+*
+********************************************************************************** */
+void OTA_ResetCurrentEepromAddress(void);
+
+/*! *********************************************************************************
 * \brief  After reception of OTA image set image flag
 *
 * Does something different for CPU_JN518X
@@ -340,6 +346,14 @@ void OTA_SetNewImageFlag(void);
 *
 ********************************************************************************** */
 otaResult_t OTA_InitExternalMemory(void);
+
+/*! *********************************************************************************
+* \brief  De-initializes the image storage (external memory or internal flash)
+*
+* \return  error code.
+*
+********************************************************************************** */
+otaResult_t OTA_DeInitExternalMemory(void);
 
 /*! *********************************************************************************
 * \brief  Read from the image storage (external memory or internal flash)
@@ -426,13 +440,13 @@ void OTA_QueryImageReq(uint16_t devId, uint16_t manufacturer, uint16_t imgType, 
 void OTA_ClientInfoCnf(uint8_t* pClientAddr, uint32_t offset, uint16_t devId);
 
 /*! *********************************************************************************
-* \brief        Image certificate authenticate
+* \brief        Image validation + authenfication if a root certificate is found
+ *              and authentication level > 0
 *
-* \param[in]    newImageAddress    Address of new image received by OTA
 *  Return:
                  Authenticate pass or not, gOtaImageAuthPass_c/gOtaImageAuthFail_c
 ********************************************************************************** */
-otaImageAuthResult_t OTA_ImageAuthenticate(uint32_t newImageAddress);
+otaImageAuthResult_t OTA_ImageAuthenticate();
 
 /*! *********************************************************************************
 
@@ -479,17 +493,6 @@ void OTA_SetInvalidateFlag ( bool_t bInvalidateFlag );
 *****************************************************************************/
 otaResult_t OTA_ClientInit(void);
 
-
-typedef struct
-{
-    const  uint32_t min_valid_addr;
-    const void*  root_cert;
-    bool in_ota_check;
-} ImageValidationArg_t;
-
-uint32_t OTA_ImageValidate(uint32_t image_addr, void * imgValArgs);
-
-
 /*****************************************************************************
 *  OTA_TransactionResume
 *
@@ -498,7 +501,14 @@ uint32_t OTA_ImageValidate(uint32_t image_addr, void * imgValArgs);
 *
 *****************************************************************************/
 int OTA_TransactionResume(void);
-
+/*****************************************************************************
+*  OTA_AlignOnReset
+*
+*  Called each time on wake, reset or abort of OTA to align internal parameters
+*  
+*
+*****************************************************************************/
+void OTA_AlignOnReset(void);
 #if defined gLoggingActive_d && (gLoggingActive_d > 0)
 #include "dbg_logging.h"
 #ifndef DBG_OTA

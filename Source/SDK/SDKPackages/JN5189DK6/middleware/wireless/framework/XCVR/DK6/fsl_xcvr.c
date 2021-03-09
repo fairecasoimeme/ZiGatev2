@@ -36,6 +36,8 @@
 #if gRadioUsePdm_d
 #include "PDM.h"
 #endif
+#include "fsl_power.h"
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -46,22 +48,123 @@
 #define PDM_RADIO_KMOD_TAG_OFFSET (0xff00)
 #endif
 #endif
+
+#define TX_PWR_LOW_DUTY_MAX_LIMIT  (10)  /* 10 dBm */
+#define TX_PWR_LOW_DUTY_MIN_LIMIT (-30) /* -30dBm */
+#define TX_PWR_HIGH_DUTY_MAX_LIMIT (15)   /* 15 dBm */
+
+#define CHIP_IS_HITXPOWER_CAPABLE(chip) ((CHIP_K32W041AM == chip_type) || (CHIP_K32W041A == chip_type))
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
+enum TxPwrOpRange_t {
+    TxPwrOperationRangeLow     = 0,  /* -30dBm to +10 dBm */
+    TxPwrOperationRangeHigh    = 1, /* +10dBm to +15dBm */
+    TxPwrOperationRangeDefault = 2, /* not specified: set to max of chip capability  */
+};
 
+typedef struct {
+    bool cold_init;
+    radio_mode_t current_radio_mode;
+    data_rate_t current_data_rate;
+    enum TxPwrOpRange_t TxPwrOperationRange;
+    int8_t currentTxPower;
+} XCVR_ctx_t;
 
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-static bool cold_init = true;
-static radio_mode_t current_radio_mode = NUM_RADIO_MODES;
-static data_rate_t current_data_rate = DR_UNASSIGNED;
+static XCVR_ctx_t xcvr_ctx = {
+    .cold_init = true,
+    .current_radio_mode = NUM_RADIO_MODES,
+    .current_data_rate = DR_UNASSIGNED,
+   .TxPwrOperationRange = TxPwrOperationRangeDefault,
+   .currentTxPower = 0,
+};
+
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
+bool_t XCVR_SetTxOperationRange(bool_t high)
+{
+    bool status = false;
+    uint32_t chip_type;
+    chip_type = Chip_GetType();
+    do {
+        if  (!CHIP_IS_HITXPOWER_CAPABLE(chip_type))
+        {
+            /* For chips not supporting the High Power range ignore */
+            xcvr_ctx.TxPwrOperationRange = TxPwrOperationRangeLow;
+            status = true;
+            break;
+        }
+        bool restart_radio = false;
+        enum TxPwrOpRange_t new_range;
+        if (!high && (xcvr_ctx.currentTxPower > TX_PWR_LOW_DUTY_MAX_LIMIT))
+        {
+            status = false;
+            break;
+        }
+        new_range = high ? TxPwrOperationRangeHigh : TxPwrOperationRangeLow;
 
+        if (new_range == xcvr_ctx.TxPwrOperationRange)
+        {
+            /* unchanged */
+            status = true;
+            break;
+        }
+        switch (new_range) {
+            case TxPwrOperationRangeLow:
+                if (!xcvr_ctx.cold_init)
+                {
+                    restart_radio = true;
+                    vRadio_RadioDeInit();
+                }
+                /* change DCDC settings to 1v3 */
+                POWER_SetDcdc1v3();
+                break;
+            case TxPwrOperationRangeHigh:
+                if (!xcvr_ctx.cold_init)
+                {
+                    restart_radio = true;
+                    vRadio_RadioDeInit();
+                }
+                /* change DCDC settings to 1v8 */
+                POWER_SetDcdc1v8();
+                break;
+            default:
+                break;
+        }
+        xcvr_ctx.TxPwrOperationRange = new_range;
+        if (restart_radio)
+        {
+            XCVR_Init(xcvr_ctx.current_radio_mode, xcvr_ctx.current_data_rate);
+        }
+    } while (0);
+    return status;
+}
+
+int8_t XCVR_SetTxPwr(int8_t tx_pwr_dbm)
+{
+    int8_t max_tx_pwr;
+
+    if (tx_pwr_dbm < TX_PWR_LOW_DUTY_MIN_LIMIT)
+    {
+        tx_pwr_dbm = TX_PWR_LOW_DUTY_MIN_LIMIT;
+    }
+    max_tx_pwr = (xcvr_ctx.TxPwrOperationRange == TxPwrOperationRangeHigh) ?
+            TX_PWR_HIGH_DUTY_MAX_LIMIT : TX_PWR_LOW_DUTY_MAX_LIMIT;
+    if (tx_pwr_dbm > max_tx_pwr)
+    {
+        tx_pwr_dbm = max_tx_pwr;
+    }
+    xcvr_ctx.currentTxPower = tx_pwr_dbm;
+
+    return tx_pwr_dbm;
+
+}
 
 void XCVR_RadioBleConfigure(data_rate_t data_rate)
 {
@@ -73,24 +176,24 @@ void XCVR_RadioBleConfigure(data_rate_t data_rate)
     {
         vRadio_Standard_Init(RADIO_STANDARD_BLE_2MB);
     }
-    if (current_radio_mode == ZIGBEE_MODE)
+    if (xcvr_ctx.current_radio_mode == ZIGBEE_MODE)
     {
         vRadio_ZBtoBLE();
     }
-    current_radio_mode = BLE_MODE;
-    current_data_rate = data_rate;
+    xcvr_ctx.current_radio_mode = BLE_MODE;
+    xcvr_ctx.current_data_rate = data_rate;
 }
 
 void XCVR_RadioZigbeeConfigure(void)
 {
     vRadio_InitialiseRadioStandard();
     /* invokes vRadio_Standard_Init with the right ZIGBEE mode */
-    if (current_radio_mode == BLE_MODE)
+    if (xcvr_ctx.current_radio_mode == BLE_MODE)
     {
         vRadio_BLEtoZB();
     }
-    current_radio_mode = ZIGBEE_MODE;
-    current_data_rate = DR_UNASSIGNED;
+    xcvr_ctx.current_radio_mode = ZIGBEE_MODE;
+    xcvr_ctx.current_data_rate = DR_UNASSIGNED;
 
 }
 
@@ -98,34 +201,37 @@ void XCVR_RadioZigbeeConfigure(void)
 static int XCVR_ModeCfg(radio_mode_t radio_mode, data_rate_t data_rate, bool wake)
 {
     int res = -1;
-    if (!wake && (current_radio_mode == radio_mode))
+    if (!wake && (xcvr_ctx.current_radio_mode == radio_mode))
     {
         res = 1;
     }
     else switch (radio_mode) {
-	    case BLE_MODE:
-	        if (data_rate == DR_2MBPS || data_rate == DR_1MBPS)
-	        {
-	            XCVR_RadioBleConfigure(data_rate);
-	            res = 0;
-	        }
-	        break;
-	    case ZIGBEE_MODE:
-	        XCVR_RadioZigbeeConfigure();
-	        res = 0;
-	        break;
-	    default:
-	        assert(0);
-	        break;
-	}
-	return res;
+        case BLE_MODE:
+            if (data_rate == DR_2MBPS || data_rate == DR_1MBPS)
+            {
+                XCVR_RadioBleConfigure(data_rate);
+                res = 0;
+            }
+            break;
+        case ZIGBEE_MODE:
+            XCVR_RadioZigbeeConfigure();
+            res = 0;
+            break;
+        default:
+            assert(0);
+            break;
+    }
+    return res;
 }
 
 xcvrStatus_t XCVR_Init(radio_mode_t radio_mode, data_rate_t data_rate)
 {
     xcvrStatus_t res = gXcvrSuccess_c;
-    if (cold_init)
+
+    if (xcvr_ctx.cold_init)
     {
+        XCVR_SetTxOperationRange(true); /* Start with the highest possible duty range */
+
         /* BLE Reset on Cold init only but not on wakeup
          * It is not required to reset the BLE again if called several times
          * */
@@ -133,10 +239,10 @@ xcvrStatus_t XCVR_Init(radio_mode_t radio_mode, data_rate_t data_rate)
         RESET_SetPeripheralReset(kBLE_RST_SHIFT_RSTn);
         RESET_ClearPeripheralReset(kBLE_RST_SHIFT_RSTn);
 #endif
-        cold_init = false;
+        xcvr_ctx.cold_init = false;
     }
     /* XCVR_Init does not repeat the RadioInit if already done and we have kept the power */
-    vRadio_RadioInit(RADIO_MODE_STD_USE_INITCAL);
+    vRadio_RadioInit((xcvr_ctx.TxPwrOperationRange == TxPwrOperationRangeLow) ? RADIO_MODE_STD_USE_INITCAL : RADIO_MODE_HTXP_USE_INITCAL);
     if (XCVR_ModeCfg(radio_mode, data_rate, false) < 0)
         res = gXcvrInvalidParameters_c;
 
@@ -147,10 +253,10 @@ xcvrStatus_t XCVR_WakeUpInit(void)
 {
     xcvrStatus_t res = gXcvrSuccess_c;
 
-    /* Do RadioInit on each wakup */
-    vRadio_RadioInit(RADIO_MODE_STD_USE_INITCAL);
-    if (XCVR_ModeCfg(current_radio_mode, current_data_rate, true) < 0)
-    	res = gXcvrInvalidParameters_c;
+    /* Do RadioInit on each wakeup */
+    vRadio_RadioInit((xcvr_ctx.TxPwrOperationRange == TxPwrOperationRangeLow) ? RADIO_MODE_STD_USE_INITCAL : RADIO_MODE_HTXP_USE_INITCAL);
+    if (XCVR_ModeCfg(xcvr_ctx.current_radio_mode, xcvr_ctx.current_data_rate, true) < 0)
+        res = gXcvrInvalidParameters_c;
     return res;
 }
 
@@ -220,16 +326,13 @@ int16_t XCVR_ReadRSSI(data_rate_t rate)
 
 void XCVR_SetBLEdpTopEmAddr(uint32_t em_addr)
 {
-
-#if 0 // MCB-1712: Call API when available in RF driver
     vRadio_SetBLEdpTopEmAddr(em_addr);
-#else // Remove when API available
-
-#define XCVR_BLE_DP_TOP_BASE  (0x40014000u)
-#define XCVR_EM_ADDR_OFFSET   (0xA8)
-
-    uint32_t* em_addr_reg_ptr = (uint32_t*)(XCVR_BLE_DP_TOP_BASE + XCVR_EM_ADDR_OFFSET);
-
-    *em_addr_reg_ptr = em_addr;
-#endif
 }
+
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+void XCVR_RegisterRfActivityCallback(void *pf_callback)
+{
+    vRadio_RegisterRfActivityCallback(pf_callback);
+}
+#endif
+

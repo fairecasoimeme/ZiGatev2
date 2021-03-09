@@ -168,10 +168,10 @@ PUBLIC  teZCL_Status eCLD_OnOffCommandHandler(
                              &sZCL_HeaderParams);
 
     // We don't handle messages as a client, so exit
-    if(psClusterInstance->bIsServer == FALSE)
+   /* if(psClusterInstance->bIsServer == FALSE)
     {
         return(E_ZCL_FAIL);
-    }
+    }*/
 
 #ifdef ONOFF_SERVER
 {
@@ -221,14 +221,25 @@ PUBLIC  teZCL_Status eCLD_OnOffCommandHandler(
         eCLD_OnOffHandleOnWithTimedOffCommand(pZPSevent, psEndPointDefinition, psClusterInstance, sZCL_HeaderParams.u8CommandIdentifier);
         break;
     #endif
-    
+    case E_CLD_ONOFF_CMD_LORATAP:
+	   // eCLD_OnOffHandleOnWithTimedOffCommand(pZPSevent, psEndPointDefinition, psClusterInstance, sZCL_HeaderParams.u8CommandIdentifier);
+		DBG_vPrintf(TRACE_ONOFF, "Toggle: ");
+		uint8 u8TransactionSequenceNumber;
+		tsCLD_OnOffCustomDataStructure sPayload;
+
+		eCLD_OnOffCommandLoratapReceive(pZPSevent,
+									&u8TransactionSequenceNumber,
+									&sPayload);
+		sOnOffCallBackMessage.uMessage.u8LoraTapData = sPayload.u8Dummy;
+
+		break;
     default:
         // unlock
         #ifndef COOPERATIVE
             eZCL_ReleaseMutex(psEndPointDefinition);
         #endif
-
-        return(E_ZCL_ERR_CUSTOM_COMMAND_HANDLER_NULL_OR_RETURNED_ERROR);
+        //On laisse passer toutes les commandes
+        //return(E_ZCL_ERR_CUSTOM_COMMAND_HANDLER_NULL_OR_RETURNED_ERROR);
         break;
     }
 
@@ -568,9 +579,9 @@ PRIVATE  teZCL_Status eCLD_OnOffHandleOffWithEffectCommand(
      * 6.6.1.4.4.3 Effect on receipt
      * On receipt of the off with effect command and if the GlobalSceneControl attribute is equal to TRUE,
      * the application on the associated endpoint shall store its settings in its global scene then set the
-     * GlobalSceneControl attribute to FALSE. The application shall then enter its “off” state, update the OnOff
+     * GlobalSceneControl attribute to FALSE. The application shall then enter its ï¿½offï¿½ state, update the OnOff
      * attribute accordingly, and set the OnTime attribute to 0x0000.
-     * In all other cases, the application on the associated endpoint shall enter its “off” state, update the OnOff
+     * In all other cases, the application on the associated endpoint shall enter its ï¿½offï¿½ state, update the OnOff
      * attribute accordingly, and set the OnTime attribute to 0x0000.
      */
 #ifdef CLD_ONOFF_ATTR_GLOBAL_SCENE_CONTROL

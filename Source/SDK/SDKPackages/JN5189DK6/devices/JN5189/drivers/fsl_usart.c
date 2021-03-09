@@ -218,7 +218,8 @@ status_t USART_Init(USART_Type *base, const usart_config_t *config, uint32_t src
     base->CFG = USART_CFG_PARITYSEL(config->parityMode) | USART_CFG_STOPLEN(config->stopBitCount) |
                 USART_CFG_DATALEN(config->bitCountPerChar) | USART_CFG_LOOP(config->loopback) |
                 USART_CFG_SYNCEN(config->syncMode >> 1) | USART_CFG_SYNCMST(config->syncMode) |
-                USART_CFG_CLKPOL(config->clockPolarity) | USART_CFG_ENABLE_MASK;
+                USART_CFG_CLKPOL(config->clockPolarity) | USART_CFG_CTSEN(config->enableHardwareFlowControl) |
+                USART_CFG_ENABLE_MASK;
 
     /* Setup baudrate */
     result = USART_SetBaudRate(base, config->baudRate_Bps, srcClock_Hz);
@@ -277,18 +278,19 @@ void USART_GetDefaultConfig(usart_config_t *config)
     memset(config, 0, sizeof(*config));
 
     /* Set always all members ! */
-    config->baudRate_Bps         = 115200U;
-    config->parityMode           = kUSART_ParityDisabled;
-    config->stopBitCount         = kUSART_OneStopBit;
-    config->bitCountPerChar      = kUSART_8BitsPerChar;
-    config->loopback             = false;
-    config->enableRx             = false;
-    config->enableTx             = false;
-    config->txWatermark          = kUSART_TxFifo0;
-    config->rxWatermark          = kUSART_RxFifo1;
-    config->syncMode             = kUSART_SyncModeDisabled;
-    config->enableContinuousSCLK = false;
-    config->clockPolarity        = kUSART_RxSampleOnFallingEdge;
+    config->baudRate_Bps              = 115200U;
+    config->parityMode                = kUSART_ParityDisabled;
+    config->stopBitCount              = kUSART_OneStopBit;
+    config->bitCountPerChar           = kUSART_8BitsPerChar;
+    config->loopback                  = false;
+    config->enableRx                  = false;
+    config->enableTx                  = false;
+    config->txWatermark               = kUSART_TxFifo0;
+    config->rxWatermark               = kUSART_RxFifo1;
+    config->syncMode                  = kUSART_SyncModeDisabled;
+    config->enableContinuousSCLK      = false;
+    config->clockPolarity             = kUSART_RxSampleOnFallingEdge;
+    config->enableHardwareFlowControl = false;
 }
 
 /*!

@@ -291,23 +291,12 @@ PUBLIC PDM_teStatus PDM_eSaveRecordDataInIdleTask(uint16_t u16IdValue,
 PUBLIC void PDM_vIdleTask(uint8_t u8WritesAllowed);
 
 /*!
-* @brief Appends Data Onto An Existing Record in the File System
+ * @brief Purge the pending event available in the queue
  *
- * This function appends data to a record previously written.
- * The record is identified by means of a 16-bit user-defined value.
- *
- * @param u16IdValue User-defined ID of the record to be saved
- * @param pvData  Pointer to data buffer to be saved in the record in NVM
- * @param u16DataSize Length of data to be saved, in bytes
- *
- * @retval PDM_E_STATUS_OK (success)
- * @retval PDM_E_STATUS_INVLD_PARAM (error in arguments, including non existing record)
- * @retval PDM_E_STATUS_PDM_FULL
- * @retval PDM_E_STATUS_INTERNAL_ERROR
+ * @retval none
  */
-PUBLIC PDM_teStatus PDM_eAppendDataToExistingRecord(uint16_t u16IdValue,
-                                                    void *pvData,
-                                                    uint16_t u16DataSize);
+PUBLIC void PDM_vQueuePurge(void);
+
 
 /*!
 * @brief Reads Partial Data from an Existing Record in the File System
@@ -330,28 +319,6 @@ PUBLIC PDM_teStatus PDM_eReadPartialDataFromExistingRecord(uint16_t u16IdValue,
                                                            void *pvDataBuffer,
                                                            uint16_t u16DataBufferLength,
                                                            uint16_t *pu16DataBytesRead);
-
-/*!
-* @brief Overwrite Partial Data in an existing Record in the File System
- *
- * This function overwrites date into an existing record identified by its ID.
- * It overwrites the number of bytes defined in the length argument at a certain offset
- * in the segment
- *
- * @param  u16IdValue      User-defined ID of the record to be overwritten
- * @param  u16TableOffset  Data Offset in segment at which write operation must be performed
- * @param  pu8DataBuffer   input Data Buffer to read dat to write from
- * @param  u16DataLength   Length of data written, in bytes.
- *
- * @retval PDM_E_STATUS_OK (success)
- * @retval PDM_E_STATUS_INVLD_PARAM (error in arguments)
- * @retval PDM_E_STATUS_INTERNAL_ERROR
- * @retval PDM_E_STATUS_USER_BUFFER_SIZE (input data too large)
- */
-PUBLIC PDM_teStatus PDM_eOverWriteExistingDataInRecord(uint16_t u16IdValue,
-                                                       uint16_t u16TableOffset,
-                                                       void *pvDataBuffer,
-                                                       uint16_t u16DataBufferLength);
 
 /*!
  * @brief Delete a PDM record

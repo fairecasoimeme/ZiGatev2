@@ -30,7 +30,7 @@ extern "C" {
 #else
 #ifdef __MINGW32__
 #define ROM_API
-#elif(defined(__CC_ARM) || defined(__ARMCC_VERSION)) || (defined(__ICCARM__))
+#elif (defined(__CC_ARM) || defined(__ARMCC_VERSION)) || (defined(__ICCARM__))
 #define ROM_API
 #else
 #define ROM_API __attribute__((long_call))
@@ -41,7 +41,7 @@ extern "C" {
 #define WEAK __attribute__((weak))
 #endif
 
-#ifdef __CDT_PARSER__
+#if defined __CDT_PARSER__ || defined __cplusplus
 #define STATIC_ASSERT(value, message)
 #else
 #define STATIC_ASSERT _Static_assert

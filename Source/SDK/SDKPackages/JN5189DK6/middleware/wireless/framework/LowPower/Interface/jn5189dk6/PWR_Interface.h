@@ -1,39 +1,11 @@
 /*! *********************************************************************************
-* The Clear BSD License
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017, 2019 NXP
+* Copyright 2016-2017, 2019-2020 NXP
 * All rights reserved.
 *
 * \file
 *
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the disclaimer
-* below) provided that the following conditions are met:
-*
-* * Redistributions of source code must retain the above copyright notice,
-*   this list of conditions and the following disclaimer.
-*
-* * Redistributions in binary form must reproduce the above copyright notice,
-*   this list of conditions and the following disclaimer in the documentation
-*   and/or other materials provided with the distribution.
-*
-* * Neither the name of the copyright holder nor the names of its contributors
-*   may be used to endorse or promote products derived from this software
-*   without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
 
 #ifndef _PWR_INTERFACE_H_
@@ -113,6 +85,8 @@ typedef  union
         uint8_t FromACmp0       :1;  /* Wakeup by Analog Comparator 0*/
         uint8_t FromACmp1       :1;  /* Wakeup by Analog Comparator 1*/
         uint8_t FromBOD         :1;  /* Wakeup by Brown-out Detect */
+        uint8_t FromBLELL       :1;  /* Wakeup by BLE LinkLayer */
+
         uint8_t Unused          :5;  /* Unused */
     } Bits;
 } PWR_WakeupReason_t;
@@ -516,6 +490,22 @@ PWR_teStatus PWR_vWakeUpConfig(uint32_t pwr_config);
 void PWR_vForceRamRetention(uint32_t u32RetainBitmap);
 
 /**
+ * Force some RAM banks to be held in retention when going to sleep mode in sleep modes
+ * E_AHI_SLEEP_OSCON_RAMON and E_AHI_SLEEP_OSCOFF_RAMON.
+ * Unlike PWR_vForceRamRetention, which uses a bitmap of banks to retain and replaces any
+ * previous configuration, this function takes the start and length of a region and adds
+ * the banks that this uses to the existing configuration. As such, it can be called
+ * multiple times for different regions, accumulating the total set of banks needed as it
+ * goes.
+ */
+void PWR_vAddRamRetention(uint32_t u32Start, uint32_t u32Length);
+
+/**
+ * Get current RAM retention setting.
+ */
+uint32_t PWR_u32GetRamRetention(void);
+
+/**
  * Force radio registers to be retained through sleep. Enabled if bRetain is
  * TRUE, disabled if bRetain is FALSE.
  * Configuration is cleared after a call to PWRM_vInit(). Application should
@@ -526,6 +516,21 @@ void PWR_vForceRadioRetention(bool_t bRetain);
 void PWR_vWakeInterruptCallback(void);
 
 /* <-- Added from PWRM */
+
+/* Added for freeRTOS tickless mode --> */
+/**
+ * Set RTC wakeup time in milliseconds duration.
+ */
+void PWR_RTCSetWakeupTimeMs (uint32_t wakeupTimeMs);
+
+uint32_t PWR_GetTotalSleepDurationMs(uint32_t start_count);
+
+void PWR_SetDeepSleepTimeInMs(uint32_t deepSleepTimeMs);
+
+void PWR_Start32kCounter(void);
+
+
+/* <--Added for freeRTOS tickless mode */
 
 #ifdef __cplusplus
 }

@@ -395,11 +395,11 @@ PUBLIC void vSL_LogInit(void)
 
     DBG_vInit(&sFunctionTbl);
 }
+
 /****************************************************************************
  *
  * NAME: vSL_setLogLevel
  *
-
  *
  * PARAMETERS:  Name                RW  Usage
  *
@@ -410,6 +410,7 @@ PUBLIC void vSL_setLogLevel(uint8 logLevel)
 {
 	u8LogLevel = logLevel;
 }
+
 
 /****************************************************************************/
 /***        Local Functions                                               ***/

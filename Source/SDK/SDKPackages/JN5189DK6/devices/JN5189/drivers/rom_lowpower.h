@@ -505,4 +505,4 @@ static inline void Chip_LOWPOWER_ArmSoftwareReset(void)
 }
 #endif
 
-#endif /* __LOWPOWER_JN518X_H_ */
+#endif /* __ROM_LOWPOWER_H_ */

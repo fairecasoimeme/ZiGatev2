@@ -1,39 +1,11 @@
 /*! *********************************************************************************
-* The Clear BSD License
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017, 2019 NXP
+* Copyright 2016-2017, 2019-2020 NXP
 * All rights reserved.
 *
 * \file
 *
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the disclaimer
-* below) provided that the following conditions are met:
-*
-* * Redistributions of source code must retain the above copyright notice,
-*   this list of conditions and the following disclaimer.
-*
-* * Redistributions in binary form must reproduce the above copyright notice,
-*   this list of conditions and the following disclaimer in the documentation
-*   and/or other materials provided with the distribution.
-*
-* * Neither the name of the copyright holder nor the names of its contributors
-*   may be used to endorse or promote products derived from this software
-*   without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
 
 /*****************************************************************************
@@ -64,7 +36,23 @@
 #include "fsl_power.h"
 #include "GPIO_Adapter.h"
 
+#include "fsl_rtc.h"
+
 #include "Panic.h"
+
+#define RTOS_TICKLESS 0
+#if defined USE_RTOS && (USE_RTOS != 0)
+  #ifdef FSL_RTOS_FREE_RTOS
+  #include "FreeRTOSConfig.h"
+  #include "FreeRTOS.h"
+  #include "portmacro.h"
+  #undef RTOS_TICKLESS
+  #define RTOS_TICKLESS (defined configUSE_TICKLESS_IDLE && (configUSE_TICKLESS_IDLE != 0) && (cPWR_FullPowerDownMode))
+//  #define USE_WTIMER /* For now use RTC Wake counter */
+  #else /* not FreeRTOS */
+  #error "RTOS unsupported"
+  #endif
+#endif
 
 #if (cPWR_FullPowerDownMode)
 extern void hardware_init(void);
@@ -93,6 +81,15 @@ extern void hardware_init(void);
 
 #define PWR_PREVENT_SLEEP_IF_LESS_TICKS        (1000)
 
+#define TICKS32K_TO_SECONDS(x)        ((x)>>15))   /* multiply by 32768 divide by 1000 */
+#define TICKS32K_TO_MILLISECONDS(x)   (((x)*125)>>12) /* mult by 1000 divided by 32768*/
+#define SECONDS_TO_TICKS32K(x)         ((x)<<15)
+#define MILLISECONDS_TO_TICKS32K(x)   (((x)<<12)/125)
+
+#define RTCTICKS_TO_SECONDS(x)        (x)
+#define SECONDS_TO_RTCTICKS(x)        (x)
+#define RTCTICKS_TO_MILLISECONDS(x)        ((x)*1000)
+#define MILLISECONDS_TO_RTCTICKS(x)        ((x)/1000)
 /* Tune FRO32K calibration
  * PWR_FRO32K_CAL_SCALE : Calibration period 4: 2^4*30.5us = 488us */
 #define PWR_FRO32K_CAL_WAKEUP_END         0   /* Set to 1 to complete the Cal at the end of the SW wakeup     */
@@ -110,6 +107,8 @@ extern void hardware_init(void);
 #if PWR_DEBUG
 #include "fsl_debug_console.h"
 #endif
+
+
 /*****************************************************************************
  *                               PUBLIC VARIABLES                            *
  *---------------------------------------------------------------------------*
@@ -140,12 +139,15 @@ static void PWR_SetWakeUpConfig(uint32_t set_msk, uint32_t clr_msk);
 static uint32_t PWR_GetWakeUpConfig(void);
 static void vSetWakeUpIoConfig(void);
 static uint64_t u64GetWakeupSourceConfig(uint32_t u32Mode);
+#if (RTOS_TICKLESS)
+static void PWR_RTCWakeupStart(void);
+#endif
 #endif /* (cPWR_FullPowerDownMode) */
 
 /*****************************************************************************
  *                        PUBLIC TYPE DEFINITIONS                            *
  *---------------------------------------------------------------------------*
- * Add to this section all the data types definitions: stuctures, unions,    *
+ * Add to this section all the data types definitions: structures, unions,    *
  * enumerations, typedefs ...                                                *
  *---------------------------------------------------------------------------*
  *****************************************************************************/
@@ -172,6 +174,8 @@ typedef struct {
     uint32_t scb_aircr;
     uint32_t scb_shp[12];
     uint32_t nvic_ip[NUMBER_OF_INT_VECTORS];
+    uint32_t sysTick_CSR;
+    uint32_t sysTick_RV;
 
 } ARM_CM4_register_t;
 
@@ -218,6 +222,8 @@ static pfPWRCallBack_t gpfPWR_LowPowerExitCb;
 
 static PWR_clock_32k_hk_t mHk32k = {
     .freq_scale_shift = PWR_FRO32K_CAL_SHIFT,
+    .freq32k   = (32768*PWR_FRO32K_CAL_SHIFT), /* expressed in 16th of Hz: (1<<19) */
+    .ppm_32k = -0x6000,                        /* initialization of the 32k clock calibration in part per miliion */
 };
 
 static volatile bool_t        s_bWakeTimerActive = FALSE;
@@ -234,6 +240,11 @@ static volatile bool_t        bBLE_Active = TRUE;
 static volatile bool_t        bBLE_Active = FALSE;
 #endif
 
+#if RTOS_TICKLESS
+#define RESTORE_SYSTICK_ON_WAKEUP 1
+uint8_t mPWR_DeepSleepTimeUpdated = 0;
+uint32_t mPWR_DeepSleepTimeMs;
+#endif
 /*****************************************************************************
  *                             PRIVATE FUNCTIONS                             *
  *---------------------------------------------------------------------------*
@@ -257,6 +268,19 @@ static void Save_CM4_registers(ARM_CM4_register_t * reg_store)
     {
         reg_store->nvic_ip[i] = NVIC->IP[i];
     }
+#ifdef RESTORE_SYSTICK_ON_WAKEUP
+    reg_store->sysTick_CSR = SysTick->CTRL;
+    /* Value to be programmed in LOAD at next SYSTICK restore */
+    /* Nb Core ticks to countdown */
+    uint32_t count_for_one_tick = CLOCK_GetFreq(kCLOCK_CoreSysClk) / configTICK_RATE_HZ;
+    reg_store->sysTick_RV =  (count_for_one_tick -1UL) & SysTick_LOAD_RELOAD_Msk;
+
+    /* Disable SysTick counter and interrupt */
+    SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk);
+    /* clear PendSysTick bit in ICSR, if set */
+    SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
+#endif
+
 }
 
 static void Restore_CM4_registers(ARM_CM4_register_t * reg_store)
@@ -276,6 +300,11 @@ static void Restore_CM4_registers(ARM_CM4_register_t * reg_store)
     {
         NVIC->IP[i] = reg_store->nvic_ip[i];
     }
+#ifdef RESTORE_SYSTICK_ON_WAKEUP
+    SysTick->VAL = 0UL; /* Current value is reset */
+    SysTick->LOAD = reg_store->sysTick_RV; /* Set reload value first */
+    SysTick->CTRL = reg_store->sysTick_CSR & ~SysTick_CTRL_ENABLE_Msk; /* postpone systick restart */
+#endif
 }
 
 #if PWR_DEBUG
@@ -375,7 +404,10 @@ static void debug_low_power(void)
 #else
     PWR_DBG_LOG("llDS=%d, DUR=%d, WKUP=%d", ble_deepslcntl_get(), ble_deepslstat_get(), ble_deepslwkup_get());
 #endif
-    PWR_DBG_LOG("ENPB=0x%x", ble_enbpreset_get());
+    /*
+     * PWR_DBG_LOG("ENPB=0x%x", ble_enbpreset_get());
+     * ENBPRESET is not restored yet so no use logging
+     */
 }
 #endif
 /* Default implementation of the WakeupTimer IRQ handler is weak:
@@ -383,9 +415,13 @@ static void debug_low_power(void)
  * */
 void BLE_WakeupTimer_IRQHandler(void)
 {
-    BOARD_DbgLpIoSet(4, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+    BOARD_DbgIoSet(4, 0);
+#endif
     NVIC_DisableIRQ(BLE_WAKE_UP_TIMER_IRQn);
-    BOARD_DbgLpIoSet(4, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+    BOARD_DbgIoSet(4, 1);
+#endif
 }
 #endif /* PWR_DEBUG */
 
@@ -476,10 +512,12 @@ void Update32kFrequency(uint32_t freq)
     }
     else
     {
-        BOARD_DbgLpIoSet(4, 1);
-        BOARD_DbgLpIoSet(4, 0);
-        BOARD_DbgLpIoSet(4, 1);
-        BOARD_DbgLpIoSet(4, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+        BOARD_DbgIoSet(4, 1);
+        BOARD_DbgIoSet(4, 0);
+        BOARD_DbgIoSet(4, 1);
+        BOARD_DbgIoSet(4, 0);
+#endif
 
 #if PWR_FRO32K_CAL_INCOMPLETE_PRINTF
         PWR_DBG_LOG("32K cal incomplete");
@@ -490,7 +528,6 @@ void Update32kFrequency(uint32_t freq)
 
 
 #endif
-
 
 /*---------------------------------------------------------------------------
  * Name: PWR_HandleDeepSleepMode
@@ -508,6 +545,7 @@ static void vHandleSleepModes(uint32_t mode)
      /* TODO: Note from pwrm.c is to not disable interrupts "Keep commented
         - DEEP DOWN 1 fails with 4470 Application if interrupts are masked" */
     __disable_irq();
+
 
     PWR_ClearWakeupReason();
 
@@ -564,7 +602,6 @@ static void vHandleSleepModes(uint32_t mode)
         {
             pd_cfg.sleep_cfg |= PM_CFG_KEEP_AO_VOLTAGE;
         }
-        Save_CM4_registers(&cm4_misc_regs);
 
         pd_cfg.wakeup_io = PWR_GetWakeUpConfig();
         pd_cfg.wakeup_src = u64GetWakeupSourceConfig(mode);
@@ -577,6 +614,27 @@ static void vHandleSleepModes(uint32_t mode)
 
         if (mode & PWR_CFG_RAM_ON)
         {
+            /* Useless to save CM4 registers if RAM is not to be retained */
+            Save_CM4_registers(&cm4_misc_regs);
+
+            #if  RTOS_TICKLESS
+            /* No need to store previous value of RTC IRQ priority: already done by Save_CM4_registers
+             * that saves the Interrupt priorities for all IRQs */
+            NVIC_ClearPendingIRQ(RTC_IRQn);
+            NVIC_SetPriority(RTC_IRQn, 0);  /* Force RTC IRQ to raise its priority required ??? */
+            /* Configure wakeup timer : RTC or optionally WTIMER */
+            if(mPWR_DeepSleepTimeUpdated)
+            {
+                PWR_RTCSetWakeupTimeMs(mPWR_DeepSleepTimeMs);
+                mPWR_DeepSleepTimeUpdated = FALSE;        // Coexistence with TMR Manager
+            }
+            PWR_RTCWakeupStart();
+            #endif
+/***********************END***************************************/
+#if gSupportBle
+            /* Clear ble wake up IRQs that could be pending */
+            NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
+#endif
             /* Go to sleep */
             PWRLib_EnterPowerDownMode(&pd_cfg);
 
@@ -591,9 +649,14 @@ static void vHandleSleepModes(uint32_t mode)
 
             /* Initialise hardware */
             hardware_init();
-            Restore_CM4_registers(&cm4_misc_regs);
+            Restore_CM4_registers(&cm4_misc_regs); /* Restore IRQs */
 
-            BOARD_DbgLpIoSet(1, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+            BOARD_DbgIoSet(0, 1);
+#endif
+
+            /* Get wakeup reason before waking up the link layer to avoid false LL wakeup detection */
+            PWR_UpdateWakeupReason();
 
 #if gSupportBle
             /* Enable BLE Interrupt */
@@ -602,7 +665,9 @@ static void vHandleSleepModes(uint32_t mode)
             NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
 #endif
 
-            BOARD_DbgLpIoSet(1, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+            BOARD_DbgIoSet(1, 1);
+#endif
 
             BOARD_DbgDiagEnable();
 
@@ -610,13 +675,13 @@ static void vHandleSleepModes(uint32_t mode)
             PWR_Start32KCalibration();
 #endif
 
-            /* Get wakeup reason before waking up the link layer to avoid false LL wakeup detection */
-            PWR_UpdateWakeupReason();
 
-#if gSupportBle
+#if gSupportBle && !(RTOS_TICKLESS && gTimerMgrUseLpcRtc_c)
             TMR_ReInit();
 #endif
-            BOARD_DbgLpIoSet(4, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+            BOARD_DbgIoSet(4, 0);
+#endif
 
 #if defined DBG_PWR && (DBG_PWR > 0)
             debug_low_power();
@@ -627,7 +692,10 @@ static void vHandleSleepModes(uint32_t mode)
                 gpfPWR_LowPowerExitCb();
             }
 
-            BOARD_DbgLpIoSet(4, 1);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+            BOARD_DbgIoSet(4, 1);
+#endif
+
 
 
 #if gClkUseFro32K && gClkRecalFro32K && PWR_FRO32K_CAL_WAKEUP_END
@@ -635,7 +703,9 @@ static void vHandleSleepModes(uint32_t mode)
             Update32kFrequency(freq);
 #endif
 
-            BOARD_DbgLpIoSet(4, 0);
+#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
+            BOARD_DbgIoSet(4, 0);
+#endif
 
             /* Check if WTIMER enabled and, if so, check running status */
             if (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK))
@@ -818,7 +888,7 @@ void PWR_Init(void)
 #if (cPWR_FullPowerDownMode)
 
 #if gClkUseFro32K /* Using 32k FRO */
-#if gClkRecalFro32K /* Will recalibrate 32k FRO on each warm start */
+    #if gClkRecalFro32K /* Will recalibrate 32k FRO on each warm start */
     // TODO MCB-539: paralyze FRO32K calibration to reduce the cold boot time
     uint32_t freq;
     PWR_clock_32k_hk_t *hk = PWR_GetHk32kHandle();
@@ -831,7 +901,7 @@ void PWR_Init(void)
     PWR_DBG_LOG("freq=%d", freq>>hk->freq_scale_shift);
 
     hk->freq32k = freq;
-#else
+    #else
     /* Does selected sleep mode require 32kHz oscillator? */
     if (0 != (PWR_GetDeepSleepConfig() & PWR_CFG_OSC_ON))
     {
@@ -888,14 +958,14 @@ void PWR_Init(void)
         }
         else
         {
-            mHk32k.freq32k = 32768;
+            mHk32k.freq32k = (32768<<PWR_FRO32K_CAL_SHIFT);
         }
     }
-#endif
+    #endif /* gClkRecalFro32K */
 #else
     /* If using XTAL 32k, set calibration value to expected value */
-    mHk32k.freq32k = 32768;
-#endif
+    mHk32k.freq32k =  (32768<<PWR_FRO32K_CAL_SHIFT);
+#endif  /* gClkUseFro32K */
 
     s_bWakeTimerActive = FALSE;
     psNextWake = NULL;
@@ -988,7 +1058,7 @@ bool_t PWR_CheckIfDeviceCanGoToSleep(void)
 #endif
 
         /* Check if WTIMER enabled and, if so, check running status */
-        if (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK))
+        if (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRL0_WAKE_UP_TIMERS_MASK))
         {
             bool dealine_too_close = FALSE;
             WTIMER_status_t InterruptStatus[2];
@@ -1016,20 +1086,37 @@ bool_t PWR_CheckIfDeviceCanGoToSleep(void)
              */
             if (   (0 != (PWR_GetDeepSleepConfig() & PWR_CFG_OSC_ON))
                 && (InterruptStatus[1] != WTIMER_STATUS_RUNNING)
-				&& (FALSE == bBLE_Active)
+                && (FALSE == bBLE_Active)
                )
             {
                 break;
             }
         }
+        if  (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRL0_RTC_MASK))
+        {
+            uint32_t rtc_ctrl = RTC->CTRL;
+            if (rtc_ctrl & (RTC_CTRL_ALARM1HZ_MASK | RTC_CTRL_WAKE1KHZ_MASK))
+            {
+                /* Alarm or wake interrupt have already fired " prevent sleep */
+                break;
+            }
+            if (rtc_ctrl &  RTC_CTRL_WAKEDPD_EN_MASK)
+            {
+                /* 1kHz clock timer is running */
+                /* Check if the deadline is not too close to go to sleep */
+                uint32_t wake_countdown = RTC->WAKE;
+                if ((wake_countdown > 0) && (MILLISECONDS_TO_TICKS32K(wake_countdown) < PWR_PREVENT_SLEEP_IF_LESS_TICKS))
+                  break;
+            }
+        }
 
 #if gSupportBle
-    if (PWR_GetDeepSleepConfig() & PWR_CFG_RAM_ON)
-    {
-        /* Check if BLE LL can sleep */
-       pwr_mode = (uint8_t)BLE_get_sleep_mode();
-       if (pwr_mode < kPmPowerDown0) break;
-    }
+        if (PWR_GetDeepSleepConfig() & PWR_CFG_RAM_ON)
+        {
+        	/* Check if BLE LL can sleep */
+        	pwr_mode = (uint8_t)BLE_get_sleep_mode();
+        	if (pwr_mode < kPmPowerDown0) break;
+        }
 #endif
 
        /* All conditions successfully passed */
@@ -1130,14 +1217,14 @@ extern PWR_WakeupReason_t PWR_EnterLowPower(void)
     if( !mPreventEnterLowPower && PWR_CheckIfDeviceCanGoToSleep() && PWR_DeepSleepAllowed())
     {
         ReturnValue = PWR_EnterPowerDown();
+        OSA_InterruptEnable();
     }
     else
 #endif
     {
+        OSA_InterruptEnable();
         PWR_EnterSleep();
     }
-
-    OSA_InterruptEnable();
 
     return ReturnValue;
 }
@@ -1289,6 +1376,29 @@ void PWR_IndicateBLEActive(bool_t bBLE_ActiveIndication)
 #endif
 }
 
+
+void PWR_Start32kCounter(void)
+{
+    WTIMER_status_t     timer_status;
+    if (0 == (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK))
+    {
+        WTIMER_Init();
+    }
+    /* Check wake timers */
+    timer_status = WTIMER_GetStatusFlags(WTIMER_TIMER0_ID);
+    if ( timer_status != WTIMER_STATUS_RUNNING )
+    {
+        /* was not running yet : start free running count */
+        WTIMER_StartTimer(WTIMER_TIMER0_ID, ~0UL);
+    }
+}
+
+
+uint32_t PWR_Get32kTimestamp(void)
+{
+     return WTIMER_ReadTimer(WTIMER_TIMER0_ID);
+}
+
 #if (cPWR_FullPowerDownMode)
 /*---------------------------------------------------------------------------
  * Name: PWR_SetWakeUpConfig
@@ -1336,46 +1446,57 @@ static void vSetWakeUpIoConfig(void)
 /* Added from PWRM */
 static uint64_t u64GetWakeupSourceConfig(uint32_t u32Mode)
 {
-    WTIMER_status_t     timer_status;
-
     /* Check for WTIMER block enabled, and 32k clock running in sleep */
-    if (   (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK))
-        && (0 != (u32Mode & PWR_CFG_OSC_ON))
-       )
+    if (0 != (u32Mode & PWR_CFG_OSC_ON))
     {
-        /* Check wake timers */
-        timer_status = WTIMER_GetStatusFlags(WTIMER_TIMER1_ID);
-        if ( timer_status == WTIMER_STATUS_RUNNING )
+        if (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET(1)))
         {
-            if ( !(psNextWake && (PWR_E_TIMER_RUNNING == psNextWake->u8Status)))
+            WTIMER_status_t     timer_status;
+            /* Check wake timers */
+            timer_status = WTIMER_GetStatusFlags(WTIMER_TIMER1_ID);
+            if ( timer_status == WTIMER_STATUS_RUNNING )
             {
-                 /* Timer running but no wake event queued: incorrect state but
-                  * not critical, so carry on */
+                if ( !(psNextWake && (PWR_E_TIMER_RUNNING == psNextWake->u8Status)))
+                {
+                    /* Timer running but no wake event queued: incorrect state but
+                     * not critical, so carry on */
+                }
+                pwrm_sleep_config.pm_wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER1;
             }
-            pwrm_sleep_config.pm_wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER1;
+            else
+            {
+                pwrm_sleep_config.pm_wakeup_src &= ~POWER_WAKEUPSRC_WAKE_UP_TIMER1;
+            }
+
+            timer_status = WTIMER_GetStatusFlags(WTIMER_TIMER0_ID);
+            if ( timer_status == WTIMER_STATUS_RUNNING )
+            {
+                pwrm_sleep_config.pm_wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER0;
+            }
+            else
+            {
+                pwrm_sleep_config.pm_wakeup_src &= ~POWER_WAKEUPSRC_WAKE_UP_TIMER0;
+            }
         }
         else
         {
-            pwrm_sleep_config.pm_wakeup_src &= ~POWER_WAKEUPSRC_WAKE_UP_TIMER1;
+            /* No wake timers enabled */
+            pwrm_sleep_config.pm_wakeup_src &= ~(  POWER_WAKEUPSRC_WAKE_UP_TIMER0
+                                                 | POWER_WAKEUPSRC_WAKE_UP_TIMER1);
         }
 
-        timer_status = WTIMER_GetStatusFlags(WTIMER_TIMER0_ID);
-        if ( timer_status == WTIMER_STATUS_RUNNING )
+        if (0 != (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRL0_RTC(1)))
         {
-            pwrm_sleep_config.pm_wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER0;
-        }
-        else
-        {
-            pwrm_sleep_config.pm_wakeup_src &= ~POWER_WAKEUPSRC_WAKE_UP_TIMER0;
+            if (RTC->CTRL & RTC_CTRL_RTC_EN_MASK)
+            {
+                pwrm_sleep_config.pm_wakeup_src |=  POWER_WAKEUPSRC_RTC;
+            }
+            else
+            {
+                pwrm_sleep_config.pm_wakeup_src &=  ~POWER_WAKEUPSRC_RTC;
+            }
         }
     }
-    else
-    {
-        /* No wake timers enabled */
-        pwrm_sleep_config.pm_wakeup_src &= ~(  POWER_WAKEUPSRC_WAKE_UP_TIMER0
-                                             | POWER_WAKEUPSRC_WAKE_UP_TIMER1);
-    }
-
     return pwrm_sleep_config.pm_wakeup_src;
 }
 
@@ -1462,6 +1583,18 @@ void PWR_vForceRamRetention(uint32_t u32RetainBitmap)
     pwrm_force_retention |= (u32RetainBitmap & PM_CFG_SRAM_ALL_RETENTION) << PM_CFG_SRAM_BANK_BIT_BASE;
 }
 
+void PWR_vAddRamRetention(uint32_t u32Start, uint32_t u32Length)
+{
+    uint32_t u32RamBanks;
+
+    u32RamBanks = PWRLib_u32RamBanksSpanned(u32Start, u32Length);
+    pwrm_force_retention |= (u32RamBanks & PM_CFG_SRAM_ALL_RETENTION) << PM_CFG_SRAM_BANK_BIT_BASE;
+}
+
+uint32_t PWR_u32GetRamRetention(void)
+{
+    return pwrm_force_retention;
+}
 
 void PWR_vForceRadioRetention(bool_t bRetain)
 {
@@ -1492,8 +1625,9 @@ PWR_teStatus PWR_eScheduleActivity(PWR_tsWakeTimerEvent *psWake,
         }
 
         uint32_t u32Ticks;
+        uint32_t freqHz = mHk32k.freq32k>>PWR_FRO32K_CAL_SHIFT;
         u64AdjustedTicks = u32TimeMs;
-        u64AdjustedTicks = u64AdjustedTicks * mHk32k.freq32k / 1000;
+        u64AdjustedTicks = u64AdjustedTicks * freqHz / 1000;
 
         if (u64AdjustedTicks > 0xffffffff)
         {
@@ -1661,4 +1795,88 @@ void PWR_vColdStart(void)
         }
     }
 }
+#else
+void PWR_vWakeInterruptCallback(void)
+{
+    /* Empty content if cPWR_FullPowerDownMode is disabled */
+}
 #endif
+
+
+void PWR_SetDeepSleepTimeInMs(uint32_t deepSleepTimeMs)
+{
+#if (RTOS_TICKLESS)
+    PWR_DBG_LOG("timeMs=%d", deepSleepTimeMs);
+    if(deepSleepTimeMs != 0)
+    {
+        mPWR_DeepSleepTimeMs = deepSleepTimeMs;
+        mPWR_DeepSleepTimeUpdated = TRUE;
+    }
+#else
+    (void) deepSleepTimeMs;
+#endif /* (cPWR_UsePowerDownMode) */
+}
+
+#if (RTOS_TICKLESS)
+/*---------------------------------------------------------------------------
+* Name: PWR_GetTotalSleepDurationMS
+* Description: -
+* Parameters: -
+* Return: -
+*---------------------------------------------------------------------------*/
+uint32_t PWR_GetTotalSleepDurationMs(uint32_t start_of_sleep)
+{
+
+    int32_t time = 0;
+    OSA_InterruptDisable();
+#ifdef USE_WTIMER
+    int time_delta; /* signed */
+    uint32_t currentSleepTime;
+
+    currentSleepTime = PWR_Get32kTimestamp();
+    time_delta = (start_of_sleep - currentSleepTime);
+    /* time_delta is a number of 32kHz ticks: convert to seconds */
+    time = TICKS32K_TO_MILLISECONDS(time_delta);
+#else
+    /* the counter is counting down so previous value is greater.
+     * already expressed in 1kHz ticks */
+    time = (int32_t)start_of_sleep - (int32_t)RTC_GetWakeupCount(RTC);
+#endif
+
+    OSA_InterruptEnable();
+
+    /* If time is negative, that means power down was aborted and the wake value
+     * didn't get set. Set to zero in this case to avoid corruption of the next
+     * daeadline update in the tickless hook. */
+    if (time < 0)
+    {
+        time = 0;
+    }
+
+    PWR_DBG_LOG("timeMs=%d", time);
+    return (uint32_t)time;
+
+}
+
+
+/*---------------------------------------------------------------------------
+* Name: PWR_RTCSetWakeupTimeMs
+* Description: -
+* Parameters: wakeupTimeMs: New wakeup time in milliseconds
+* Return: -
+*---------------------------------------------------------------------------*/
+void PWR_RTCSetWakeupTimeMs (uint32_t wakeupTimeMs)
+{
+    PWR_DBG_LOG("timer ms=%d", wakeupTimeMs);
+    /* Countdown of 1kHz clock */
+    RTC_SetWakeupCount(RTC, wakeupTimeMs);
+}
+
+static void PWR_RTCWakeupStart(void)
+{
+    PWR_DBG_LOG("");
+    uint32_t enabled_interrupts = RTC_GetEnabledInterrupts(RTC);
+    enabled_interrupts |= kRTC_WakeupInterruptEnable;
+    RTC_EnableInterrupts(RTC, enabled_interrupts);
+}
+#endif /* RTOS_TICKLESS */

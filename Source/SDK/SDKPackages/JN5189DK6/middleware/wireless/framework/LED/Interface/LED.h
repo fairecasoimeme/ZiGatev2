@@ -16,6 +16,10 @@
 #include "EmbeddedTypes.h"
 #include "board.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef gLEDSupported_d
 #define gLEDSupported_d                 TRUE
 #endif
@@ -462,5 +466,9 @@ void LED_RgbSetDimInterval(uint8_t);
 #define LED_RgbSetDimInterval(value)
 
 #endif /* gLEDSupported_d */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _LED_INTERFACE_H_ */

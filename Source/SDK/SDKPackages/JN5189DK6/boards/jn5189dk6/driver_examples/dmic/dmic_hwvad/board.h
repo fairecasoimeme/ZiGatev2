@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NXP
+ * Copyright  2019 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -46,6 +46,13 @@
 #define BOARD_LED_USB_DONGLE2_GPIO GPIO
 #define BOARD_LED_USB_DONGLE2_GPIO_PORT 0U
 #define BOARD_LED_USB_DONGLE2_GPIO_PIN 10U
+
+/* SPIFI clock rate */
+#define BOARD_SPIFI_CLK_RATE 16000000U
+
+#ifndef BIT
+#define BIT(x) (1 << (x))
+#endif
 
 /* Board led color mapping */
 #define LOGIC_LED_ON 0U
@@ -158,13 +165,13 @@ extern int32_t CLOCK_ai32MXtalIecLoadPfVsTemp_x1000[HW_32M_LOAD_VS_TEMP_SIZE];
            are just for example */
 
 /* Temperature related to element 0 of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_MIN (-20)
+#define HW_32k_LOAD_VS_TEMP_MIN (-40)
 
 /* Temperature related to final element of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_MAX (100)
+#define HW_32k_LOAD_VS_TEMP_MAX (130)
 
 /* Temperature step between elements of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_STEP (20)
+#define HW_32k_LOAD_VS_TEMP_STEP (5)
 
 #define HW_32k_LOAD_VS_TEMP_SIZE ((HW_32k_LOAD_VS_TEMP_MAX - HW_32k_LOAD_VS_TEMP_MIN) / HW_32k_LOAD_VS_TEMP_STEP + 1U)
 
@@ -184,6 +191,11 @@ status_t BOARD_InitDebugConsole(void);
 /* Dummy functions, added to enable LowPower module to link */
 void BOARD_DbgDiagEnable(void);
 void BOARD_DbgLpIoSet(int pinid, int val);
+
+extern uint32_t BOARD_GetSpiClock(uint32_t instance);
+extern void BOARD_InitSPI(void);
+extern void BOARD_InitSPIFI(void);
+extern void BOARD_SetSpiFi_LowPowerEnter(void);
 
 #if defined(__cplusplus)
 }

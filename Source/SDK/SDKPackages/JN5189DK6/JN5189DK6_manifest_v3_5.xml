@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ksdk:manifest xmlns:ksdk="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="SDK_2.x_JN5189DK6" name="JN5189DK6" brief="This is SDK version 2.6.0 manifest file. It describes the content of the JN5189DK6 and additional settings for tools that support SDK version 2.6.0" format_version="3.5" api_version="2.0.0" configuration="96f09b43c59ff40074d72fdbe6b313ba" xsi:schemaLocation="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd http://nxp.com/mcuxpresso/sdk/sdk_manifest_v3.5.xsd">
-  <!--Timestamp (UTC): 2020-03-09 15:29:03.758037-->
+<ksdk:manifest xmlns:ksdk="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="SDK_2.x_JN5189DK6" name="JN5189DK6" brief="This is SDK version 2.6.2 manifest file. It describes the content of the JN5189DK6 and additional settings for tools that support SDK version 2.6.2" format_version="3.5" api_version="2.0.0" configuration="e1f204e725b8b746bb5ce92600836af2" xsi:schemaLocation="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd http://nxp.com/mcuxpresso/sdk/sdk_manifest_v3.5.xsd">
+  <!--Timestamp (UTC): 2020-12-28 13:54:06.294922-->
+  <!--This manifest is generated based on sdk repo commit: c5b64a1e3481ffc7e8fb1ffd9ffcebc5af7f86b9-->
   <defines>
     <define name="CPU_$|package|" value=""/>
     <define name="CPU_$|package|_$|core|" value=""/>
   </defines>
-  <ksdk id="MCUXpresso260" name="MCUXpresso260" version="2.6.0" revision="328 2020-03-09"/>
+  <ksdk id="MCUXpresso262" name="MCUXpresso262" version="2.6.2" revision="428 2020-12-23"/>
   <compilers>
     <compiler id="compiler_gcc" name="gcc" type="gcc"/>
   </compilers>
   <toolchainSettings>
-    <toolchainSetting id="com.nxp.mcuxpresso" name="mcuxpresso" version="11.1.0" full_name="MCUXpresso IDE" compiler="compiler_gcc" toolchain="mcuxpresso">
+    <toolchainSetting id="com.nxp.mcuxpresso" name="mcuxpresso" version="11.2.1" full_name="MCUXpresso IDE" compiler="compiler_gcc" toolchain="mcuxpresso">
       <option id="gnu.cpp.compiler.option.optimization.flags" type="string" user_name="">
         <value>-fno-common</value>
       </option>
@@ -32,7 +33,7 @@
     </toolchainSetting>
   </toolchainSettings>
   <toolchains>
-    <toolchain id="mcuxpresso" name="MCUXpresso_IDE" version="11.1.0" full_name="MCUXpresso IDE" compiler="compiler_gcc" type="mcuxpresso" vendor="NXP Semiconductors" vendor_url="http://www.nxp.com">
+    <toolchain id="mcuxpresso" name="MCUXpresso_IDE" version="11.2.1" full_name="MCUXpresso IDE" compiler="compiler_gcc" type="mcuxpresso" vendor="NXP Semiconductors" vendor_url="http://www.nxp.com">
       <debug>
         <debug_configuration id="com.crt.advproject.config.exe.release" name="Release Configuration" probe="LinkServer">
           <scripts>
@@ -141,11 +142,6 @@ ${load}</script>
         <example id="jn5189dk6_dmic_hwvad" name="dmic_hwvad" brief="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~This demo explains how built in HWVAD( HW voice activity detector) in LPC5411x can be used towake up the device from sleep mode" toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/dmic" path="boards/jn5189dk6/driver_examples/dmic/dmic_hwvad">
           <external path="boards/jn5189dk6/driver_examples/dmic/dmic_hwvad" type="xml">
             <files mask="dmic_hwvad.xml"/>
-          </external>
-        </example>
-        <example id="jn5189dk6_ed_bm" name="ed_bm" brief="This application represents the &quot;Thread end device&quot; of the OpenThread Stack Demo Applications. Please consult doc/readme.txt in project's folder from MCUXpresso workspace for more information." toolchain="mcuxpresso" compiler="compiler_gcc" category="wireless_examples/openthread/ed/bm" path="boards/jn5189dk6/wireless_examples/openthread/ed/bm">
-          <external path="boards/jn5189dk6/wireless_examples/openthread/ed/bm" type="xml">
-            <files mask="ed_bm.xml"/>
           </external>
         </example>
         <example id="jn5189dk6_flash_demo" name="flash_demo" brief="The Flash Example project is to demonstrate usage of the Flash driver.&#10;In this example, we test the flash features: Initialization, erase and programming" toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples" path="boards/jn5189dk6/driver_examples/flash">
@@ -273,9 +269,9 @@ ${load}</script>
             <files mask="lpc_adc_interrupt.xml"/>
           </external>
         </example>
-        <example id="jn5189dk6_lped_bm" name="lped_bm" brief="This application represents the &quot;Thread low power end device&quot; of the OpenThread Stack Demo Applications. Please consult doc/readme.txt in project's folder from MCUXpresso workspace for more information." toolchain="mcuxpresso" compiler="compiler_gcc" category="wireless_examples/openthread/lped/bm" path="boards/jn5189dk6/wireless_examples/openthread/lped/bm">
-          <external path="boards/jn5189dk6/wireless_examples/openthread/lped/bm" type="xml">
-            <files mask="lped_bm.xml"/>
+        <example id="jn5189dk6_nci_demo_bm" name="nci_demo_bm" brief="The nci_demo application" toolchain="mcuxpresso" compiler="compiler_gcc" category="wireless_examples/framework/nfc/nci_demo/bm" path="boards/jn5189dk6/wireless_examples/framework/nfc/nci_demo/bm">
+          <external path="boards/jn5189dk6/wireless_examples/framework/nfc/nci_demo/bm" type="xml">
+            <files mask="nci_demo_bm.xml"/>
           </external>
         </example>
         <example id="jn5189dk6_pint_pattern_match" name="pint_pattern_match" brief="This example shows how to use SDK drivers to use the Pin interrupt &amp; pattern match peripheral." toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/pint" path="boards/jn5189dk6/driver_examples/pint/pattern_match">
@@ -296,11 +292,6 @@ ${load}</script>
         <example id="jn5189dk6_pwm_output" name="pwm_output" brief="The pwm_output project is a simple demonstration program of the SDK PWM driver.&#10;The pulse width modulator (PWM) module contains PWM channels, each of which is set up to output different signals.&#10;This PWM module can generate various switching patterns, including highly sophisticated waveforms.&#10;" toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples" path="boards/jn5189dk6/driver_examples/pwm/pwm_output">
           <external path="boards/jn5189dk6/driver_examples/pwm/pwm_output" type="xml">
             <files mask="pwm_output.xml"/>
-          </external>
-        </example>
-        <example id="jn5189dk6_reed_bm" name="reed_bm" brief="This application represents the &quot;Thread router eligible device&quot; of the OpenThread Stack Demo Applications. Please consult doc/readme.txt in project's folder from MCUXpresso workspace for more information." toolchain="mcuxpresso" compiler="compiler_gcc" category="wireless_examples/openthread/reed/bm" path="boards/jn5189dk6/wireless_examples/openthread/reed/bm">
-          <external path="boards/jn5189dk6/wireless_examples/openthread/reed/bm" type="xml">
-            <files mask="reed_bm.xml"/>
           </external>
         </example>
         <example id="jn5189dk6_rng_test" name="rng_test" brief="The RNG project is a simple demonstration program of the SDK RNG driver.&#10;This application is showing in the serial port random number generator examples. " toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/rng" path="boards/jn5189dk6/driver_examples/rng">
@@ -378,6 +369,11 @@ ${load}</script>
             <files mask="spifi_polling_transfer.xml"/>
           </external>
         </example>
+        <example id="jn5189dk6_ssbl" name="ssbl" brief="The ssbl application" toolchain="mcuxpresso" compiler="compiler_gcc" category="wireless_examples/framework/ssbl/bm" path="boards/jn5189dk6/wireless_examples/framework/ssbl/bm">
+          <external path="boards/jn5189dk6/wireless_examples/framework/ssbl/bm" type="xml">
+            <files mask="ssbl.xml"/>
+          </external>
+        </example>
         <example id="jn5189dk6_temp_sensor" name="temp_sensor" brief="&#10;The temp_sensor example shows how to use the temperature sensor.&#10;&#10;In this example, the calibration data (adc and temperature sensor) are first loaded from flash and then the temperature is computed.&#10;For reading the temperature, the software:&#10;a.&#9;Calls load_calibration_param_from_flash(). This step shall be done once prior doing any read of temperature.&#10;If calibration data of either ADC or temperature sensor is not present, the function returns false and measurement of temperature cannot be done.&#10;b.&#9;Calls get_temperature(8, &amp;temperature_in_128th_degree) to read the temperature. 8 is the number of sample to acquire.&#10;&#10;Note that reported temperature is only valid if function returns true menaning that calibration data for ADC and temperature sensor are present in flash.&#10;&#10;" toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples" path="boards/jn5189dk6/driver_examples/temp_sensor">
           <external path="boards/jn5189dk6/driver_examples/temp_sensor" type="xml">
             <files mask="temp_sensor.xml"/>
@@ -391,6 +387,11 @@ ${load}</script>
         <example id="jn5189dk6_usart_dma_transfer" name="usart_dma_transfer" brief="The usart_dma example shows how to use usart driver with DMA:In this example, one usart instance connect to PC through usart, the board willsend back all characters that PC send to the board.Note: The example echo every 8 characters, so input 8 characters every time." toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/usart" path="boards/jn5189dk6/driver_examples/usart/dma_transfer">
           <external path="boards/jn5189dk6/driver_examples/usart/dma_transfer" type="xml">
             <files mask="usart_dma_transfer.xml"/>
+          </external>
+        </example>
+        <example id="jn5189dk6_usart_hardware_flow_control" name="usart_hardware_flow_control" brief="The usart_hardware_flow_control example project demonstrates the usage of the hardware flow control function. This example sends data to itself(loopback), and hardware flow control is enabled in the example. The CTS(clear-to-send) pin is for transmiter to check if receiver is ready, if the CTS pin is asserted, transmiter starts to send data. The RTS(request-to-send) pin is for receiver to inform the transmiter if receiver is ready to receive data. So, please connect RTS to CTS pin directly." toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/usart" path="boards/jn5189dk6/driver_examples/usart/hardware_flow_control">
+          <external path="boards/jn5189dk6/driver_examples/usart/hardware_flow_control" type="xml">
+            <files mask="usart_hardware_flow_control.xml"/>
           </external>
         </example>
         <example id="jn5189dk6_usart_interrupt" name="usart_interrupt" brief="The uart_functioncal_interrupt example shows how to use uart driver functionalAPI to receive data with interrupt method:In this example, one uart instance connect to PC through uart, the board willsend back all characters that PC send to the board." toolchain="mcuxpresso" compiler="compiler_gcc" category="driver_examples/usart" path="boards/jn5189dk6/driver_examples/usart/interrupt">
@@ -472,7 +473,7 @@ ${load}</script>
         <toolchainSetting id_refs="com.nxp.mcuxpresso">
           <buildSteps>
             <preBuildStep></preBuildStep>
-            <postBuildStep>arm-none-eabi-size "${BuildArtifactFileName}"; python "../scripts/dk6_image_tool.py" -s 294912 ${ENV_IMAGE_TOOL_OPTS} ${BuildArtifactFileName}; arm-none-eabi-objcopy -v -O binary "${BuildArtifactFileName}" "${BuildArtifactFileBaseName}.bin"</postBuildStep>
+            <postBuildStep>arm-none-eabi-size "${BuildArtifactFileName}"; echo "${OsType}" | grep -q win* &amp;&amp; py -3 "../scripts/dk6_image_tool.py" -s 294912 ${ENV_IMAGE_TOOL_OPTS} ${BuildArtifactFileName} || python3 "../scripts/dk6_image_tool.py" -s 294912 ${ENV_IMAGE_TOOL_OPTS} ${BuildArtifactFileName}; arm-none-eabi-objcopy -v -O binary "${BuildArtifactFileName}" "${BuildArtifactFileBaseName}.bin"</postBuildStep>
           </buildSteps>
         </toolchainSetting>
       </toolchainSettings>
@@ -483,6 +484,7 @@ ${load}</script>
             <params id="internal.multi.swd.release.JN5189" name="internal.multi.swd" value="true"/>
             <params id="internal.wiretype.release.JN5189" name="internal.wiretype" value="SWD"/>
             <params id="internal.has_swo.release.JN5189" name="internal.has_swo" value="true"/>
+            <params id="internal.connect.script.debug.mcuxpresso.JN5189" name="internal.connect.script" value="QN9090Connect.scp"/>
           </params>
           <drivers>
             <driver id_refs="PROGRAM_FLASH_JN5189">
@@ -510,18 +512,20 @@ ${load}</script>
     </device>
   </devices>
   <components>
-    <component id="project_template.jn5189dk6.JN5189" name="jn5189dk6" version="1.0.0" devices="JN5189" dependency="component.lists.JN5189 component.serial_manager.JN5189 component.serial_manager_uart.JN5189 component.usart_adapter.JN5189 device.JN5189_CMSIS.JN5189 device.JN5189_image_tool.JN5189 device.JN5189_startup.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.flexcomm_usart.JN5189 platform.drivers.jn_iocon.JN5189 platform.drivers.jn_romapi.JN5189 platform.drivers.lpc_gpio.JN5189 platform.drivers.power_no_lib.JN5189 platform.drivers.reset.JN5189 utility.debug_console.JN5189" device_cores="core0_JN5189" category="Board Support/SDK Project Template" user_visible="true" type="project_template">
+    <component id="project_template.jn5189dk6.JN5189" name="jn5189dk6" version="1.0.0" devices="JN5189" dependency="component.lists.JN5189 component.serial_manager.JN5189 component.serial_manager_uart.JN5189 component.usart_adapter.JN5189 device.JN5189_CMSIS.JN5189 device.JN5189_image_tool.JN5189 device.JN5189_startup.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.flexcomm_usart.JN5189 platform.drivers.jn_iocon.JN5189 platform.drivers.jn_romapi.JN5189 platform.drivers.lpc_adc.JN5189 platform.drivers.lpc_gpio.JN5189 platform.drivers.power_no_lib.JN5189 platform.drivers.reset.JN5189 utility.debug_console.JN5189" device_cores="core0_JN5189" category="Board Support/SDK Project Template" user_visible="true" type="project_template">
       <source path="boards/jn5189dk6/project_template" target_path="board" type="src">
-        <files mask="board.c"/>
         <files mask="clock_config.c"/>
         <files mask="peripherals.c"/>
         <files mask="pin_mux.c"/>
+        <files mask="board.c"/>
+        <files mask="board_utility.c"/>
       </source>
       <source path="boards/jn5189dk6/project_template" target_path="board" type="c_include">
-        <files mask="board.h"/>
         <files mask="clock_config.h"/>
         <files mask="peripherals.h"/>
         <files mask="pin_mux.h"/>
+        <files mask="board.h"/>
+        <files mask="board_utility.h"/>
       </source>
     </component>
     <component id="platform.CMSIS.JN5189" name="CMSIS" version="5.1.1" devices="JN5189" dependency="platform.CMSIS_Driver platform.CMSIS_Driver_Include.CAN_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.Common_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.Ethernet_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.Ethernet_MAC_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.Ethernet_PHY_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.Flash_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.I2C_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.MCI_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.NAND_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.SAI_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.SPI_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.USART_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.USB_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.USB_Device_CMSISInclude.JN5189 platform.CMSIS_Driver_Include.USB_Host_CMSISInclude.JN5189 platform.Include_common.JN5189" user_visible="true" type="CMSIS">
@@ -1453,7 +1457,7 @@ ${load}</script>
         <files mask="core_cm4.h"/>
       </source>
     </component>
-    <component id="project_template.JN5189.JN5189" name="JN5189" version="1.0.0" devices="JN5189" dependency="component.lists.JN5189 component.serial_manager.JN5189 component.serial_manager_uart.JN5189 component.usart_adapter.JN5189 device.JN5189_CMSIS.JN5189 device.JN5189_image_tool.JN5189 device.JN5189_startup.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.flexcomm_usart.JN5189 platform.drivers.jn_iocon.JN5189 platform.drivers.jn_romapi.JN5189 platform.drivers.lpc_gpio.JN5189 platform.drivers.power_no_lib.JN5189 platform.drivers.reset.JN5189 utility.debug_console.JN5189" device_cores="core0_JN5189" category="Board Support/SDK Project Template" user_visible="true" type="project_template">
+    <component id="project_template.JN5189.JN5189" name="JN5189" version="1.0.0" devices="JN5189" dependency="component.lists.JN5189 component.serial_manager.JN5189 component.serial_manager_uart.JN5189 component.usart_adapter.JN5189 device.JN5189_CMSIS.JN5189 device.JN5189_image_tool.JN5189 device.JN5189_startup.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.flexcomm_usart.JN5189 platform.drivers.jn_iocon.JN5189 platform.drivers.jn_romapi.JN5189 platform.drivers.lpc_adc.JN5189 platform.drivers.lpc_gpio.JN5189 platform.drivers.power_no_lib.JN5189 platform.drivers.reset.JN5189 utility.debug_console.JN5189" device_cores="core0_JN5189" category="Board Support/SDK Project Template" user_visible="true" type="project_template">
       <source path="devices/JN5189/project_template" target_path="board" type="src">
         <files mask="board.c"/>
         <files mask="clock_config.c"/>
@@ -1572,6 +1576,8 @@ ${load}</script>
         <files mask="AppBuildOtaRegions.ld"/>
         <files mask="AppBuild_ZBSOTA_App0.ld"/>
         <files mask="AppBuild_ZBSOTA_App1.ld"/>
+        <files mask="JN5188_flash.ld"/>
+        <files mask="JN5188_ram.ld"/>
         <files mask="JN5189_flash.ld"/>
         <files mask="JN5189_ram.ld"/>
         <files mask="JN5189_rom.ld"/>
@@ -1625,6 +1631,7 @@ ${load}</script>
         <files mask="GUID-0B5FCC2A-DA24-4E65-8618-82A3CFD3B542.html"/>
         <files mask="GUID-0DD5E9BF-FFAC-4B35-BEB8-D006D120508D.html"/>
         <files mask="GUID-0E23C916-82C8-415A-8469-773251C6D3F3.html"/>
+        <files mask="GUID-0F1E9A2B-1CAC-49A4-8662-BDEA17D09776.html"/>
         <files mask="GUID-10D21B12-FEB6-4F72-8BA1-837CFBFDBC79.html"/>
         <files mask="GUID-117F06D1-8774-4667-B4F0-79A8166102A2.html"/>
         <files mask="GUID-1247B91A-D9D6-4BA9-A274-B26A86ABEF52.html"/>
@@ -1860,12 +1867,8 @@ ${load}</script>
         <files mask="DK6-UG-3127-Production-Flash-Programmer.pdf"/>
         <files mask="Getting Started with MCUXpresso SDK for JN5189.pdf"/>
         <files mask="MCUXpresso SDK API Reference Manual_JN5189.pdf"/>
-        <files mask="MCUXpresso SDK Release Notes Supporting JN5189.pdf"/>
-      </source>
-    </component>
-    <component id="docs.Openthread.JN5189" name="Openthread" version="1.0.0" devices="JN5189" user_visible="true" type="documentation">
-      <source path="docs/wireless/OpenThread" target_path="src" type="doc">
-        <files mask="OpenThread Demo Applications User Guide.pdf"/>
+        <files mask="MCUXpresso SDK Change Logs_JN5189.pdf"/>
+        <files mask="MCUXpresso SDK Release Notes_JN5189.pdf"/>
       </source>
     </component>
     <component id="docs.images.JN5189" name="images" version="1.0.0" devices="JN5189" user_visible="true" type="documentation">
@@ -1882,7 +1885,7 @@ ${load}</script>
         <files mask="JN-UG-3133-Core-Utilities.pdf"/>
         <files mask="JN-UG-3134-Zigbee3-Green-Power.pdf"/>
         <files mask="JN-UG-3135-Encyption-Tool.pdf"/>
-        <files mask="ZigBee Demo Applications User’s Guide.pdf"/>
+        <files mask="ZigBee Demo Applications User's Guide.pdf"/>
       </source>
       <source path="docs/wireless/Zigbee/html/ZigBee Demo Applications User's Guide/ZBDAUG_files" target_path="src" type="doc">
         <files mask="GUID-020F0A13-2BEF-47D7-ADEC-2B6BA9E2DDED.html"/>
@@ -1988,7 +1991,7 @@ ${load}</script>
         <files mask="fsl_cic_irb_private.h"/>
       </source>
     </component>
-    <component id="platform.drivers.clock.JN5189" name="clock" brief="Clock Driver" version="2.1.0" full_name="Clock Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
+    <component id="platform.drivers.clock.JN5189" name="clock" brief="Clock Driver" version="2.0.0" full_name="Clock Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
       <source path="devices/JN5189/drivers" target_path="drivers" type="src">
         <files mask="fsl_clock.c"/>
       </source>
@@ -2004,7 +2007,7 @@ ${load}</script>
         <files mask="fsl_common.h"/>
       </source>
     </component>
-    <component id="platform.drivers.ctimer.JN5189" name="ctimer" brief="CTimer Driver" version="2.0.2" full_name="CTimer Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
+    <component id="platform.drivers.ctimer.JN5189" name="ctimer" brief="CTimer Driver" version="2.1.0" full_name="CTimer Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
       <source path="devices/JN5189/drivers" target_path="drivers" type="src">
         <files mask="fsl_ctimer.c"/>
       </source>
@@ -2092,7 +2095,7 @@ ${load}</script>
         <files mask="fsl_spi_freertos.h"/>
       </source>
     </component>
-    <component id="platform.drivers.flexcomm_usart.JN5189" name="usart" brief="USART Driver" version="2.1.0" full_name="FLEXCOMM USART Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
+    <component id="platform.drivers.flexcomm_usart.JN5189" name="usart" brief="USART Driver" version="2.4.0" full_name="FLEXCOMM USART Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.flexcomm.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
       <source path="devices/JN5189/drivers" target_path="drivers" type="src">
         <files mask="fsl_usart.c"/>
       </source>
@@ -2164,6 +2167,14 @@ ${load}</script>
     <component id="platform.drivers.jn_iocon.JN5189" name="jn_iocon" brief="JN_IOCON Driver" version="2.0.0" full_name="JN_IOCON Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
       <source path="devices/JN5189/drivers" target_path="drivers" type="c_include">
         <files mask="fsl_iocon.h"/>
+      </source>
+    </component>
+    <component id="platform.drivers.jn_ntag.JN5189" name="jn_ntag" brief="JN_NTAG Driver" version="2.0.0" full_name="JN_NTAG Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
+      <source path="devices/JN5189/drivers" target_path="drivers" type="src">
+        <files mask="fsl_ntag.c"/>
+      </source>
+      <source path="devices/JN5189/drivers" target_path="drivers" type="c_include">
+        <files mask="fsl_ntag.h"/>
       </source>
     </component>
     <component id="platform.drivers.jn_pwm.JN5189" name="jn_pwm" brief="JN_PWM Driver" version="2.0.0" full_name="JN_PWM Driver" devices="JN5189" dependency="device.JN5189_CMSIS.JN5189 platform.Include_common.JN5189 platform.Include_core_cm4.JN5189 platform.drivers.clock.JN5189 platform.drivers.common.JN5189 platform.drivers.reset.JN5189" device_cores="core0_JN5189" user_visible="true" type="driver">
@@ -2527,13 +2538,7 @@ ${load}</script>
         <files mask="Eeprom.h"/>
       </source>
       <source path="middleware/wireless/framework/Flash/External/Source" target_path="framework/Flash/External/source" type="src">
-        <files mask="Eeprom_AT26DF081A.c"/>
-        <files mask="Eeprom_AT45DB021E.c"/>
-        <files mask="Eeprom_AT45DB041E.c"/>
-        <files mask="Eeprom_AT45DB161E.c"/>
         <files mask="Eeprom_InternalFlash.c"/>
-        <files mask="Eeprom_MX25R2035F.c"/>
-        <files mask="Eeprom_MX25R3235F.c"/>
         <files mask="Eeprom_MX25R8035F.c"/>
       </source>
     </component>
@@ -2543,6 +2548,15 @@ ${load}</script>
       </source>
       <source path="middleware/wireless/framework/Flash/External/Source" target_path="framework/Flash/External/source" type="src">
         <files mask="Eeprom_InternalFlash.c"/>
+      </source>
+    </component>
+    <component id="middleware.wireless.EEPROM_MX25R8035F.JN5189" name="wireless EEPROM_MX25R8035F" version="1.0.0" full_name="wireless EEPROM_MX25R8035F" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/Flash/External/Interface" target_path="framework/Flash/External/interface" type="c_include">
+        <files mask="Eeprom.h"/>
+      </source>
+      <source path="middleware/wireless/framework/Flash/External/Source" target_path="framework/Flash/External/source" type="src">
+        <files mask="Eeprom_InternalFlash.c"/>
+        <files mask="Eeprom_MX25R8035F.c"/>
       </source>
     </component>
     <component id="middleware.wireless.framework.flash.internal.JN5189" name="wireless Flash" version="1.0.0" full_name="wireless Flash" devices="JN5189" user_visible="false" type="middleware">
@@ -2589,6 +2603,14 @@ ${load}</script>
       </source>
       <source path="middleware/wireless/framework/SerialManager/Source/SPI_Adapter" target_path="framework/SerialManager/source/SPI_Adapter" type="c_include">
         <files mask="SPI_Serial_Adapter.h"/>
+      </source>
+    </component>
+    <component id="middleware.wireless.framework.smgr.uart_adapter.JN5189" name="wireless UART_Adapter" version="1.0.0" full_name="wireless UART_Adapter" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/SerialManager/Source" target_path="framework/SerialManager/source" type="src">
+        <files mask="UART_Serial_Adapter.c"/>
+      </source>
+      <source path="middleware/wireless/framework/SerialManager/Source" target_path="framework/SerialManager/source" type="c_include">
+        <files mask="UART_Serial_Adapter.h"/>
       </source>
     </component>
     <component id="middleware.wireless.XCVR_DK6_Radio_Test_tools.JN5189" name="Wireless XCVR Radio DK6 Test tools" version="1.0.0" full_name="Wireless XCVR DK6 Radio Test tools" devices="JN5189" user_visible="false" type="middleware">
@@ -2693,6 +2715,19 @@ ${load}</script>
         <files mask="Messaging.c"/>
       </source>
     </component>
+    <component id="middleware.wireless.framework.nvm.JN5189" name="wireless framework NVM" version="1.0.0" full_name="wireless framework NVM" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/NVM/Interface" target_path="framework/NVM/interface" type="c_include">
+        <files mask="NVM_Interface.h"/>
+      </source>
+      <source path="middleware/wireless/framework/NVM/Source" target_path="framework/NVM/source" type="src">
+        <files mask="NV_Flash.c"/>
+        <files mask="NV_FsciCommands.c"/>
+      </source>
+      <source path="middleware/wireless/framework/NVM/Source" target_path="framework/NVM/source" type="c_include">
+        <files mask="NV_Flash.h"/>
+        <files mask="NV_FsciCommands.h"/>
+      </source>
+    </component>
     <component id="middleware.wireless.framework.osa.JN5189" name="wireless framework OSAbstraction" version="1.0.0" full_name="wireless framework OSAbstraction" devices="JN5189" user_visible="false" type="middleware">
       <source path="middleware/wireless/framework/OSAbstraction/Interface" target_path="framework/OSAbstraction/interface" type="c_include">
         <files mask="fsl_os_abstraction.h"/>
@@ -2712,17 +2747,29 @@ ${load}</script>
     <component id="middleware.wireless.framework.ota.JN5189" name="wireless framework OtaSupport" version="1.0.0" full_name="wireless framework OtaSupport" devices="JN5189" dependency="middleware.wireless.framework.flash.external.JN5189 middleware.wireless.framework.smgr.spi_adapter.JN5189" user_visible="false" type="middleware">
       <source path="middleware/wireless/framework/OtaSupport/Interface" target_path="framework/OtaSupport/interface" type="c_include">
         <files mask="OtaSupport.h"/>
+        <files mask="OtaUtils.h"/>
       </source>
       <source path="middleware/wireless/framework/OtaSupport/Source" target_path="framework/OtaSupport/source" type="src">
         <files mask="OtaSupport.c"/>
+        <files mask="OtaUtils.c"/>
       </source>
     </component>
     <component id="middleware.wireless.framework.framework_OtaSupport_InternalFlash.JN5189" name="wireless framework OtaSupport  InternalFlash#IDE will show this as component name" version="1.0.0" full_name="wireless framework OtaSupport InternalFlash" devices="JN5189" dependency="middleware.wireless.framework.flash.EEPROM_InternalFlash.JN5189" user_visible="false" type="middleware">
       <source path="middleware/wireless/framework/OtaSupport/Interface" target_path="framework/OtaSupport/interface" type="c_include">
         <files mask="OtaSupport.h"/>
+        <files mask="OtaUtils.h"/>
       </source>
       <source path="middleware/wireless/framework/OtaSupport/Source" target_path="framework/OtaSupport/source" type="src">
         <files mask="OtaSupport.c"/>
+        <files mask="OtaUtils.c"/>
+      </source>
+    </component>
+    <component id="middleware.wireless.framework.pdm.JN5189" name="wireless framework PDM" version="1.0.0" full_name="wireless framework PDM" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/PDM" target_path="framework/PDM/interface" type="c_include">
+        <files mask="PDM.h"/>
+      </source>
+      <source path="middleware/wireless/framework/PDM" target_path="framework/PDM/source" type="src">
+        <files mask="pdm_port.c"/>
       </source>
     </component>
     <component id="middleware.wireless.framework.framework_PDM_hf.JN5189" name="wireless framework PDM header file#IDE will show this as component name" version="1.0.0" full_name="wireless framework PDM header file" devices="JN5189" user_visible="false" type="middleware">
@@ -2778,6 +2825,26 @@ ${load}</script>
         <files mask="RNG.c"/>
       </source>
     </component>
+    <component id="middleware.wireless.framework.smgr.JN5189" name="wireless framework SerialManager" version="1.0.0" full_name="wireless framework SerialManager" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/SerialManager/Interface" target_path="framework/SerialManager/interface" type="c_include">
+        <files mask="SerialManager.h"/>
+      </source>
+      <source path="middleware/wireless/framework/SerialManager/Source" target_path="framework/SerialManager/source" type="src">
+        <files mask="SerialManager.c"/>
+      </source>
+    </component>
+    <component id="middleware.wireless.framework.shell.JN5189" name="wireless framework Shells" version="1.0.0" full_name="wireless framework Shells" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/Shell/Interface" target_path="framework/Shell/interface" type="c_include">
+        <files mask="shell.h"/>
+        <files mask="shell_config.h"/>
+      </source>
+      <source path="middleware/wireless/framework/Shell/Source" target_path="framework/Shell/source" type="src">
+        <files mask="shell.c"/>
+        <files mask="shell_autocomplete.c"/>
+        <files mask="shell_cmdhelp.c"/>
+        <files mask="shell_cmdhist.c"/>
+      </source>
+    </component>
     <component id="middleware.wireless.framework.tmr.JN5189" name="wireless framework TimersManager" version="1.0.0" full_name="wireless framework TimersManager" devices="JN5189" user_visible="false" type="middleware">
       <source path="middleware/wireless/framework/TimersManager/Interface" target_path="framework/TimersManager/interface" type="c_include">
         <files mask="TimersManager.h"/>
@@ -2804,13 +2871,12 @@ ${load}</script>
         <files mask="FunctionLib.h"/>
       </source>
     </component>
-    <component id="middleware.wireless.framework_jn_OtaSupport.JN5189" name="wireless framework OtaSupport" version="1.0.0" full_name="wireless framework OtaSupport" devices="JN5189" dependency="middleware.wireless.framework.flash.external.JN5189 middleware.wireless.framework.smgr.spi_adapter.JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/framework/OtaSupport/Interface" target_path="framework/OtaSupport/interface" type="c_include">
-        <files mask="OtaSupport.h"/>
+    <component id="middleware.wireless.framework.dbg_logging.JN5189" name="wireless framework dbg_logging" version="1.0.0" full_name="wireless framework dbg_logging" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/Logging/Interface" target_path="framework/Logging/interface" type="c_include">
+        <files mask="dbg_logging.h"/>
       </source>
-      <source path="middleware/wireless/framework/OtaSupport/Source" target_path="framework/OtaSupport/source" type="src">
-        <files mask="OtaImageAuthenticate.c"/>
-        <files mask="OtaSupport.c"/>
+      <source path="middleware/wireless/framework/Logging/Source" target_path="framework/Logging/source" type="src">
+        <files mask="dbg_logging.c"/>
       </source>
     </component>
     <component id="middleware.framework.generic_lists.JN5189" name="wireless framework lists" version="1.0.0" full_name="wireless framework lists" devices="JN5189" user_visible="false" type="middleware">
@@ -2849,6 +2915,14 @@ ${load}</script>
         <files mask="aessw_ccm.h"/>
       </source>
     </component>
+    <component id="middleware.wireless.ieee-802.15.4_MacDynamic.JN5189" name="Wireless ieee-802.15.4 MacDynamic" version="1.0.0" full_name="Wireless ieee-802.15.4 MacDynamic" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/ieee-802.15.4/MacDynamic/Include" target_path="ieee-802.15.4/MacDynamic/Include" type="c_include">
+        <files mask="MacDynamic.h"/>
+      </source>
+      <source toolchain="mcuxpresso" path="middleware/wireless/ieee-802.15.4/lib" target_path="libs" type="lib">
+        <files mask="libMiniMac_Dynamic.a"/>
+      </source>
+    </component>
     <component id="middleware.wireless.ieee-802.15.4_common.JN5189" name="Wireless ieee-802.15.4 common" version="1.0.0" full_name="Wireless ieee-802.15.4 common" devices="JN5189" user_visible="false" type="middleware">
       <source path="middleware/wireless/ieee-802.15.4/Include" target_path="ieee-802.15.4/Include" type="c_include">
         <files mask="AppApi.h"/>
@@ -2884,13 +2958,17 @@ ${load}</script>
       </source>
     </component>
     <component id="middleware.wireless.imagetool.JN5189" name="Wireless imagetool" version="1.0.0" full_name="Wireless imagetool" devices="JN5189" user_visible="false" type="middleware">
+      <source path="tools/imagetool" target_path="src" type="script">
+        <files mask="add_padding.py"/>
+        <files mask="create_certificate.py"/>
+        <files mask="create_key.py"/>
+        <files mask="dk6_iarpostbuild.bat"/>
+        <files mask="dk6_iarpostbuild_ssbl.bat"/>
+        <files mask="dk6_image_tool.py"/>
+      </source>
       <source path="tools/imagetool" target_path="src" type="other">
         <files mask="certif_es2"/>
         <files mask="testkey_es2.pem"/>
-      </source>
-      <source path="tools/imagetool" target_path="src" type="script">
-        <files mask="dk6_iarpostbuild.bat"/>
-        <files mask="dk6_image_tool.py"/>
       </source>
       <source path="tools/imagetool/test_es2_sign" target_path="src" type="binary">
         <files mask="cert.bin"/>
@@ -2899,150 +2977,38 @@ ${load}</script>
         <files mask="priv_key.pem"/>
       </source>
     </component>
-    <component id="middleware.wireless.openthread_app_common.JN5189" name="Wireless OpenThread Application common files" version="1.0.0" full_name="Wireless OpenThread Application common files" devices="JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/openthread/examples/common" target_path="openthread/app/common" type="src">
-        <files mask="app_init.c"/>
-        <files mask="app_latency_measure.c"/>
-        <files mask="app_led.c"/>
-        <files mask="app_ota_client.c"/>
-        <files mask="network_utils.c"/>
-        <files mask="missing_strlcpy.c"/>
+    <component id="middleware.wireless.zb_Example_Common.JN5189" name="Wireless zb_Example_Common" version="1.0.0" full_name="Wireless zb_Example_Common" devices="JN5189" user_visible="false" type="middleware">
+      <source path="boards/jn5189dk6" target_path="src" type="src">
+        <files mask="clock_config.c"/>
       </source>
-      <source path="middleware/wireless/openthread/examples/common" target_path="openthread/app/common" type="c_include">
-        <files mask="app_init.h"/>
-        <files mask="app_latency_measure.h"/>
-        <files mask="app_led.h"/>
-        <files mask="app_ota.h"/>
-        <files mask="network_utils.h"/>
+      <source path="boards/jn5189dk6" target_path="src" type="c_include">
+        <files mask="clock_config.h"/>
       </source>
-      <source path="middleware/wireless/openthread/examples/common/utils" target_path="openthread/app/common/utils" type="c_include">
-        <files mask="wrap_string.h"/>
+      <source path="middleware/wireless/zigbee/examples/board/dk6" target_path="src" type="c_include">
+        <files mask="app.h"/>
+        <files mask="pin_mux.h"/>
+      </source>
+      <source path="middleware/wireless/zigbee/examples/board/dk6" target_path="src" type="src">
+        <files mask="hardware_init.c"/>
+        <files mask="pin_mux.c"/>
       </source>
     </component>
-    <component id="middleware.wireless.openthread_cli_ftd_libraries.JN5189" name="Wireless OpenThread CLI FTD stack libs" version="1.0.0" full_name="Wireless OpenThread CLI FTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-cli-ftd.a"/>
+    <component id="middleware.wireless.zb_Selective_OTA.JN5189" name="Wireless zb_Selective_OTA" version="1.0.0" full_name="Wireless zb_Selective_OTA" devices="JN5189" user_visible="false" type="middleware">
+      <source path="middleware/wireless/framework/Common/devices/DK6/gcc" target_path="src" type="linker">
+        <files mask="connectivity_sota.ld"/>
       </source>
-    </component>
-    <component id="middleware.wireless.openthread_cli_mtd_libraries.JN5189" name="Wireless OpenThread CLI MTD stack libs" version="1.0.0" full_name="Wireless OpenThread CLI MTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-cli-mtd.a"/>
+      <source path="middleware/wireless/framework/Common/devices/DK6/gcc/sota_zigbee_only_2_blobs" target_path="src" type="linker">
+        <files mask="app_memory_split.ld"/>
       </source>
-    </component>
-    <component id="middleware.wireless.openthread_crypto_libraries.JN5189" name="Wireless OpenThread crypto stack lib" version="1.0.0" full_name="Wireless OpenThread crypto stack lib" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libmbedcrypto.a"/>
+      <source path="middleware/wireless/framework/SelectiveOTA" target_path="src" type="src">
+        <files mask="blob_utils.c"/>
+        <files mask="startup_slave_blob.c"/>
       </source>
-    </component>
-    <component id="middleware.wireless.openthread_ftd_libraries.JN5189" name="Wireless OpenThread FTD stack libs" version="1.0.0" full_name="Wireless OpenThread FTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-ftd.a"/>
+      <source path="middleware/wireless/framework/SelectiveOTA" target_path="src" type="c_include">
+        <files mask="blob_utils.h"/>
       </source>
-    </component>
-    <component id="middleware.wireless.openthread_interface.JN5189" name="Wireless OpenThread Interface" version="1.0.0" full_name="Wireless OpenThread Interface" devices="JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/openthread/interface/openthread" target_path="openthread/interface/openthread" type="c_include">
-        <files mask="border_agent.h"/>
-        <files mask="border_router.h"/>
-        <files mask="channel_manager.h"/>
-        <files mask="channel_monitor.h"/>
-        <files mask="child_supervision.h"/>
-        <files mask="cli.h"/>
-        <files mask="coap.h"/>
-        <files mask="coap_secure.h"/>
-        <files mask="commissioner.h"/>
-        <files mask="config.h"/>
-        <files mask="crypto.h"/>
-        <files mask="dataset.h"/>
-        <files mask="dataset_ftd.h"/>
-        <files mask="diag.h"/>
-        <files mask="dns.h"/>
-        <files mask="entropy.h"/>
-        <files mask="error.h"/>
-        <files mask="icmp6.h"/>
-        <files mask="instance.h"/>
-        <files mask="ip6.h"/>
-        <files mask="jam_detection.h"/>
-        <files mask="joiner.h"/>
-        <files mask="link.h"/>
-        <files mask="link_raw.h"/>
-        <files mask="logging.h"/>
-        <files mask="message.h"/>
-        <files mask="ncp.h"/>
-        <files mask="netdata.h"/>
-        <files mask="network_time.h"/>
-        <files mask="random_crypto.h"/>
-        <files mask="random_noncrypto.h"/>
-        <files mask="server.h"/>
-        <files mask="sntp.h"/>
-        <files mask="tasklet.h"/>
-        <files mask="thread.h"/>
-        <files mask="thread_ftd.h"/>
-        <files mask="udp.h"/>
-      </source>
-      <include_paths>
-        <include_path path="openthread/interface"/>
-      </include_paths>
-    </component>
-    <component id="middleware.wireless.openthread_interface_platform.JN5189" name="Wireless OpenThread Platform Interface" version="1.0.0" full_name="Wireless OpenThread Platform Interface" devices="JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/openthread/interface/openthread/platform" target_path="openthread/interface/openthread/platform" type="c_include">
-        <files mask="openthread-system.h"/>
-        <files mask="alarm-micro.h"/>
-        <files mask="alarm-milli.h"/>
-        <files mask="ble.h"/>
-        <files mask="diag.h"/>
-        <files mask="entropy.h"/>
-        <files mask="logging.h"/>
-        <files mask="memory.h"/>
-        <files mask="messagepool.h"/>
-        <files mask="misc.h"/>
-        <files mask="radio.h"/>
-        <files mask="settings.h"/>
-        <files mask="spi-slave.h"/>
-        <files mask="time.h"/>
-        <files mask="toolchain.h"/>
-        <files mask="udp.h"/>
-      </source>
-      <include_paths>
-        <include_path path="openthread/interface"/>
-      </include_paths>
-    </component>
-    <component id="middleware.wireless.openthread_mtd_libraries.JN5189" name="Wireless OpenThread MTD stack libs" version="1.0.0" full_name="Wireless OpenThread MTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-mtd.a"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_ncp_ftd_libraries.JN5189" name="Wireless OpenThread NCP FTD stack libs" version="1.0.0" full_name="Wireless OpenThread NCP FTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-ncp-ftd.a"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_ncp_mtd_libraries.JN5189" name="Wireless OpenThread NCP MTD stack libs" version="1.0.0" full_name="Wireless OpenThread NCP MTD stack libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-mtd.a"/>
-        <files mask="libopenthread-ncp-mtd.a"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_plat_libraries.JN5189" name="Wireless OpenThread plat libs" version="1.0.0" full_name="Wireless OpenThread plat libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-jn5189_plat.a"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_radio_libraries.JN5189" name="Wireless OpenThread radio stack lib" version="1.0.0" full_name="Wireless OpenThread radio stack lib" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/framework/XCVR/lib" target_path="openthread/libs" type="lib">
-        <files mask="libRadio.a"/>
-      </source>
-      <source toolchain="mcuxpresso" path="middleware/wireless/ieee-802.15.4/lib" target_path="openthread/libs" type="lib">
-        <files mask="libMiniMac.a"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_tools.JN5189" name="Wireless Openthread binaries" version="1.0.0" full_name="Wireless Openthread binaries" devices="JN5189" user_visible="false" type="middleware">
-      <source path="tools/binaries" target_path="src" type="binary">
-        <files mask="ot-rcp.bin"/>
-      </source>
-    </component>
-    <component id="middleware.wireless.openthread_utils_libraries.JN5189" name="Wireless OpenThread utils libs" version="1.0.0" full_name="Wireless OpenThread utils libs" devices="JN5189" user_visible="false" type="middleware">
-      <source toolchain="mcuxpresso" path="middleware/wireless/openthread/libraries" target_path="openthread/libs" type="lib">
-        <files mask="libopenthread-platform-utils.a"/>
+      <source path="middleware/wireless/zigbee/ZigbeeCommon/SelectiveOtaZigbeeStack/ZigbeeBlob" target_path="src" type="other">
+        <files mask="zigbee.axf"/>
       </source>
     </component>
     <component id="middleware.wireless.zigbee_BuildConfig.JN5189" name="wireless zigbee BuildConfig#IDE will show this as component name" version="1.0.0" full_name="wireless zigbee BuildConfig" devices="JN5189" user_visible="false" type="middleware">
@@ -3326,10 +3292,10 @@ ${load}</script>
       </source>
     </component>
     <component id="middleware.wireless.zigbee_core_ZCL_Clusters_OTA.JN5189" name="Wireless Zigbee stack for ZCL Clusters OTA" version="1.0.0" full_name="Wireless Zigbee stack for ZCL Clusters OTA" devices="JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Include" target_path="zigbee/ZCL/Clusters/OTA/Include" type="c_include">
+      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Include" target_path="zigbee/OTA/Include" type="c_include">
         <files mask="OTA.h"/>
       </source>
-      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Source" target_path="zigbee/ZCL/Clusters/OTA/Source" type="src">
+      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Source" target_path="zigbee/OTA/Source" type="src">
         <files mask="OTA.c"/>
         <files mask="OTA_ClientUpgradeManager.c"/>
         <files mask="OTA_CustomCommandHandler.c"/>
@@ -3339,12 +3305,12 @@ ${load}</script>
         <files mask="OTA_common.c"/>
         <files mask="OTA_server.c"/>
       </source>
-      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Source" target_path="zigbee/ZCL/Clusters/OTA/Source" type="c_include">
+      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Source" target_path="zigbee/OTA/Source" type="c_include">
         <files mask="OTA_private.h"/>
       </source>
     </component>
     <component id="middleware.wireless.zigbee_core_ZCL_Clusters_OTA_header.JN5189" name="Wireless Zigbee stack for ZCL Clusters OTA header file" version="1.0.0" full_name="Wireless Zigbee stack for ZCL Clusters OTA header file" devices="JN5189" user_visible="false" type="middleware">
-      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Include" target_path="zigbee/ZCL/Clusters/OTA/Include" type="c_include">
+      <source path="middleware/wireless/zigbee/ZCL/Clusters/OTA/Include" target_path="zigbee/OTA/Include" type="c_include">
         <files mask="OTA.h"/>
       </source>
     </component>
@@ -3633,6 +3599,16 @@ ${load}</script>
         <files mask="on_off_sensor.c"/>
       </source>
     </component>
+    <component id="middleware.wireless.zigbee_core_ZED_lib.JN5189" name="wireless zigbee core ZED lib#IDE will show this as component name" version="1.0.0" full_name="wireless zigbee core ZED lib" devices="JN5189" user_visible="false" type="middleware">
+      <source toolchain="mcuxpresso" path="middleware/wireless/zigbee/Library" target_path="libs" type="lib">
+        <files mask="libZPSAPL.a"/>
+        <files mask="libZPSGP_ZED.a"/>
+        <files mask="libZPSIPAN_ZED.a"/>
+        <files mask="libZPSMAC_Mini_SOC.a"/>
+        <files mask="libZPSNWK_ZED.a"/>
+        <files mask="libZPSTSV.a"/>
+      </source>
+    </component>
     <component id="middleware.wireless.zigbee_core_all_libs.JN5189" name="wireless zigbee core all libs#IDE will show this as component name" version="1.0.0" full_name="wireless zigbee core all libs" devices="JN5189" user_visible="false" type="middleware">
       <source toolchain="mcuxpresso" path="middleware/wireless/zigbee/Library" target_path="libs" type="lib">
         <files mask="libATJParser.a"/>
@@ -3755,7 +3731,7 @@ ${load}</script>
         <files mask="usart_dma_rxbuffer.c"/>
       </source>
     </component>
-    <component id="middleware.wireless.zigbee_core_ZED_lib.JN5189" name="wireless zigbee core ZED lib#IDE will show this as component name" version="1.0.0" full_name="wireless zigbee core ZED lib" devices="JN5189" user_visible="false" type="middleware">
+    <component id="middleware.wireless.zigbee_core_lib.JN5189" name="wireless zigbee core lib#IDE will show this as component name" version="1.0.0" full_name="wireless zigbee core lib" devices="JN5189" user_visible="false" type="middleware">
       <source toolchain="mcuxpresso" path="middleware/wireless/zigbee/Library" target_path="libs" type="lib">
         <files mask="libZPSAPL.a"/>
         <files mask="libZPSGP.a"/>
@@ -4872,14 +4848,14 @@ ${load}</script>
         <files mask="content.jar"/>
       </source>
       <source path="middleware/wireless/zigbee/tools/Eclipse_plugins/com.nxp.sdk.update_site/features" target_path="src" type="other">
-        <files mask="com.jennic.sdk.zbpro.external.feature_2.1.2.jar"/>
+        <files mask="com.jennic.sdk.zbpro.external.feature_2.1.3.jar"/>
       </source>
       <source path="middleware/wireless/zigbee/tools/Eclipse_plugins/com.nxp.sdk.update_site" target_path="src" type="doc">
         <files mask="index.html"/>
       </source>
       <source path="middleware/wireless/zigbee/tools/Eclipse_plugins/com.nxp.sdk.update_site/plugins" target_path="src" type="other">
         <files mask="com.jennic.zps.configeditor.edit_2.0.3.jar"/>
-        <files mask="com.jennic.zps.configeditor.editor_2.0.3.jar"/>
+        <files mask="com.jennic.zps.configeditor.editor_2.0.4.jar"/>
         <files mask="com.jennic.zps.configeditor_2.0.3.jar"/>
       </source>
       <source path="middleware/wireless/zigbee/tools/Eclipse_plugins/com.nxp.sdk.update_site" target_path="src" type="xml">

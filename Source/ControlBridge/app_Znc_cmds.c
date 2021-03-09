@@ -93,6 +93,8 @@
 #include "app_nci_icode.h"
 #endif
 
+#include "zcl_common.h"
+
 /****************************************************************************/
 /***    Macro Definitions                         ***/
 /****************************************************************************/
@@ -324,7 +326,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
     uint8                  u8Status = 0;
     uint16                 u16TargetAddress;
     tsZCL_Address          sAddress;
-    uint8                  au8values[8];
+    uint8                  au8values[10];
     uint8                  u8Length = 0;
 #ifdef FULL_FUNC_DEVICE
     tsBDB_ZCLEvent         sEvent;
@@ -397,14 +399,13 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
         switch ( u16PacketType )
         {
+        	case (E_SL_MSG_SET_LOGMODE):
+			{
+				u8LogLevel     =   au8LinkRxBuffer [ 0 ];
+			}
+			break;
 
-            case (E_SL_MSG_SET_LOGMODE):
-            {
-            	u8LogLevel     =   au8LinkRxBuffer [ 0 ];
-            }
-            break;
-
-            case (E_SL_MSG_SET_RAWMODE):
+        	case (E_SL_MSG_SET_RAWMODE):
             {
                sZllState.u8RawMode     =   au8LinkRxBuffer [ 0 ];
                 PDM_eSaveRecordData( PDM_ID_APP_ZLL_CMSSION, &sZllState, sizeof ( sZllState ) );
@@ -2672,11 +2673,17 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             //vLog_Printf(TRACE_APP,LOG_DEBUG, "\nPacket Type %x \n",u16PacketType );
 
 			u8Length    =  0;
-			if (u8RequestSent != 0){
+			if (u8RequestSent == 1){
 				//u8SeqApsNum = u8ZCL_GetApsSequenceNumberOfLastTransmit ();
-				zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
-				u8SeqApsNum =s_sApl->sApsContext.sDcfmRecordPool.psDcfmRecords->u8SeqNum;
+				//zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
+				//u8SeqApsNum =s_sApl->sApsContext.sDcfmRecordPool.psDcfmRecords->u8SeqNum;
+				u8SeqApsNum =psZCL_Common->u8ApsSequenceNumberOfLastTransmit;
+				//u8SeqApsNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[0];
 				//u8SeqApsNum = s_sApl->sApsContext.u8SeqNum - 1 ;
+			}else{
+				zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
+
+				u8SeqApsNum =s_sApl->sZdpContext.u8ZdpSeqNum;
 			}
 			ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8Status,      u8Length );
 			ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8SeqNum,      u8Length );

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016, Freescale Semiconductor, Inc.
- * Copyright 2016-2018 NXP
+ * Copyright 2016-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -394,6 +394,24 @@ void CTIMER_SetupMatch(CTIMER_Type *base, ctimer_match_t matchChannel, const cti
     }
 }
 
+/*!
+ * brief Get the status of output match.
+ *
+ * This function gets the status of output MAT, whether or not this output is connected to a pin.
+ * This status is driven to the MAT pins if the match function is selected via IOCON. 0 = LOW. 1 = HIGH.
+ *
+ * param base         Ctimer peripheral base address
+ * param matchChannel External match channel, user can obtain the status of multiple match channels
+ *                    at the same time by using the logic of "|"
+ *                    enumeration ::ctimer_external_match_t
+ * return The mask of external match channel status flags. Users need to use the
+ *        _ctimer_external_match type to decode the return variables.
+ */
+uint32_t CTIMER_GetOutputMatchStatus(CTIMER_Type *base, uint32_t matchChannel)
+{
+    return (base->EMR & matchChannel);
+}
+
 #if !(defined(FSL_FEATURE_CTIMER_HAS_NO_INPUT_CAPTURE) && (FSL_FEATURE_CTIMER_HAS_NO_INPUT_CAPTURE))
 /*!
  * brief Setup the capture.
@@ -463,7 +481,11 @@ void CTIMER_GenericIRQHandler(uint32_t index)
 #if defined(FSL_FEATURE_CTIMER_HAS_IR_CR3INT) && FSL_FEATURE_CTIMER_HAS_IR_CR3INT
         for (i = 0; i <= CTIMER_IR_CR3INT_SHIFT; i++)
 #else
+#if !(defined(FSL_FEATURE_CTIMER_HAS_NO_IR_CR2INT) && FSL_FEATURE_CTIMER_HAS_NO_IR_CR2INT)
         for (i = 0; i <= CTIMER_IR_CR2INT_SHIFT; i++)
+#else
+        for (i = 0; i <= CTIMER_IR_CR1INT_SHIFT; i++)
+#endif /* FSL_FEATURE_CTIMER_HAS_NO_IR_CR2INT */
 #endif /* FSL_FEATURE_CTIMER_HAS_IR_CR3INT */
 #endif
         {

@@ -1,5 +1,6 @@
 /*
- * Copyright 2018 NXP
+ * Copyright (c) 2016, Freescale Semiconductor, Inc.
+ * Copyright 2016-2017, 2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -32,26 +33,27 @@
  ******************************************************************************/
 
 /*!
-* @brief Call back for GINT0 event
-*/
+ * @brief Call back for GINT0 event
+ */
 void gint0_callback(void)
 {
     PRINTF("\f\r\nGINT0 event detected\r\n");
 }
 
 /*!
-* @brief Call back for GINT1 event
-*/
+ * @brief Call back for GINT1 event
+ */
 void gint1_callback(void)
 {
     PRINTF("\f\r\nGINT1 event detected\r\n");
 }
 
 /*!
-* @brief Main function
-*/
+ * @brief Main function
+ */
 int main(void)
 {
+    /* Board pin, clock, debug console init */
     /* Security code to allow debug access */
     SYSCON->CODESECURITYPROT = 0x87654320;
 
@@ -65,6 +67,7 @@ int main(void)
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
     BOARD_InitPins();
+
     /* Clear screen*/
     PRINTF("%c[2J", 27);
     /* Set cursor location at [0,0] */
@@ -82,28 +85,32 @@ int main(void)
     GINT_SetCtrl(GINT0, kGINT_CombineOr, kGINT_TrigEdge, gint0_callback);
 
 /* Setup GINT1 for edge trigger, "AND" mode */
-
 #if defined(FSL_FEATURE_SOC_GINT_COUNT) && (FSL_FEATURE_SOC_GINT_COUNT > 1)
     GINT_SetCtrl(GINT1, kGINT_CombineAnd, kGINT_TrigEdge, gint1_callback);
 #endif
     /* Select pins & polarity for GINT0 */
     GINT_ConfigPins(GINT0, DEMO_GINT0_PORT, DEMO_GINT0_POL_MASK, DEMO_GINT0_ENA_MASK);
 
-/* Select pins & polarity for GINT1 */
+    /* Select pins & polarity for GINT1 */
 
 #if defined(FSL_FEATURE_SOC_GINT_COUNT) && (FSL_FEATURE_SOC_GINT_COUNT > 1)
     GINT_ConfigPins(GINT1, DEMO_GINT1_PORT, DEMO_GINT1_POL_MASK, DEMO_GINT1_ENA_MASK);
 #endif
     /* Enable callbacks for GINT0 & GINT1 */
     GINT_EnableCallback(GINT0);
-    PRINTF("\r\nGINT0 event is configured\r\n");
 
 #if defined(FSL_FEATURE_SOC_GINT_COUNT) && (FSL_FEATURE_SOC_GINT_COUNT > 1)
     GINT_EnableCallback(GINT1);
-    PRINTF("\r\nGINT1 event is configured\r\n");
 #endif
 
-    PRINTF("\r\nPress corresponding switch to generate event\r\n");
+#if defined(FSL_FEATURE_SOC_GINT_COUNT) && (FSL_FEATURE_SOC_GINT_COUNT > 1)
+    PRINTF("\r\nGINT0 and GINT1 events are configured\r\n");
+    PRINTF("\r\nPress corresponding switches to generate events\r\n");
+#else
+    PRINTF("\r\nGINT0 event is configured\r\n");
+    PRINTF("\r\nPress corresponding switch to generate events\r\n");
+#endif
+
     while (1)
     {
         __WFI();

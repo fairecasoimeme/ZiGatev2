@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -19,6 +19,8 @@ processor: JN5189
 package_id: JN5189HN
 mcu_data: ksdk2_0
 processor_version: 0.0.0
+pin_labels:
+- {pin_num: '6', pin_signal: PIO0_3/SPI0_MISO/USART0_TXD/PWM3/SPI1_SSELN0/ISO7816_CLK, label: LED_RED, identifier: LED_RED}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -44,22 +46,22 @@ void BOARD_InitBootPins(void)
 BOARD_InitPins:
 - options: {callFromInitBoot: 'true', coreID: cm4, enableClock: 'true'}
 - pin_list:
-  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0_PU/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2_PU/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9_PU/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8_PU/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '13', peripheral: I2C0, signal: SCL, pin_signal: PIO0_10/CT32B0_CAP0/USART1_TXD/RFTX/I2C0_SCL/SPI0_SCK/PDM0_DATA, egp: i2c, ecs: disabled, ehs: disabled,
-    invert: disabled, filter_off: disabled, fsel: disabled, open_drain: disabled, io_clamp: disabled}
-  - {pin_num: '14', peripheral: I2C0, signal: SDA, pin_signal: PIO0_11/CT32B1_CAP0/USART1_RXD/RFRX/I2C0_SDA/SPI0_MISO/PDM0_CLK, egp: i2c, ecs: disabled, ehs: disabled,
-    invert: disabled, filter_off: disabled, fsel: disabled, open_drain: disabled, io_clamp: disabled}
-  - {pin_num: '10', peripheral: I2C1, signal: SDA, pin_signal: PIO0_7/SPI0_MISO/USART0_CTS/CT32B1_MAT1/PWM7_PD/I2C1_SDA/USART1_RXD/ADO, mode: pullDown, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: enabled, ssel: disabled}
-  - {pin_num: '9', peripheral: I2C1, signal: SCL, pin_signal: PIO0_6/SPI0_SCK/USART0_RTS/CT32B1_MAT0/PWM6_PD/I2C1_SCL/USART1_TXD/ADE, mode: pullDown, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: enabled, ssel: disabled}
+  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '13', peripheral: I2C0, signal: SCL, pin_signal: PIO0_10/CT32B0_CAP0/USART1_TXD/RFTX/I2C0_SCL/SPI0_SCK/PDM0_DATA, egp: i2c, ecs: disabled, ehs: low,
+    invert: disabled, filter_off: disabled, fsel: Below_50ns, open_drain: disabled, io_clamp: disabled}
+  - {pin_num: '14', peripheral: I2C0, signal: SDA, pin_signal: PIO0_11/CT32B1_CAP0/USART1_RXD/RFRX/I2C0_SDA/SPI0_MISO/PDM0_CLK, egp: i2c, ecs: disabled, ehs: low,
+    invert: disabled, filter_off: disabled, fsel: Below_50ns, open_drain: disabled, io_clamp: disabled}
+  - {pin_num: '9', peripheral: I2C1, signal: SCL, pin_signal: PIO0_6/SPI0_SCK/USART0_RTS/CT32B1_MAT0/PWM6/I2C1_SCL/USART1_TXD/ADE, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: enabled, ssel: disabled}
+  - {pin_num: '10', peripheral: I2C1, signal: SDA, pin_signal: PIO0_7/SPI0_MISO/USART0_CTS/CT32B1_MAT1/PWM7/I2C1_SDA/USART1_RXD/ADO, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: enabled, ssel: disabled}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -73,7 +75,7 @@ BOARD_InitPins:
 /* Function assigned for the Cortex-M4 */
 void BOARD_InitPins(void)
 {
-    /* Enables the clock for the I/O controller: 0x01u */
+    /* Enables the clock for the I/O controller block. 0: Disable. 1: Enable.: 0x01u */
     CLOCK_EnableClock(kCLOCK_Iocon);
 
     const uint32_t port0_pin10_config = (/* Pin is configured as I2C0_SCL */
@@ -166,8 +168,8 @@ void BOARD_InitPins(void)
 
     const uint32_t port0_pin6_config = (/* Pin is configured as I2C1_SCL */
                                         IOCON_PIO_FUNC5 |
-                                        /* Selects pull-down function */
-                                        IOCON_PIO_MODE_PULLDOWN |
+                                        /* Selects pull-up function */
+                                        IOCON_PIO_MODE_PULLUP |
                                         /* Standard mode, output slew rate control is disabled */
                                         IOCON_PIO_SLEW0_STANDARD |
                                         /* Input function is not inverted */
@@ -187,8 +189,8 @@ void BOARD_InitPins(void)
 
     const uint32_t port0_pin7_config = (/* Pin is configured as I2C1_SDA */
                                         IOCON_PIO_FUNC5 |
-                                        /* Selects pull-down function */
-                                        IOCON_PIO_MODE_PULLDOWN |
+                                        /* Selects pull-up function */
+                                        IOCON_PIO_MODE_PULLUP |
                                         /* Standard mode, output slew rate control is disabled */
                                         IOCON_PIO_SLEW0_STANDARD |
                                         /* Input function is not inverted */

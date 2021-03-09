@@ -21,8 +21,19 @@
 
 #include "fsl_os_abstraction.h"
 #include "Keyboard.h"
+#if (cPWR_FullPowerDownMode)
+#include "PWR_Interface.h"
+#endif
 
-#define PreventDSForDebounce 0
+#define PreventDSForDebounce (0 && cPWR_FullPowerDownMode)
+
+#if (cPWR_FullPowerDownMode)
+#define PWR_ALLOW_DEVICE_TO_SLEEP PWR_AllowDeviceToSleep()
+#define PWR_DISALLOW_DEVICE_TO_SLEEP PWR_DisallowDeviceToSleep()
+#else
+#define PWR_ALLOW_DEVICE_TO_SLEEP
+#define PWR_DISALLOW_DEVICE_TO_SLEEP
+#endif
 
 extern const kbdSwitchConfig_t kbdSwitchButtons[];
 
@@ -353,10 +364,10 @@ static void KBD_TimerStart(void)
     TMR_lock++;
     if (TMR_lock == 1)
     {
-        PWR_DisallowDeviceToSleep();
+        PWR_DISALLOW_DEVICE_TO_SLEEP();
     }
     OSA_EnableIRQGlobal();
-#endif
+#endif  /* PreventDSForDebounce */
     TMR_StartIntervalTimer(mKeyScanTimerID,
                            gKeyScanInterval_c,
                            (pfTmrCallBack_t)KeyScan,
@@ -373,11 +384,11 @@ static void KBD_TimerStop(void)
         TMR_lock--;
         if (TMR_lock == 0)
         {
-            PWR_AllowDeviceToSleep();
+            PWR_ALLOW_DEVICE_TO_SLEEP;
         }
     }
     OSA_EnableIRQGlobal();
-#endif
+#endif /* PreventDSForDebounce */
     TMR_StopTimer(mKeyScanTimerID);
 
 }
@@ -391,6 +402,7 @@ static void KBD_TimerStop(void)
 static void KbGpioInit(void)
 {
     KBD_DBG_LOG("");
+
     uint8_t idx = 0;
     for(idx = 0; idx < gKBD_KeysCount_c; idx++)
     {
@@ -490,55 +502,73 @@ void KBD_Deinit(void)
 #endif
 }
 
-#if gTMR_Enabled_d
-
-/******************************************************************************
-* Name: KBD_KeySwitchPortGet
-* Description: Gets the switch port
-* Parameter(s): -
-* Return: switch port value (pressed / not pressed keys)
-******************************************************************************/
-static switchScan_t KBD_KeySwitchPortGet(void)
+static uint32_t GetPressedButtonsMask(void)
 {
-#if gKBD_TsiElectdCount_c
-    uint32_t j;
-#endif
-    uint32_t portScan, i;
-    pressedKey = mNoKey_c;
-
-    portScan = mWakePortScan;
+   uint32_t res = 0;
+   int i;
     for( i=0; i<gKBD_KeysCount_c; i++ )
     {
-        if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-        {
-            if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
-            {
-                portScan |= BIT(i);
-            }
-        }
+       switch (kbdSwButtons[i].swType) {
+
+       case gKBDTypeGpio_c:
+       {
+          if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
+          {
+             res |= BIT(i);
+          }
+       }
+       break;
+
 #if gKBD_TsiElectdCount_c
-        else if(kbdSwButtons[i].swType == gKBDTypeTsi_c)
+       case gKBDTypeTsi_c:
         {
-            for(j = 0; j < kbdNumberOfElectrodes; j++)
+           int j;
+           for(j = 0; j < kbdNumberOfElectrodes; j++)
             {
                 if(kbdTsiElectrodes[j].elecName ==
                    kbdSwButtons[i].config_struct.swTsiElectrodeId)
                 {
                     if(kbdTsiElectrodes[j].elecValueAboveThresh)
                     {
-                        portScan |= BIT(i);
+                        res |= BIT(i);
                     }
                 }
             }
         }
+        break;
 #endif
-        if((portScan & BIT(i)) && (pressedKey == mNoKey_c))/*first detected key*/
+        default:
+           break;
+       } /* switch */
+    }
+    return res;
+}
+
+#if gTMR_Enabled_d
+
+/******************************************************************************
+* Name: KBD_KeySwitchPortGet
+* Description: Gets the switch port
+* mWakePortScan is the mask of IO that have triggered a wake up. Is cleared on exit.
+* Parameter(s): -
+* Return: switch port value (pressed / not pressed keys)
+******************************************************************************/
+static switchScan_t KBD_KeySwitchPortGet(void)
+{
+    uint32_t portScan;
+    pressedKey = mNoKey_c;
+
+    portScan = mWakePortScan;
+    portScan |= GetPressedButtonsMask();
+    for(int i=0; i<gKBD_KeysCount_c; i++ )
+    {
+        if((portScan & BIT(i)) && (pressedKey == mNoKey_c)) /*first detected key*/
         {
             pressedKey = i;
         }
     }
     mWakePortScan = 0; /* clear after event consumed */
-    KBD_DBG_LOG("portScan=%x", portScan);
+    KBD_DBG_LOG("portScan=%x pressedKey=%d", portScan, pressedKey);
 
     return portScan;
 }
@@ -554,52 +584,28 @@ static switchScan_t KBD_KeySwitchPortGet(void)
 static bool_t KBD_KeyCheck(switchScan_t previousPressed)
 {
     bool_t pressed = FALSE;
-    uint32_t portScan, i;
+    uint32_t portScan;
     uint8_t key = mNoKey_c;
-#if gKBD_TsiElectdCount_c
-    uint32_t j;
-#endif
 
     previousPressed=previousPressed; /* avoid compiler warnings */
 
-    portScan = mWakePortScan;
-    for( i=0; i<gKBD_KeysCount_c; i++ )
+    portScan = GetPressedButtonsMask();
+
+    for(int i=0; i<gKBD_KeysCount_c; i++)
     {
-        if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-        {
-            if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
-            {
-                portScan |= BIT(i);
-            }
-        }
-#if gKBD_TsiElectdCount_c
-        else if(kbdSwButtons[i].swType == gKBDTypeTsi_c)
-        {
-            for(j = 0; j < kbdNumberOfElectrodes; j++)
-            {
-                if(kbdTsiElectrodes[j].elecName ==
-                   kbdSwButtons[i].config_struct.swTsiElectrodeId)
-                {
-                    if(kbdTsiElectrodes[j].elecValueAboveThresh)
-                    {
-                        portScan |= BIT(i);
-                    }
-                }
-            }
-        }
-#endif
-        if(portScan != 0 && key == mNoKey_c)/*first detected key*/
+        if((portScan & (1<<i)) != 0)
         {
             key = i;
+            break;
         }
     }
     /* Check if the switch is still pressed */
-    if(pressedKey == key)
+    if (pressedKey == key)
     {
         pressed = TRUE;
     }
     mWakePortScan = 0;
-    KBD_DBG_LOG("pressed=%d key=%x", pressed, key);
+    KBD_DBG_LOG("previousPressed=%d still_pressed=%d key=%x", pressedKey, pressed, key);
     return pressed;
 }
 #endif /*#if ((gKeyEventNotificationMode_d == gKbdEventShortLongPressMode_c) || \
@@ -635,10 +641,8 @@ static void KeyScan(uint8_t timerId)
 static void KeyScan(uint8_t timerId)
 {
     uint8_t keyBase;
-    uint32_t portScan, i;
-#if gKBD_TsiElectdCount_c
-    uint32_t j;
-#endif
+    uint32_t portScan;
+
 #if DBG_KBD
     uint8_t prev_key_state = mKeyState;
 #endif
@@ -646,6 +650,7 @@ static void KeyScan(uint8_t timerId)
     {
     /* got a fresh key */
     case mStateKeyIdle:
+        PWR_DISALLOW_DEVICE_TO_SLEEP;
         mSwitch_SCAN = KBD_KeySwitchPortGet();
         if(mSwitch_SCAN != 0)
         {
@@ -655,6 +660,8 @@ static void KeyScan(uint8_t timerId)
         else
         {
             KBD_TimerStop();
+            PWR_ALLOW_DEVICE_TO_SLEEP;
+
         }
         break;
 
@@ -699,37 +706,13 @@ static void KeyScan(uint8_t timerId)
     /* got the long key, waiting for the release to go back to idle */
     case mStateKeyWaitRelease:
         /* wait for the release before going back to idle */
-        portScan=0;
-        for( i=0; i<gKBD_KeysCount_c; i++ )
-        {
-            if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-            {
-                if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
-                {
-                    portScan |= BIT(i);
-                }
-            }
-#if gKBD_TsiElectdCount_c
-            else if(kbdSwButtons[i].swType == gKBDTypeTsi_c)
-            {
-                for(j = 0; j < kbdNumberOfElectrodes; j++)
-                {
-                    if(kbdTsiElectrodes[j].elecName ==
-                       kbdSwButtons[i].config_struct.swTsiElectrodeId)
-                    {
-                        if(kbdTsiElectrodes[j].elecValueAboveThresh)
-                        {
-                            portScan |= BIT(i);
-                        }
-                    }
-                }
-            }
-#endif
-        }
+        portScan = GetPressedButtonsMask();
+
         if((mSwitch_SCAN == 0) || (portScan == 0))
         {
             mKeyState = mStateKeyIdle;
             KBD_TimerStop();
+            PWR_ALLOW_DEVICE_TO_SLEEP;
         }
         break;
     default:
@@ -782,32 +765,7 @@ static void KeyScan(uint8_t timerId)
         }
         else
         {
-            for( i=0, portScan = 0; i<gKBD_KeysCount_c; i++ )
-            {
-                if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-                {
-                    if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
-                    {
-                        portScan |= BIT(i);
-                    }
-                }
-#if gKBD_TsiElectdCount_c
-                else if(kbdSwButtons[i].swType == gKBDTypeTsi_c)
-                {
-                    for(j = 0; j < kbdNumberOfElectrodes; j++)
-                    {
-                        if(kbdTsiElectrodes[j].elecName ==
-                           kbdSwButtons[i].config_struct.swTsiElectrodeId)
-                        {
-                            if(kbdTsiElectrodes[j].elecValueAboveThresh)
-                            {
-                                portScan |= BIT(i);
-                            }
-                        }
-                    }
-                }
-#endif
-            }
+           portScan = GetPressedButtonsMask();
 
             if((mSwitch_SCAN == 0) || (portScan == 0))
             {
@@ -835,32 +793,7 @@ static void KeyScan(uint8_t timerId)
         }
         else
         {
-            for( i=0, portScan = 0; i<gKBD_KeysCount_c; i++ )
-            {
-                if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-                {
-                    if(GpioReadPinInput(kbdSwButtons[i].config_struct.pSwGpio) == 0)
-                    {
-                        portScan |= BIT(i);
-                    }
-                }
-#if gKBD_TsiElectdCount_c
-                else if(kbdSwButtons[i].swType == gKBDTypeTsi_c)
-                {
-                    for(j = 0; j < kbdNumberOfElectrodes; j++)
-                    {
-                        if(kbdTsiElectrodes[j].elecName ==
-                           kbdSwButtons[i].config_struct.swTsiElectrodeId)
-                        {
-                            if(kbdTsiElectrodes[j].elecValueAboveThresh)
-                            {
-                                portScan |= BIT(i);
-                            }
-                        }
-                    }
-                }
-#endif
-            }
+           portScan = GetPressedButtonsMask();
 
             if((mSwitch_SCAN == 0) || (portScan == 0))
             {
@@ -915,13 +848,15 @@ static void ProgramKeyScan(uint32_t wake_bitfield)
     KBD_DBG_LOG("wake_bitfield=%x", wake_bitfield);
 
 #if (gKeyEventNotificationMode_d)
-
-#if gTMR_Enabled_d
+   #if gTMR_Enabled_d
     KBD_TimerStart();
-#else
-#error gKeyEventNotificationMode_d needs gTMR_Enabled_d to be set
-#endif
-
+    if (wake_bitfield)
+    {
+       KeyScan(mKeyScanTimerID);
+    }
+   #else
+   #error gKeyEventNotificationMode_d needs gTMR_Enabled_d to be set
+   #endif
 #else
         KeyScan(mKeyScanTimerID);
 #endif
@@ -1024,7 +959,7 @@ void KBD_Init( KBDFunction_t pfCallBackAdr )
             }
         }
     }
-	mKbdServiceOpened = true;
+    mKbdServiceOpened = true;
 }
 
 
@@ -1042,12 +977,12 @@ void KBD_ShutOff(void)
 
 /******************************************************************************
  * Name: KBD_IsWakeUpSource
- * Description: 
+ * Description:
  * Parameter(s): -
  * Return: -
  ******************************************************************************/
 #if gKeyBoardSupported_d
-#if !defined (CPU_JN518X) 
+#if !defined (CPU_JN518X)
 bool_t KBD_IsWakeUpSource(void)
 {
     uint32_t i;
@@ -1063,7 +998,7 @@ bool_t KBD_IsWakeUpSource(void)
     }
     return status;
 }
-#endif
+#endif /* !defined (CPU_JN518X)  */
 #endif /* gKeyBoardSupported_d */
 /******************************************************************************
  * Name: KBD_PrepareEnterLowPower
@@ -1072,9 +1007,9 @@ bool_t KBD_IsWakeUpSource(void)
  * Return: -
  ******************************************************************************/
 #if gKeyBoardSupported_d
-#if !defined(CPU_JN518X)
 void KBD_PrepareEnterLowPower(void)
 {
+#if !defined(CPU_JN518X)
 #if gKBD_TsiElectdCount_c
 #if gTMR_Enabled_d
     TMR_StopTimer(mTsiSwTriggerTimerID);
@@ -1086,9 +1021,12 @@ void KBD_PrepareEnterLowPower(void)
     NVIC_DisableIRQ(TSI0_IRQn); /* disable interrupt from NVIC */
     NVIC_ClearPendingIRQ(TSI0_IRQn); /* clear interrupt flag from NVIC */
     TSI_EnableModule(TSI0, false);
+  #endif /* gKBD_TsiElectdCount_c */
+#else
+    /* For the CPU_JN518X family stop the KeyScan timer */
+    KBD_TimerStop();
 #endif
 }
-#endif
 /******************************************************************************
  * Name: KBD_PrepareExitLowPower
  * Description:
@@ -1119,9 +1057,9 @@ void KBD_PrepareExitLowPower(void)
         mWakePortScan = 0;
         for(int i=0; i<gKBD_KeysCount_c; i++ )
         {
-        	if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
-        	{
-        		if( Switch_CheckIRQ(i) )
+            if(kbdSwButtons[i].swType == gKBDTypeGpio_c)
+            {
+                if( Switch_CheckIRQ(i) )
                 {
                     mWakePortScan |= BIT(i);
                 }
@@ -1142,10 +1080,10 @@ void KBD_PrepareExitLowPower(void)
         }
         ProgramKeyScan(mWakePortScan);
     } while (0);
-#endif
-#endif
+  #endif /* defined (CPU_JN518X)*/
+#endif /* gKBD_TsiElectdCount_c */
 }
-#endif
+#endif /* gKeyBoardSupported_d */
 /******************************************************************************
  * Name: KBD_SwitchPressOnWakeUp
  * Description:

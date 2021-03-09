@@ -4,8 +4,8 @@ This example shows how to use SDK drivers to use the Pin interrupt & pattern mat
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================
@@ -48,7 +48,7 @@ The interrupt callback prints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PINT Pin Interrupt 0 event detected
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"Pin Interrupt 1" to be invoked when SW1 on OM15082-2 Expansion Board is pressed by the user.
+"Pin Interrupt 1" to be invoked when SW3 on OM15082-2 Expansion Board is pressed by the user.
 The interrupt callback prints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PINT Pin Interrupt 1 event detected

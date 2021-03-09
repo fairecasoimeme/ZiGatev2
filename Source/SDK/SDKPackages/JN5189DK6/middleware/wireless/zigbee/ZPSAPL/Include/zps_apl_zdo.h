@@ -100,7 +100,7 @@ typedef enum {
 
 PUBLIC ZPS_teStatus zps_eAplZdoStartStack(void *);
 PUBLIC void zps_eAplSetConcentrator(void *);
-PUBLIC ZPS_teStatus zps_eAplZdoRejoinNetwork(void *,bool_t,bool_t);
+PUBLIC ZPS_teStatus zps_eAplZdoRejoinNetwork(void *,bool_t,bool_t,bool_t);
 PUBLIC ZPS_teStatus zps_eAplZdoPermitJoining(void *, uint8 );
 PUBLIC ZPS_teStatus zps_eAplZdoLeaveNetwork(void *, uint64 , bool , bool );
 PUBLIC ZPS_teStatus zps_eAplZdoPoll(void *);
@@ -163,15 +163,12 @@ PUBLIC void ZPS_vResetBoundServerContext (void);
 /***        External Variables                                            ***/
 /****************************************************************************/
 
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 extern void *ZPS_pvAplZdoGetAplHandle(void);
-#endif
 
 /****************************************************************************/
 /***        In-line Functions                                            ***/
 /****************************************************************************/
 
-#ifndef ZPS_APL_OPT_MULTIPLE_INSTANCES
 
 ZPS_APL_INLINE void ZPS_eAplSetConcentrator(void) ZPS_ZDO_ALWAYS_INLINE;
 ZPS_APL_INLINE void ZPS_eAplSetConcentrator(void)
@@ -185,16 +182,28 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoStartStack(void)
     return zps_eAplZdoStartStack(ZPS_pvAplZdoGetAplHandle());
 }
 
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetworkTryNextParent(void) ZPS_ZDO_ALWAYS_INLINE;
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetworkTryNextParent(void)
+{
+    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),FALSE,TRUE,TRUE);
+}
+
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTCRejoinNetworkTryNextParent(void) ZPS_ZDO_ALWAYS_INLINE;
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTCRejoinNetworkTryNextParent(void)
+{
+    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),FALSE,FALSE,TRUE);
+}
+
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTCRejoinNetwork(bool_t bWithDiscovery) ZPS_ZDO_ALWAYS_INLINE;
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTCRejoinNetwork(bool_t bWithDiscovery)
 {
-    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),bWithDiscovery,FALSE);
+    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),bWithDiscovery,FALSE,FALSE);
 }
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetwork(bool_t bWithDiscovery) ZPS_ZDO_ALWAYS_INLINE;
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetwork(bool_t bWithDiscovery)
 {
-    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),bWithDiscovery,TRUE);
+    return zps_eAplZdoRejoinNetwork(ZPS_pvAplZdoGetAplHandle(),bWithDiscovery,TRUE,FALSE);
 }
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoPermitJoining(uint8 u8PermitDuration) ZPS_ZDO_ALWAYS_INLINE;
@@ -538,310 +547,6 @@ ZPS_APL_INLINE uint8* ZPS_pu8AplZdoGetVsOUI(void)
 }
 
 
-#else
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoStartStack(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoStartStack(void *pvApl)
-{
-    return zps_eAplZdoStartStack(pvApl);
-}
-
-ZPS_APL_INLINE void ZPS_eAplSetConcentrator(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_eAplSetConcentrator(void *pvApl)
-{
-    zps_eAplSetConcentrator(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetwork(void *pvApl,bool_t bWithDiscovery) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRejoinNetwork(void *pvApl,bool_t bWithDiscovery)
-{
-    return zps_eAplZdoRejoinNetwork(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoPermitJoining(void *pvApl, uint8 u8PermitDuration) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoPermitJoining(void *pvApl, uint8 u8PermitDuration)
-{
-    return zps_eAplZdoPermitJoining(pvApl, u8PermitDuration);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoLeaveNetwork(void *pvApl, uint64 u64Addr, bool bRemoveChildren, bool bRejoin) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoLeaveNetwork(void *pvApl, uint64 u64Addr, bool bRemoveChildren, bool bRejoin)
-{
-    return zps_eAplZdoLeaveNetwork(pvApl, u64Addr, bRemoveChildren, bRejoin);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoPoll(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoPoll(void *pvApl)
-{
-    return zps_eAplZdoPoll(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupEndpointAdd(void *pvApl, uint16 u16GroupAddr, uint8 u8DstEndpoint) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupEndpointAdd(void *pvApl, uint16 u16GroupAddr, uint8 u8DstEndpoint)
-{
-    return zps_eAplZdoGroupEndpointAdd(pvApl, u16GroupAddr, u8DstEndpoint);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupEndpointRemove(void *pvApl, uint16 u16GroupAddr, uint8 u8DstEndpoint) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupEndpointRemove(void *pvApl, uint16 u16GroupAddr, uint8 u8DstEndpoint)
-{
-    return zps_eAplZdoGroupEndpointRemove(pvApl, u16GroupAddr, u8DstEndpoint);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupAllEndpointRemove(void *pvApl, uint8 u8DstEndpoint) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoGroupAllEndpointRemove(void *pvApl, uint8 u8DstEndpoint)
-{
-    return zps_eAplZdoGroupAllEndpointRemove(pvApl, u8DstEndpoint);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoBind(
-    void         *pvApl,
-    uint16       u16ClusterId,
-    uint64       u64SrcAddr,
-    uint8        u8SrcEndpoint,
-    uint8        u8DstAddrMode,
-    ZPS_tuAddress *puDstAddr,
-    uint8        u8DstEndpoint) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoBind(
-    void         *pvApl,
-    uint16       u16ClusterId,
-    uint64       u64SrcAddr,
-    uint8        u8SrcEndpoint,
-    uint8        u8DstAddrMode,
-    ZPS_tuAddress *puDstAddr,
-    uint8        u8DstEndpoint)
-{
-    // TODO compress parameters to 6
-    return zps_eAplZdoBind(pvApl, u16ClusterId, u64SrcAddr, u8SrcEndpoint, u8DstAddrMode, puDstAddr, u8DstEndpoint);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoUnbind(
-    void         *pvApl,
-    uint16       u16ClusterId,
-    uint64       u64SrcAddr,
-    uint8        u8SrcEndpoint,
-    uint8        u8DstAddrMode,
-    ZPS_tuAddress *puDstAddr,
-    uint8        u8DstEndpoint) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoUnbind(
-    void         *pvApl,
-    uint16       u16ClusterId,
-    uint64       u64SrcAddr,
-    uint8        u8SrcEndpoint,
-    uint8        u8DstAddrMode,
-    ZPS_tuAddress *puDstAddr,
-    uint8        u8DstEndpoint)
-{
-    // TODO compress parameters to 6
-    return zps_eAplZdoUnbind(pvApl, u16ClusterId, u64SrcAddr, u8SrcEndpoint, u8DstAddrMode, puDstAddr, u8DstEndpoint);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoDiscoverNetworks(void *pvApl, uint32 u32ChannelMask) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoDiscoverNetworks(void *pvApl, uint32 u32ChannelMask)
-{
-    return zps_eAplZdoDiscoverNetworks(pvApl, u32ChannelMask);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoJoinNetwork(void *pvApl, ZPS_tsNwkNetworkDescr *psNetworkDescr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoJoinNetwork(void *pvApl, ZPS_tsNwkNetworkDescr *psNetworkDescr)
-{
-    return zps_eAplZdoJoinNetwork(pvApl, psNetworkDescr);
-}
-
-ZPS_APL_INLINE ZPS_tsNwkNib *ZPS_psAplZdoGetNib(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_tsNwkNib *ZPS_psAplZdoGetNib(void *pvApl)
-{
-    return zps_psAplZdoGetNib(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teZdoDeviceType ZPS_eAplZdoGetDeviceType(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teZdoDeviceType ZPS_eAplZdoGetDeviceType(void *pvApl)
-{
-    return zps_eAplZdoGetDeviceType(pvApl);
-}
-
-ZPS_APL_INLINE void *ZPS_pvAplZdoGetNwkHandle(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void *ZPS_pvAplZdoGetNwkHandle(void *pvApl)
-{
-    return zps_pvAplZdoGetNwkHandle(pvApl);
-}
-
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_vAplSecSetInitialSecurityState(void *pvApl, ZPS_teZdoNwkKeyState eState, uint8 *pu8Key, uint8 u8KeySeqNum ) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_vAplSecSetInitialSecurityState(void *pvApl, ZPS_teZdoNwkKeyState eState, uint8 *pu8Key, uint8 u8KeySeqNum)
-{
-    return zps_vAplSecSetInitialSecurityState(pvApl, eState, pu8Key, u8KeySeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTransportNwkKey( void *pvApl, uint8 u8DstAddrMode, ZPS_tuAddress uDstAddress, uint8 au8Key[ZPS_SEC_KEY_LENGTH], uint8 u8KeySeqNum, bool bUseParent, uint64 u64ParentAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoTransportNwkKey( void *pvApl, uint8 u8DstAddrMode, ZPS_tuAddress uDstAddress, uint8 au8Key[ZPS_SEC_KEY_LENGTH], uint8 u8KeySeqNum, bool bUseParent, uint64 u64ParentAddr)
-{
-    return zps_eAplZdoTransportNwkKey(pvApl, u8DstAddrMode, uDstAddress, au8Key, u8KeySeqNum, bUseParent, u64ParentAddr);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRemoveDeviceReq( void *pvApl, uint64 u64ParentAddr, uint64 u64ChildAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRemoveDeviceReq( void *pvApl, uint64 u64ParentAddr, uint64 u64ChildAddr)
-{
-    return zps_eAplZdoRemoveDeviceReq(pvApl, u64ParentAddr, u64ChildAddr);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoSwitchKeyReq( void *pvApl, uint8 u8DstAddrMode, ZPS_tuAddress uDstAddress, uint8 u8KeySeqNum) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoSwitchKeyReq( void *pvApl, uint8 u8DstAddrMode, ZPS_tuAddress uDstAddress, uint8 u8KeySeqNum)
-{
-    return zps_eAplZdoSwitchKeyReq(pvApl, u8DstAddrMode, uDstAddress, u8KeySeqNum);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRequestKeyReq( void *pvApl, uint8 u8KeyType, uint64 u64IeeePartnerAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRequestKeyReq( void *pvApl, uint8 u8KeyType, uint64 u64IeeePartnerAddr)
-{
-    return zps_eAplZdoRequestKeyReq(pvApl, u8KeyType, u64IeeePartnerAddr);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterSetDevicePermissions(void *pvApl, uint64 u64DeviceAddr, ZPS_teDevicePermissions u8DevicePermissions) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterSetDevicePermissions(void *pvApl, uint64 u64DeviceAddr, ZPS_teDevicePermissions u8DevicePermissions)
-{
-    return zps_bAplZdoTrustCenterSetDevicePermissions(pvApl, u64DeviceAddr, u8DevicePermissions);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterGetDevicePermissions(void *pvApl, uint64 u64DeviceAddr, ZPS_teDevicePermissions *pu8DevicePermissions) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterGetDevicePermissions(void *pvApl, uint64 u64DeviceAddr, ZPS_teDevicePermissions *pu8DevicePermissions)
-{
-    return zps_bAplZdoTrustCenterGetDevicePermissions(pvApl, u64DeviceAddr, pu8DevicePermissions);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoAddReplaceLinkKey(void *pvApl, uint64 u64IeeeAddr, uint8 au8Key[ZPS_SEC_KEY_LENGTH]) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoAddReplaceLinkKey(void *pvApl, uint64 u64IeeeAddr, uint8 au8Key[ZPS_SEC_KEY_LENGTH])
-{
-    return zps_eAplZdoAddReplaceLinkKey(pvApl, u64IeeeAddr, au8Key);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRemoveLinkKey(void *pvApl, uint64 u64IeeeAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRemoveLinkKey(void *pvApl, uint64 u64IeeeAddr)
-{
-    return zps_eAplZdoRemoveLinkKey(pvApl, u64IeeeAddr);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoManyToOneRouteRequest(void *pvApl, bool bCacheRoute, uint8 u8Radius) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoManyToOneRouteRequest(void *pvApl, bool bCacheRoute, uint8 u8Radius)
-{
-    return zps_eAplZdoManyToOneRouteRequest(pvApl, bCacheRoute, u8Radius);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRouteRequest(void *pvApl, uint16 u16DstAddr, uint8 u8Radius) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoRouteRequest(void *pvApl, uint16 u16DstAddr, uint8 u8Radius)
-{
-    return zps_eAplZdoRouteRequest(pvApl, u16DstAddr, u8Radius);
-}
-
-/* Network layer fn wrappers */
-
-ZPS_APL_INLINE uint16 ZPS_u16AplZdoGetNwkAddr(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint16 ZPS_u16AplZdoGetNwkAddr(void *pvApl)
-{
-    return ZPS_u16NwkNibGetNwkAddr(zps_pvAplZdoGetNwkHandle(pvApl));
-}
-
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoGetIeeeAddr(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoGetIeeeAddr(void *pvApl)
-{
-    return ZPS_u64NwkNibGetExtAddr(zps_pvAplZdoGetNwkHandle(pvApl));
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoAddAddrMapEntry(void *pvApl, uint16 u16NwkAddr, uint64 u64ExtAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdoAddAddrMapEntry(void *pvApl, uint16 u16NwkAddr, uint64 u64ExtAddr)
-{
-    return ZPS_bNwkNibAddrMapAddEntry(zps_pvAplZdoGetNwkHandle(pvApl), u16NwkAddr, u64ExtAddr,TRUE) ?
-            ZPS_E_SUCCESS : ZPS_APL_APS_E_TABLE_FULL;
-}
-
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoLookupIeeeAddr(void *pvApl, uint16 u16NwkAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoLookupIeeeAddr(void *pvApl, uint16 u16NwkAddr)
-{
-    return ZPS_u64NwkNibFindExtAddr(zps_pvAplZdoGetNwkHandle(pvApl), u16NwkAddr);
-}
-
-ZPS_APL_INLINE uint16 ZPS_u16AplZdoLookupAddr(void *pvApl, uint64 u64ExtAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint16 ZPS_u16AplZdoLookupAddr(void *pvApl, uint64 u64ExtAddr)
-{
-    return ZPS_u16NwkNibFindNwkAddr(zps_pvAplZdoGetNwkHandle(pvApl), u64ExtAddr);
-}
-
-ZPS_APL_INLINE uint8 ZPS_u8AplZdoGetRadioChannel(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint8 ZPS_u8AplZdoGetRadioChannel(void *pvApl)
-{
-    return zps_psAplZdoGetNib(pvApl)->sPersist.u8VsChannel;
-}
-
-ZPS_APL_INLINE uint8 ZPS_u8AplZdoGetAuxRadioChannel(void) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint8 ZPS_u8AplZdoGetAuxRadioChannel(void)
-{
-    return zps_psAplZdoGetNib(ZPS_pvAplZdoGetAplHandle())->sPersist.u8VsAuxChannel;
-}
-
-ZPS_APL_INLINE uint16 ZPS_u8AplZdoGetNetworkPanId(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint16 ZPS_u8AplZdoGetNetworkPanId(void *pvApl)
-{
-    return zps_psAplZdoGetNib(pvApl)->sPersist.u16VsPanId;
-}
-
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoGetNetworkExtendedPanId(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint64 ZPS_u64AplZdoGetNetworkExtendedPanId(void *pvApl)
-{
-    return ZPS_u64NwkNibGetEpid(zps_pvAplZdoGetNwkHandle(pvApl));
-}
-ZPS_APL_INLINE ZPS_teDevicePermissions ZPS_eAplTrustCenterFindDevice(void *pvApl, uint64 u64ExtendedAddress) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teDevicePermissions ZPS_eAplTrustCenterFindDevice(void *pvApl, uint64 u64ExtendedAddress)
-{
-    return zps_eAplTrustCenterFindDevice(pvApl, u64ExtendedAddress);
-}
-
-
-ZPS_APL_INLINE void ZPS_eAplZdoSetDevicePermission(void *pvApl, ZPS_teDevicePermissions u8DevicePermissions) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_eAplZdoSetDevicePermission(void *pvApl, ZPS_teDevicePermissions u8DevicePermissions)
-{
-    zps_eAplZdoSetDevicePermission(pvApl, u8DevicePermissions);
-}
-
-
-ZPS_APL_INLINE void ZPS_eAplZdoRegisterZdoFilterCallback(void *pvApl,void* fnPtr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_eAplZdoRegisterZdoFilterCallback(void *pvApl,void* fnPtr)
-{
-    zps_eAplZdoRegisterZdoFilterCallback(pvApl, fnPtr);
-}
-
-ZPS_APL_INLINE bool ZPS_bGetPermitJoiningStatus(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE bool ZPS_bGetPermitJoiningStatus(void *pvApl)
-{
-    return ZPS_vNwkGetPermitJoiningStatus(zps_pvAplZdoGetNwkHandle(pvApl));
-}
-
-ZPS_APL_INLINE void ZPS_eAplZdoEnableProxyTcCapability(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_eAplZdoEnableProxyTcCapability(void *pvApl)
-{
-    zps_eAplZdoEnableProxyTcCapability(pvApl);
-}
-
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterRemoveDevice(uint64 u64DeviceAddr) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE ZPS_teStatus ZPS_bAplZdoTrustCenterRemoveDevice(uint64 u64DeviceAddr)
-{
-    return zps_bAplZdoTrustCenterRemoveDevice(pvApl,u64DeviceAddr );
-}
-
-
-
-ZPS_APL_INLINE void ZPS_vAplZdoSetVsOUI(void *pvApl, uint8 *pu8VsOUI) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE void ZPS_vAplZdoSetVsOUI(void *pvApl, uint8 *pu8VsOUI)
-{
-    return zps_vAplZdoSetVsOUI(pvApl, pu8VsOUI);
-}
-
-ZPS_APL_INLINE uint8* ZPS_pu8AplZdoGetVsOUI(void *pvApl) ZPS_ZDO_ALWAYS_INLINE;
-ZPS_APL_INLINE uint8* ZPS_pu8AplZdoGetVsOUI(void *pvApl)
-{
-    return zps_pu8AplZdoGetVsOUI(pvApl);
-}
-
-#endif
 
 /****************************************************************************/
 /****************************************************************************/

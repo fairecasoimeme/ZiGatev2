@@ -6,8 +6,8 @@ demo is to provide a simple project for debugging and further development.
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================
@@ -21,8 +21,8 @@ No special settings are required.
 Prepare the Demo
 ================
 1.  Plug the PCB2459-2 JN5189 USB DONGLE onto the Personal Computer.
-4.  Download the program to the target board. run "JN518xProgrammer.exe -s COMx -p led_blinky.bin" command.
-5.  Rebuild the debugger to generate new led_blinky.bin file for new program.
+2.  Download the program to the target board. run "DK6Programmer.exe -s COMx -p led_blinky.bin" command.
+3.  Rebuild the debugger to generate new led_blinky.bin file for new program.
 
 Running the demo
 ================

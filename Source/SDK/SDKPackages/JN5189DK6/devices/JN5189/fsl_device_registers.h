@@ -1,6 +1,6 @@
 /*
  * Copyright 2014-2016 Freescale Semiconductor, Inc.
- * Copyright 2016-2018 NXP
+ * Copyright 2016-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -15,9 +15,8 @@
  *
  * The CPU macro should be declared in the project or makefile.
  */
-#if (defined(CPU_JN518X) || defined(CPU_JN5189HN) || defined(CPU_JN5189THN))
-
-#define JN518X_SERIES
+#if (defined(CPU_JN5188HN) || defined(CPU_JN5188THN) || defined(CPU_JN5189HN) || \
+    defined(CPU_JN5189THN) || defined(CPU_JN518X))
 
 #define JN5189_SERIES
 

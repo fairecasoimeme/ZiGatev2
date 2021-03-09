@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -35,7 +35,9 @@ void BOARD_InitBootPins(void);
 #define IOCON_PIO_DIGITAL_EN 0x80u     /*!<@brief Enables digital function */
 #define IOCON_PIO_FUNC1 0x01u          /*!<@brief Selects pin function 1 */
 #define IOCON_PIO_FUNC2 0x02u          /*!<@brief Selects pin function 2 */
+#define IOCON_PIO_FUNC5 0x05u          /*!<@brief Selects pin function 5 */
 #define IOCON_PIO_INPFILT_OFF 0x0100u  /*!<@brief Input filter disabled */
+#define IOCON_PIO_INPFILT_ON 0x00u     /*!<@brief Input filter enabled */
 #define IOCON_PIO_INV_DI 0x00u         /*!<@brief Input function is not inverted */
 #define IOCON_PIO_MODE_PULLDOWN 0x18u  /*!<@brief Selects pull-down function */
 #define IOCON_PIO_MODE_PULLUP 0x00u    /*!<@brief Selects pull-up function */

@@ -214,6 +214,35 @@ int16_t XCVR_ReadRSSI(data_rate_t rate);
    */
 void XCVR_SetBLEdpTopEmAddr(uint32_t em_addr);
 
+/*!
+   * @brief  Set Tx Power value
+   *
+   * Call to set Tx Power value in dBm : takes place on radio re-initialization
+   *
+   */
+int8_t XCVR_SetTxPwr(int8_t tx_pwr_dbm);
+
+/*!
+   * @brief  Set Tx Power operation range
+   *
+   *
+   * Call to set Tx Power operation range : high Tx power range allows operation between [-30dBm .. +15dBm]
+   * whereas low Tx power range in in the [-30dBm..+10dBm] range,
+   * Hight Tx power is only possible on chips having this capability, other remain in low range.
+   *
+   */
+bool_t XCVR_SetTxOperationRange(bool_t high);
+
+#if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
+/*!
+   * @brief  Register callback to be notified of next RF activity
+   *
+   * Call to be notified when next RF Activity started to drive rfStatusPrio coexistence signal
+   *
+   */
+void XCVR_RegisterRfActivityCallback(void *pf_callback);
+#endif
+
 /* @} */
 
 

@@ -138,6 +138,10 @@ uint32_t StackTimer_GetInputFrequency(void);
 uint32_t StackTimer_GetCounterValue(void);
 void StackTimer_SetOffsetTicks(uint32_t offset);
 
+#ifndef ENABLE_RAM_VECTOR_TABLE
+void StackTimer_ISR_withParam(uint32_t param);
+#endif
+
 void PWM_Init(uint8_t instance);
 void PWM_SetChnCountVal(uint8_t instance, uint8_t channel, tmrTimerTicks_t val);
 tmrTimerTicks_t PWM_GetChnCountVal(uint8_t instance, uint8_t channel);

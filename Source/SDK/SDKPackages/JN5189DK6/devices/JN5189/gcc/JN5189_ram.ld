@@ -4,15 +4,15 @@
 **                          JN5189THN
 **
 **     Compiler:            GNU C Compiler
-**     Reference manual:    JN5189 User manual Rev0.1 27 July 2018
+**     Reference manual:    JN5189UM_Rev.1.2 20 December 2018
 **     Version:             rev. 1.0, 2018-07-31
-**     Build:               b180731
+**     Build:               b200430
 **
 **     Abstract:
 **         Linker file for the GNU C Compiler
 **
 **     Copyright 2016 Freescale Semiconductor, Inc.
-**     Copyright 2016-2018 NXP
+**     Copyright 2016-2020 NXP
 **     All rights reserved.
 **
 **     SPDX-License-Identifier: BSD-3-Clause
@@ -34,9 +34,9 @@ STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0800;
 /* Specify the memory areas */
 MEMORY
 {
-  m_interrupts          (RX)  : ORIGIN = 0x20000000, LENGTH = 0x00000140
-  m_text                (RX)  : ORIGIN = 0x20000140, LENGTH = 0x00012EC0
-  m_data                (RW)  : ORIGIN = 0x20013000, LENGTH = 0x00013000
+  m_interrupts          (RX)  : ORIGIN = 0x04000000, LENGTH = 0x00000140
+  m_text                (RX)  : ORIGIN = 0x04000140, LENGTH = 0x0000AEB0
+  m_data                (RW)  : ORIGIN = 0x0400AFF0, LENGTH = 0x0000AFF0
 }
 
 /* Define output sections */

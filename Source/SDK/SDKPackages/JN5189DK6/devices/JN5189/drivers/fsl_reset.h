@@ -9,11 +9,7 @@
 #ifndef _FSL_RESET_H_
 #define _FSL_RESET_H_
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include "fsl_device_registers.h"
+#include "fsl_common.h"
 
 /*!
  * @addtogroup ksdk_common
@@ -37,8 +33,11 @@
  */
 typedef enum _SYSCON_RSTn
 {
-    kSPIFI_RST_SHIFT_RSTn   = (0 | SYSCON_PRESETCTRL0_SPIFI_RST_SHIFT), /**< SpiFi reset control   */
-    kMUX_RST_SHIFT_RSTn     = (0 | SYSCON_PRESETCTRL0_MUX_RST_SHIFT),   /**< Input mux reset control */
+    kSPIFI_RST_SHIFT_RSTn = (0 | SYSCON_PRESETCTRL0_SPIFI_RST_SHIFT), /**< SpiFi reset control   */
+    kMUX_RST_SHIFT_RSTn   = (0 | SYSCON_PRESETCTRL0_MUX_RST_SHIFT),   /**< Input mux reset control */
+#if defined(SUPPORT_FOR_BLE) && SUPPORT_FOR_BLE
+    kBLE_TG_RST_SHIFT_RSTn = (0 | SYSCON_PRESETCTRL0_BLE_TIMING_GEN_RST_SHIFT), /**< BLE power module reset control   */
+#endif
     kIOCON_RST_SHIFT_RSTn   = (0 | SYSCON_PRESETCTRL0_IOCON_RST_SHIFT), /**< IOCON reset control */
     kGPIO0_RST_SHIFT_RSTn   = (0 | SYSCON_PRESETCTRL0_GPIO_RST_SHIFT),  /**< GPIO0 reset control */
     kPINT_RST_SHIFT_RSTn    = (0 | SYSCON_PRESETCTRL0_PINT_RST_SHIFT),  /**< Pin interrupt (PINT) reset control */
@@ -61,14 +60,19 @@ typedef enum _SYSCON_RSTn
     kPWM_RST_SHIFT_RSTn = ((1UL << 16) | SYSCON_PRESETCTRL1_PWM_RST_SHIFT),  /**< PWM reset control */
     kRNG_RST_SHIFT_RSTn =
         ((1UL << 16) | SYSCON_PRESETCTRL1_RNG_RST_SHIFT), /**< Random number generator reset control */
-    kFC6_RST_SHIFT_RSTn = ((1UL << 16) | SYSCON_PRESETCTRL1_I2C2_RST_SHIFT), /**< Flexcomm Interface 6 reset control */
+    kFC6_RST_SHIFT_RSTn = ((1UL << 16) | 20U),                               /**< Flexcomm Interface 6 reset control */
     kUSART0_RST_SHIFT_RSTn = kFC0_RST_SHIFT_RSTn,                            /**< USART0 reset control == Flexcomm0 */
     kUSART1_RST_SHIFT_RSTn = kFC1_RST_SHIFT_RSTn,                            /**< USART0 reset control == Flexcomm1 */
     kI2C0_RST_SHIFT_RSTn   = kFC2_RST_SHIFT_RSTn,                            /**< I2C0 reset control == Flexcomm 2  */
     kI2C1_RST_SHIFT_RSTn   = kFC3_RST_SHIFT_RSTn,                            /**< I2C1 reset control == Flexcomm 3  */
     kSPI0_RST_SHIFT_RSTn   = kFC4_RST_SHIFT_RSTn,                            /**< SPI0 reset control == Flexcomm 4  */
     kSPI1_RST_SHIFT_RSTn   = kFC5_RST_SHIFT_RSTn,                            /**< SPI1 reset control == Flexcomm 5  */
+#ifdef I2C2
     kI2C2_RST_SHIFT_RSTn   = kFC6_RST_SHIFT_RSTn,                            /**< I2C2 reset control == Flexcomm 6  */
+#endif
+#if defined(SUPPORT_FOR_BLE) && SUPPORT_FOR_BLE
+    kBLE_RST_SHIFT_RSTn = ((1UL << 16) | SYSCON_PRESETCTRL1_BLE_RST_SHIFT), /**< Bluetooth LE modules reset control */
+#endif
     kMODEM_MASTER_SHIFT_RSTn =
         ((1UL << 16) | SYSCON_PRESETCTRL1_MODEM_MASTER_RST_SHIFT),          /**< AHB Modem master interface reset */
     kAES_RST_SHIFT_RSTn = ((1UL << 16) | SYSCON_PRESETCTRL1_AES_RST_SHIFT), /**< Encryption module reset control */

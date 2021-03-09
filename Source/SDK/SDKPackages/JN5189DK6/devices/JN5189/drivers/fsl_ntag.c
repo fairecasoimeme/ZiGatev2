@@ -35,6 +35,7 @@ ntag_handle_t s_ntagHandle;
  * Codes
  ******************************************************************************/
 
+#if !(defined(FSL_FEATURE_NTAG_APP_NOT_SUPPORTED) && FSL_FEATURE_NTAG_APP_NOT_SUPPORTED)
 void NFCTag_IRQHandler(void)
 {
     ntag_handle_t *h = &s_ntagHandle;
@@ -50,6 +51,7 @@ void NFCTag_IRQHandler(void)
         h->callback(fd, h->userData);
     }
 }
+#endif
 
 void NTAG_GetDefaultConfig(ntag_config_t *config)
 {

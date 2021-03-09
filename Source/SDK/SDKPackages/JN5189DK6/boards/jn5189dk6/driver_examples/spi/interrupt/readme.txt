@@ -7,8 +7,8 @@ and check if the data slave received is correct.
 
 Toolchain supported
 ===================
-- IAR embedded Workbench  8.32.4
-- MCUXpresso  11.1.0
+- IAR embedded Workbench  8.50.6
+- MCUXpresso  11.2.1
 
 Hardware requirements
 =====================
@@ -23,10 +23,10 @@ Connect SPI1 pins to SPI0 pins:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Master - SPI1                 CONNECTS TO      Slave - SPI0
 Pin Name   Board Location                      Pin Name  Board Location
-MISO       J3 pin 25                           MISO      J3 pin 10
+MISO       J3 pin 8                            MISO      J3 pin 14
 MOSI       J3 pin 24                           MOSI      J3 pin 11
 SCK        J3 pin 22                           SCK       J3 pin 9
-SELN       J3 pin 23                           PCS2      J3 pin 12
+SELN       J3 pin 10                           SELN      J3 pin 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prepare the Demo

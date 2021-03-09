@@ -1,5 +1,5 @@
 /*
- * Copyright  2019 NXP
+ * Copyright  2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -19,6 +19,8 @@ processor: JN5189
 package_id: JN5189HN
 mcu_data: ksdk2_0
 processor_version: 0.0.0
+pin_labels:
+- {pin_num: '3', pin_signal: PIO0_0/USART0_SCK/USART1_TXD/PWM0/SPI1_SCK/PDM0_DATA, label: LED0, identifier: LED0}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -44,26 +46,26 @@ void BOARD_InitBootPins(void)
 BOARD_InitPins:
 - options: {callFromInitBoot: 'true', coreID: cm4, enableClock: 'true'}
 - pin_list:
-  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0_PU/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2_PU/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9_PU/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8_PU/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '19', peripheral: SPIFI, signal: CSN, pin_signal: PIO0_16/SPI1_SSELN0/ISO7816_RST/PWM5_PU/I2C0_SDA/PDM1_CLK/SPIFI_CSN, mode: pullUp, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '21', peripheral: SPIFI, signal: 'SPIFI_IO, 3', pin_signal: PIO0_17/SPI1_MOSI/ISO7816_CLK/SWO/PWM6_PD/CLK_OUT/SPIFI_IO3, mode: pullDown, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '22', peripheral: SPIFI, signal: SCK, pin_signal: PIO0_18/SPI1_MISO/ISO7816_IO/CT32B0_MAT1/PWM7_PD/USART0_TXD/SPIFI_CLK, mode: pullDown, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '23', peripheral: SPIFI, signal: SPIFI_IO0_or_SPIFI_MOSI, pin_signal: PIO0_19/ADO/USART1_RXD/CLK_IN/PWM4_PD/USART0_RXD/SPIFI_IO0, mode: pullDown, slew0: disabled,
-    invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '24', peripheral: SPIFI, signal: 'SPIFI_IO, 2', pin_signal: PIO0_20/IR_BLASTER/USART1_TXD/PWM8_PD/RFTX/SPIFI_IO2, mode: pullDown, slew0: disabled, invert: disabled,
-    filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
-  - {pin_num: '25', peripheral: SPIFI, signal: SPIFI_IO1_or_SPIFI_MISO, pin_signal: PIO0_21/IR_BLASTER/USART1_SCK/FLICKER_CTRL/PWM9_PD/RFRX/SWO/SPIFI_IO1, mode: pullUp,
-    slew0: disabled, invert: disabled, filter_off: disabled, slew1: disabled, open_drain: disabled, ssel: disabled}
+  - {pin_num: '15', peripheral: SWD, signal: SWCLK, pin_signal: PIO0_12/IR_BLASTER/SWCLK/PWM0/I2C1_SCL/SPI0_MOSI/ANA_COMP_OUT, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '16', peripheral: SWD, signal: SWDIO, pin_signal: PIO0_13/SPI1_SSELN2/SWDIO/PWM2/I2C1_SDA/SPI0_SSELN, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '12', peripheral: USART0, signal: RXD, pin_signal: PIO0_9/SPI0_SSELN/USART0_RXD/CT32B1_CAP1/PWM9/USART1_SCK/ADO/PDM1_CLK, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '11', peripheral: USART0, signal: TXD, pin_signal: PIO0_8/SPI0_MOSI/USART0_TXD/CT32B0_MAT0/PWM8/ANA_COMP_OUT/RFTX/PDM1_DATA, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '19', peripheral: SPIFI, signal: CSN, pin_signal: PIO0_16/SPI1_SSELN0/ISO7816_RST/PWM5/I2C0_SDA/PDM1_CLK/SPIFI_CSN, mode: pullUp, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '22', peripheral: SPIFI, signal: SPIFI_CLK, pin_signal: PIO0_18/SPI1_MISO/ISO7816_IO/CT32B0_MAT1/PWM7/USART0_TXD/SPIFI_CLK, mode: pullDown, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '24', peripheral: SPIFI, signal: 'SPIFI_IO, 2', pin_signal: PIO0_20/IR_BLASTER/USART1_TXD/PWM8/RFTX/SPIFI_IO2, mode: pullDown, slew0: standard, invert: disabled,
+    filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '21', peripheral: SPIFI, signal: 'SPIFI_IO, 3', pin_signal: PIO0_17/SPI1_MOSI/ISO7816_CLK/SWO/PWM6/CLK_OUT/SPIFI_IO3, mode: pullDown, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '23', peripheral: SPIFI, signal: SPIFI_IO0_or_SPIFI_MOSI, pin_signal: PIO0_19/ADO/USART1_RXD/CLK_IN/PWM4/USART0_RXD/SPIFI_IO0, mode: pullDown, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
+  - {pin_num: '25', peripheral: SPIFI, signal: SPIFI_IO1_or_SPIFI_MISO, pin_signal: PIO0_21/IR_BLASTER/USART1_SCK/PWM9/RFRX/SWO/SPIFI_IO1, mode: pullUp, slew0: standard,
+    invert: disabled, filter_off: disabled, slew1: standard, open_drain: disabled, ssel: disabled}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -77,7 +79,7 @@ BOARD_InitPins:
 /* Function assigned for the Cortex-M4 */
 void BOARD_InitPins(void)
 {
-    /* Enables the clock for the I/O controller: 0x01u */
+    /* Enables the clock for the I/O controller block. 0: Disable. 1: Enable.: 0x01u */
     CLOCK_EnableClock(kCLOCK_Iocon);
 
     const uint32_t port0_pin12_config = (/* Pin is configured as SWCLK */

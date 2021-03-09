@@ -157,8 +157,11 @@ void APP_vInitialiseEndDevice(bool_t bColdStart)
    APP_vSetLed(LED2, OFF);
    APP_bButtonInitialise();
    ZPS_psAplAibGetAib()->bUseInstallCode = BDB_JOIN_USES_INSTALL_CODE_KEY;
+
    if (bColdStart)
    {
+       APP_SetHighTxPowerMode();
+
        /* Initialise ZBPro stack */
        ZPS_eAplAfInit();
    }
@@ -167,6 +170,9 @@ void APP_vInitialiseEndDevice(bool_t bColdStart)
        /* ReInitialise ZBPro stack */
         ZPS_eAplAfReInit();
    }
+
+   APP_SetMaxTxPower();
+
    /* Initialise ZCL */
    APP_ZCL_vInitialise(bColdStart);
 
@@ -402,15 +408,6 @@ static void vAppHandleZdoEvents( BDB_tsZpsAfEvent *psZpsAfEvent)
             DBG_vPrintf(TRACE_APP, "APP-ZDO: Failed To Join %02x Rejoin %d\r\n",
                     psAfEvent->uEvent.sNwkJoinFailedEvent.u8Status,
                     psAfEvent->uEvent.sNwkJoinFailedEvent.bRejoin);
-            if(sDeviceDesc.eNodeState != E_STARTUP)
-            {
-                APP_vSetLed(LED2, OFF);
-                /* save everything */
-                sDeviceDesc.eNodeState = E_STARTUP;
-                vResetOTADiscovery();
-                vOTAResetPersist();
-                PDM_eSaveRecordData(PDM_ID_APP_END_DEVICE,&sDeviceDesc,sizeof(tsDeviceDesc));
-            }
             break;
 
 
