@@ -62,6 +62,10 @@ typedef struct listElement_tag
 * Public prototypes
 *************************************************************************************
 ********************************************************************************** */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void ListInit(listHandle_t list, uint32_t max);
 listHandle_t ListGetList(listElementHandle_t element);
 listStatus_t ListAddHead(listHandle_t list, listElementHandle_t element);
@@ -76,6 +80,9 @@ uint32_t ListGetSize(listHandle_t list);
 uint32_t ListGetAvailable(listHandle_t list);
 listStatus_t ListTest(void);
 
+#ifdef __cplusplus
+}
+#endif
 /*! *********************************************************************************
 *************************************************************************************
 * Private macros

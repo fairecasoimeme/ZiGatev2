@@ -161,7 +161,7 @@ mmcauAesContext_t mmcauAesCtx;
 
 #if USE_RTOS && (JN_AES_HW_ACC || LTC_HW_ACC || MMCAU_HW_ACC || FSL_FEATURE_SOC_AES_HW)
 /*! Mutex used to protect the AES Context when an RTOS is used. */
-osaMutexId_t mSecLibMutexId;
+osaMutexId_t mSecLibMutexId = NULL;
 #endif /* USE_RTOS */
 
 #if JN_SHA_HW_ACC
@@ -350,11 +350,16 @@ void SecLib_Init(void)
     
 #if USE_RTOS && (LTC_HW_ACC || MMCAU_HW_ACC || JN_AES_HW_ACC || FSL_FEATURE_SOC_AES_HW)
     /*! Initialize the MMCAU AES Context Buffer Mutex here. */
-       mSecLibMutexId = OSA_MutexCreate();
+    /* Do not allocate heap memory again after getting out of low power
+       and reinitializing SecLib if RAM retention is on*/
     if (mSecLibMutexId == NULL)
     {
-        panic( ID_PANIC(0,0), (uint32_t)SecLib_Init, 0, 0 );
-        return;
+        mSecLibMutexId = OSA_MutexCreate();
+        if (mSecLibMutexId == NULL)
+        {
+            panic( ID_PANIC(0,0), (uint32_t)SecLib_Init, 0, 0 );
+            return;
+        }
     }
 #endif
 }
@@ -1765,6 +1770,10 @@ void SHA1_CloneCtx (void* pDestCtx, void* pSourceCtx)
 void SHA1_Init (void* pContext)
 {
 #if JN_SHA_HW_ACC
+    /* lock SHA HW resource and */
+    /* prevent device to go to low power until SHA processing finished */
+    SecLib_DisallowToSleep();
+    SECLIB_MUTEX_LOCK();
     SHA_ClkInit(SHA0);
     SHA_Init(SHA0, pContext, kSHA_Sha1);
 #else
@@ -1851,6 +1860,9 @@ void SHA1_HashFinish (void* pContext, uint8_t*  pOutput)
 #if JN_SHA_HW_ACC
     SHA_Finish(SHA0, pContext, pOutput, NULL);
     SHA_ClkDeinit(SHA0);
+    /* Unlock SHA HW resource and allow device to go to low power */
+    SecLib_AllowToSleep();
+    SECLIB_MUTEX_UNLOCK();
 #else
     uint32_t i;
     uint32_t temp;
@@ -1959,6 +1971,10 @@ void SHA256_CloneCtx (void* pDestCtx, void* pSourceCtx)
 void SHA256_Init (void* pContext)
 {
 #if JN_SHA_HW_ACC
+    /* lock SHA HW resource and */
+    /* prevent device to go to low power until SHA processing finished */
+    SecLib_DisallowToSleep();
+    SECLIB_MUTEX_LOCK();
     SHA_ClkInit(SHA0);
     SHA_Init(SHA0, pContext, kSHA_Sha256);
 #else  
@@ -2044,6 +2060,9 @@ void SHA256_HashFinish (void* pContext, uint8_t* pOutput)
 #if JN_SHA_HW_ACC
     SHA_Finish(SHA0, pContext, pOutput, NULL);
     SHA_ClkDeinit(SHA0);
+    /* Unlock SHA HW resource and allow device to go to low power */
+    SecLib_AllowToSleep();
+    SECLIB_MUTEX_UNLOCK();
 #else
     uint32_t i;
     uint32_t temp;

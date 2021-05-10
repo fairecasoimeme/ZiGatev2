@@ -363,7 +363,8 @@ PUBLIC teZCL_Status eCLD_DiagnosticsUpdate(uint8 u8SourceEndPointId)
     #endif
 
     #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_UCAST_SUCCESS
-        psSharedStruct->u16ApsTxUcastSuccess = psApsCounters->u16ApsTxUcastSuccess;
+        psSharedStruct->u16ApsTxUcastSuccess = psApsCounters->u16ApsTxUcastSuccess +
+                                               ZPS_psAplZdoGetNib()->u16BufferedSuccess;
     #endif
 
     #ifdef CLD_DIAGNOSTICS_ATTR_ID_APS_TX_UCAST_RETRY

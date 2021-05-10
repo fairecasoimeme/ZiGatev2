@@ -21,6 +21,7 @@
 #include "FunctionLib.h"
 
 #include "Panic.h"
+#include "fsl_os_abstraction.h"
 
 #if gEepromType_d == gEepromDevice_MX25R8035F_c
 
@@ -39,8 +40,7 @@
 #define gEepromWriteEnable_d   1
 #endif
 
-
-
+static osaSemaphoreId_t       mExtEepromSemaphoreId;
 
 #define IS_WORD_ALIGNED(x) (((uint32_t)(x) & 0x3) == 0)
 #define IS_PAGE_ALIGNED(x) (((uint32_t)(x) & (EEPROM_PAGE_SIZE-1)) == 0)
@@ -222,6 +222,12 @@ ee_err_t EEPROM_Init(void)
     ee_err_t status = ee_ok;
     bool_t resReqCalled = FALSE;
 
+    if( (mExtEepromSemaphoreId == NULL)
+    		&& ((mExtEepromSemaphoreId = OSA_SemaphoreCreate(0)) == NULL))
+    {
+        panic( ID_PANIC(0,0), (uint32_t)EEPROM_Init, 0, 0 );
+    }
+
 #if defined gFlashBlockBitmap_d
     uint32_t i;
 
@@ -327,11 +333,16 @@ ee_err_t EEPROM_DeInit(void)
 {
     if (initialized)
     {
+        OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
         SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_DP]);
         SPIFI_Deinit(SPIFI);
         SYSCON->AHBCLKCTRLSET[0] = SYSCON_AHBCLKCTRLSET0_SPIFI_CLK_SET_MASK;
         BOARD_SetSpiFi_LowPowerEnter();
         initialized = 0;
+
+        OSA_SemaphorePost(mExtEepromSemaphoreId);
+        OSA_SemaphoreDestroy(mExtEepromSemaphoreId);
     }
     return ee_ok;
 }
@@ -350,6 +361,9 @@ ee_err_t EEPROM_ChipErase(void)
 #endif
 
     EEPROM_DBG_LOG("");
+
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
     /* Wait for idle state : check before operation in order to let previous
      * operation terminate rather than blocking */
     while (EEPROM_isBusy());
@@ -359,6 +373,8 @@ ee_err_t EEPROM_ChipErase(void)
 
     /* Erase command */
     SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_ERASE_ALL]);
+
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
 
 #if defined gFlashBlockBitmap_d
     /* Mark Flash as erased */
@@ -392,6 +408,8 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
 
     EEPROM_DBG_LOG("");
 
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
     while (EEPROM_isBusy());
 
     EEPROM_WriteEnable();
@@ -419,6 +437,7 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
 #endif
         break;
     default:
+        OSA_SemaphorePost(mExtEepromSemaphoreId);
         return ee_error;
     }
 
@@ -428,6 +447,7 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
     /* Erase sector or block */
     SPIFI_SetCommand(SPIFI, &command[cmd]);
 
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
 
     return ee_ok;
 }
@@ -463,11 +483,17 @@ ee_err_t EEPROM_EraseArea(uint32_t *Addr, int32_t *size, bool non_blocking)
         erase_addr = SECTOR_ADDR(Addr);
         for (erase_addr = *Addr; remain_sz > 0; )
         {
+            OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
             if (non_blocking && EEPROM_isBusy())
             {
                 status = ee_busy;
+                OSA_SemaphorePost(mExtEepromSemaphoreId);
                 break;
             }
+
+            OSA_SemaphorePost(mExtEepromSemaphoreId);
+
 #if defined gFlashBlockBitmap_d
             block_nb = BLOCK_NUMBER(erase_addr);
 #endif
@@ -650,6 +676,9 @@ ee_err_t EEPROM_WriteData(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 
 void EEPROM_SetRead(void)
 {
+
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
     while (EEPROM_isBusy());
 
     /* Set start address */
@@ -664,6 +693,8 @@ void EEPROM_SetRead(void)
     {
         SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_QREAD]);
     }
+
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
 }
 
 
@@ -680,6 +711,8 @@ void EEPROM_SetRead(void)
 ********************************************************************************** */
 ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
 {
+
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
 
     while (EEPROM_isBusy());
 
@@ -701,6 +734,8 @@ ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
 
     /* Reset the SPIFI to switch to command mode */
     SPIFI_ResetCommand(SPIFI);
+
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
 
     return ee_ok;
 }
@@ -845,6 +880,9 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
         mHandle.EraseBitmap[sector_index/8] &= ~ (1 << (sector_index%8));
     }
 #endif /* gFlashBlockBitmap_d */
+
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
     EEPROM_WriteEnable();
     SPIFI_SetCommandAddress(SPIFI, Addr + FSL_FEATURE_SPIFI_START_ADDR);
 
@@ -859,6 +897,8 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
         SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_QPROGRAM_PAGE]);
     }
     SPIFI_WriteBuffer(SPIFI, Outbuf, NoOfBytes);
+
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
 }
 
 /*! *********************************************************************************
@@ -877,7 +917,11 @@ static ee_err_t EEPROM_WritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Out
 
     if (NoOfBytes > 0)
     {
+        OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+
         while (EEPROM_isBusy());
+
+        OSA_SemaphorePost(mExtEepromSemaphoreId);
 
         EepromWritePage(NoOfBytes, Addr, Outbuf);
     }

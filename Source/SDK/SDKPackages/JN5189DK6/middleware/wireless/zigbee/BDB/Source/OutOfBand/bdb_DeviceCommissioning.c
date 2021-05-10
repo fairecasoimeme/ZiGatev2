@@ -50,7 +50,7 @@
 #endif
 #include <string.h>
 #include <stdlib.h>
-#include "portmacro.h"
+
 
 /****************************************************************************/
 /***        Macro Definitions                                             ***/

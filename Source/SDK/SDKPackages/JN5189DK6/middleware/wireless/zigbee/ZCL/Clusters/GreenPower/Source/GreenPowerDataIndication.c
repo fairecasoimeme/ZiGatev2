@@ -227,9 +227,9 @@ PUBLIC void vZCL_HandleZgpDataConfirm(ZPS_tsAfEvent *pZPSevent, uint8 u8GpEndpoi
 
         u8DataReqHandle = psGpCustomDataStructure->u8GPDataReqHandle;
 
-        if(u8DataReqHandle == 0x81)
+        if(u8DataReqHandle == ZPS_NWK_GP_BASE_HANDLE + 1)
         {
-            u8DataReqHandle = 0xFF;
+            u8DataReqHandle = ZPS_NWK_GP_MAX_HANDLE - 1;
         }
         else
         {

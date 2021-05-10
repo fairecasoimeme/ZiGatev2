@@ -281,6 +281,16 @@ void PWRLib_EnterSleep_WithFlashControllerPowerDown(void)
 #endif
 }
 
+#if gSwdWakeupReconnect_c
+void SWD_spin_waiting_for_connection(void)
+{
+    static volatile int foo = 1;
+
+    while (foo)
+    {
+    }
+}
+#endif
 
 /*****************************************************************************
  *                             PUBLIC FUNCTIONS                              *
@@ -408,9 +418,12 @@ void PWRLib_MCU_Enter_Sleep(void)
     BOARD_DbgIoSet(0, 0);
 #endif
 
-#if gPWR_FreqScalingWFI
+#if defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI == 2)
     /* FRO 12MHz */
     SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_FRO12M);
+#elif defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI == 1)
+    /* XTAL 32MHz */
+    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_XTAL32M);
 #endif
 
 #if gPWR_FlashControllerPowerDownInWFI
@@ -467,8 +480,18 @@ void PWRLib_MCU_Enter_Sleep(void)
 
     OSA_EnableIRQGlobal();
 }
+#if gSwdWakeupReconnect_c
+bool swd_PD_deny = false;
+void PWR_SWD_SetPowerDownAllowDeny(bool against)
+{
+    swd_PD_deny = against;
+}
 
-
+bool PWR_SWD_GetPowerDownDeny(void)
+{
+    return swd_PD_deny;
+}
+#endif
 /*---------------------------------------------------------------------------
  * Name: PWRLib_UpdateWakeupReason
  * Description: Updates wakeup reason when exiting deep sleep
@@ -481,32 +504,43 @@ void PWR_UpdateWakeupReason(void)
     uint32_t wakeup_io_source = POWER_GetIoWakeStatus();
     if (wakeup_io_source)
     {
+#if gSwdWakeupReconnect_c
+        if (wakeup_io_source == BIT(SWDIO_GPIO_PIN))
+        {
+            wakeup_io_source &= BIT(SWDIO_GPIO_PIN);
+            SWD_spin_waiting_for_connection();
+            PWR_SWD_SetPowerDownAllowDeny(true);
+        }
+#endif
         PWRLib_MCU_WakeupReason.Bits.FromKeyBoard = 1U;
         /* notify the GPIO adaptor so the user callback could be called */
         GpioNotifyIoWakeupSource(wakeup_io_source);
         PWR_DBG_LOG("WakeIOSource=%x", wakeup_io_source);
     }
 
-    /* BLE */
-    if (NVIC_GetPendingIRQ( BLE_WAKE_UP_TIMER_IRQn))
-    {
-        PWR_DBG_LOG("BLE_WAKE_UP_TIMER_IRQn");
-        PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
-    }
-
-    /* Timer - RTC */
+    /* WTIMER */
     if (NVIC_GetPendingIRQ(WAKE_UP_TIMER0_IRQn) ||
         NVIC_GetPendingIRQ(WAKE_UP_TIMER1_IRQn))
     {
         PWR_DBG_LOG("WAKE_UP_TIMERx_IRQn");
-        PWRLib_MCU_WakeupReason.Bits.FromTMR = 1U;
+        PWRLib_MCU_WakeupReason.Bits.FromWakeTimer = 1U;
     }
 
-    /* RTC Second Interrupt */
+    /* RTC Interrupt */
     if (NVIC_GetPendingIRQ(RTC_IRQn))
     {
-        PWR_DBG_LOG("RTC_IRQn");
-        PWRLib_MCU_WakeupReason.Bits.FromRTC_Sec = 1U;
+        /* RTC Second Interrupt */
+        if (RTC->CTRL & RTC_CTRL_ALARM1HZ_MASK)
+        {
+            PWR_DBG_LOG("RTC_IRQn 1s");
+            PWRLib_MCU_WakeupReason.Bits.FromRTC_Sec = 1U;
+        }
+        /* RTC Millisecond Interrupt */
+        if (RTC->CTRL & RTC_CTRL_WAKE1KHZ_MASK)
+        {
+            PWR_DBG_LOG("RTC_IRQn 1ms");
+            PWRLib_MCU_WakeupReason.Bits.FromRTC_mSec = 1U;
+        }
     }
 
     /* Analog comparator 0 */
@@ -523,18 +557,46 @@ void PWR_UpdateWakeupReason(void)
         PWRLib_MCU_WakeupReason.Bits.FromUSART0 = 1U;
     }
 
-    /* USART 1 */
-    if (NVIC_GetPendingIRQ(FLEXCOMM1_IRQn))
-    {
-        PWR_DBG_LOG("FLEXCOMM1_IRQn");
-        PWRLib_MCU_WakeupReason.Bits.FromUSART1 = 1U;
-    }
 
     /* BOD */
     if (NVIC_GetPendingIRQ(WDT_BOD_IRQn))
     {
         PWR_DBG_LOG("WDT_BOD_IRQn");
         PWRLib_MCU_WakeupReason.Bits.FromBOD = 1U;
+    }
+
+#if gSupportBle
+    /* BLE */
+    if (NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn))
+    {
+        PWR_DBG_LOG("BLE_LL_ALL_IRQn");
+        PWRLib_MCU_WakeupReason.Bits.FromBLELL = 1U;
+    }
+
+    /* BLE */
+    if (NVIC_GetPendingIRQ( BLE_WAKE_UP_TIMER_IRQn))
+    {
+        PWR_DBG_LOG("BLE_WAKE_UP_TIMER_IRQn");
+        PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
+        NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
+    }
+
+    /* Enable BLE Interrupt */
+    NVIC_SetPriority(BLE_LL_ALL_IRQn, 0x01U);
+    NVIC_EnableIRQ(BLE_LL_ALL_IRQn);
+#endif
+    /* We may have peeked the NVIC Pending IRQ too early:
+       The duration of the application Wakeup call back participates to that delay but
+       60us at least are required after the end of hardware_init for the IRQ to raise.
+       Keep the DidPowerDown bit so that the caller may know whether specific action is to be
+       undertaken.
+     */
+    if(PWRLib_MCU_WakeupReason.Bits.DidPowerDown == 1U)
+    {
+    	if ((PWRLib_MCU_WakeupReason.AllBits & ~0x8000U) == 0)
+    	{
+    		PWR_DBG_LOG("no IRQ detected");
+    	}
     }
 }
 
@@ -596,6 +658,9 @@ void PWRLib_EnterPowerDownMode(pwrlib_pd_cfg_t *pd_cfg)
 
     /* on application warm start, prevent the application from corrupting the current stack */
     SYSCON->CPSTACK = RESUME_STACK_POINTER;
+
+    /* Set low power flag in wakeup source */
+    PWRLib_MCU_WakeupReason.Bits.DidPowerDown = 1;
 
     if ( 0 == PWR_setjmp(pwr_CPUContext))
     {

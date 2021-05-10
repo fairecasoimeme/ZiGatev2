@@ -122,6 +122,7 @@ PUBLIC  teZCL_Status eZCL_CreateZCL(tsZCL_Config *psZCL_Config)
     // create ZCL common structure pointer for reference elsewhere
     psZCL_Common = &sZCL_Common;
     memset(&sZCL_Common, 0, sizeof(sZCL_Common));
+    u8NumberOfRegEndpoints = 0;
 
     psZCL_Common->u8TransactionSequenceNumber = 0;
     psZCL_Common->pfZCLinternalCallBackFunction = psZCL_Config->pfZCLcallBackFunction;
@@ -387,12 +388,14 @@ PUBLIC  teZCL_Status eZCL_Register(tsZCL_EndPointDefinition *psEndPointDefinitio
     {
 
         // store cluster reference
-        psZCL_Common->psZCL_EndPointRecord[u8NumberOfRegEndpoints].bRegistered = TRUE;
-        psZCL_Common->psZCL_EndPointRecord[u8NumberOfRegEndpoints].psEndPointDefinition = psEndPointDefinition;
-        vLog_Printf(TRACE_DEBUG,LOG_DEBUG,"u8NumberOfRegEndpoints : %d\n",u8NumberOfRegEndpoints);
-    
-        //Increment number of registered endpoints
-        u8NumberOfRegEndpoints++;
+    	if (u8NumberOfRegEndpoints < psZCL_Common->u8NumberOfEndpoints)
+		{
+			psZCL_Common->psZCL_EndPointRecord[u8NumberOfRegEndpoints].bRegistered = TRUE;
+			psZCL_Common->psZCL_EndPointRecord[u8NumberOfRegEndpoints].psEndPointDefinition = psEndPointDefinition;
+
+			//Increment number of registered endpoints
+			u8NumberOfRegEndpoints++;
+		}
     }
     
     return(E_ZCL_SUCCESS);

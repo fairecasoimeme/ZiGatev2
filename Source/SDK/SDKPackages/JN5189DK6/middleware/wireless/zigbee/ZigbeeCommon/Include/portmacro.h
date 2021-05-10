@@ -32,8 +32,8 @@
  *
  ****************************************************************************/
 
-#ifndef PORTMACRO_H
-#define PORTMACRO_H
+#ifndef ZIGBEE_PORTMACRO_H
+#define ZIGBEE_PORTMACRO_H
 
 #if (defined JN517x)
 #include "portmacro_JN517x.h"

@@ -60,6 +60,10 @@
 #include "rom_psector.h"
 #include "rom_api.h"
 #endif
+#ifdef FSL_RTOS_FREE_RTOS
+#include "FreeRTOSConfig.h"
+#include "FreeRTOS.h"
+#endif
 #ifdef LITTLE_ENDIAN_PROCESSOR
     #include "portmacro.h"
 #endif

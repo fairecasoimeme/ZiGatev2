@@ -74,20 +74,22 @@ typedef  union
     uint16_t AllBits;
     struct
     {
-        uint8_t FromReset       :1;  /* Comming from Reset */
-        uint8_t FromUSART0      :1;  /* Wakeup by UART 0 interrupt */
-        uint8_t FromUSART1      :1;  /* Wakeup by UART 1 interrupt */
+        uint8_t FromReset       :1;  /* Coming from Reset */
+        uint8_t FromUSART0      :1;  /* Wakeup by UART 0 interrupt / USART1 is not wake capable */
         uint8_t FromKeyBoard    :1;  /* Wakeup by TSI/Push button interrupt */
         uint8_t FromTMR         :1;  /* Wakeup by TMR timer interrupt */
-        uint8_t FromRTC_Sec     :1;  /* Wakeup by RTC timer interrupt */
+        uint8_t FromRTC_Sec     :1;  /* Wakeup by RTC 1Hz timer interrupt */
+        uint8_t FromRTC_mSec    :1;  /* Wakeup by RTC 1kHz timer interrupt */
+        uint8_t FromWakeTimer   :1;  /* Wakeup by Wake timer interrupt */
         uint8_t FromBLE_LLTimer :1;  /* Wakeup by BLE_LL Timer */
-        uint8_t FromCap_Sense   :1;  /* Wakeup by Cap Sense */
         uint8_t FromACmp0       :1;  /* Wakeup by Analog Comparator 0*/
         uint8_t FromACmp1       :1;  /* Wakeup by Analog Comparator 1*/
         uint8_t FromBOD         :1;  /* Wakeup by Brown-out Detect */
         uint8_t FromBLELL       :1;  /* Wakeup by BLE LinkLayer */
 
-        uint8_t Unused          :5;  /* Unused */
+        uint8_t Unused          :3;  /* Unused */
+
+        uint8_t DidPowerDown    :1;  /* set when going to power down */
     } Bits;
 } PWR_WakeupReason_t;
 
@@ -151,9 +153,9 @@ typedef enum {
 
 /* @brief:  lp_32k_dyn must match the clock_32k_hk_t structure */
 typedef struct  {
-    uint32_t freq32k;          /*!< 32k clock actual calculated frequency */
+    uint32_t freq32k;          /*!< 32k clock actual calculated frequency in Hz */
+    uint32_t freq32k_16thHz;  /*!< 32k clock actual calculated frequency in 16th of Hz */
     int32_t  ppm_32k;          /*!< the result of 32k clock software calibration in part per million */
-    uint8_t  freq_scale_shift;   /*!< Shift used to express 32k frequency in steps of 1/2^freq_scale_shift */
 } PWR_clock_32k_hk_t;
 
 /*****************************************************************************
@@ -416,6 +418,9 @@ PWR_teStatus PWR_eScheduleActivity(
         uint32_t u32TimeMs,
         void (*prCallbackfn)(void));
 
+PWR_teStatus PWR_eRemoveActivity(
+        PWR_tsWakeTimerEvent *psWake);
+
 void vAppRegisterPWRCallbacks(void);
 
 /*
@@ -517,17 +522,9 @@ void PWR_vWakeInterruptCallback(void);
 
 /* <-- Added from PWRM */
 
-/* Added for freeRTOS tickless mode --> */
-/**
- * Set RTC wakeup time in milliseconds duration.
- */
-void PWR_RTCSetWakeupTimeMs (uint32_t wakeupTimeMs);
-
-uint32_t PWR_GetTotalSleepDurationMs(uint32_t start_count);
-
-void PWR_SetDeepSleepTimeInMs(uint32_t deepSleepTimeMs);
-
 void PWR_Start32kCounter(void);
+uint32_t PWR_Get32kTimestamp(void);
+
 
 
 /* <--Added for freeRTOS tickless mode */

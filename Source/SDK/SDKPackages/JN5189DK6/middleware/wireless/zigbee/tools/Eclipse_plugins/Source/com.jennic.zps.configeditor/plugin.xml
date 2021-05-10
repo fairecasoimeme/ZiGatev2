@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<!--
+ (C) Jennic Ltd 2008
+
+ $Id$
+-->
+
+<plugin>
+
+   <extension point="org.eclipse.emf.ecore.generated_package">
+      <package
+            uri="http://www.jennic.com/zpscfg"
+            class="com.jennic.ZPSConfiguration.ZPSConfigurationPackage"
+            genModel="model/ZPSConfig.genmodel"/>
+   </extension>
+
+   <extension point="org.eclipse.emf.ecore.extension_parser">
+      <parser
+            type="zpscfg"
+            class="com.jennic.ZPSConfiguration.util.ZPSConfigurationResourceFactoryImpl"/>
+   </extension>
+
+</plugin>

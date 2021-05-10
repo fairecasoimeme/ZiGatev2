@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2021 NXP
 * All rights reserved.
 *
 * \file
@@ -107,7 +107,7 @@ typedef uint16_t bufIndex_t;
 
 /*
  * Defines events recognized by the SerialManager's Task
- * Message used to enque async tx data
+ * Message used to enqueue asynchronous tx data
  */
 typedef struct SerialManagetMsg_tag{
     pSerialCallBack_t txCallback;
@@ -148,6 +148,7 @@ typedef struct serial_tag{
     volatile uint8_t       txNo;
     volatile uint8_t       events;
     volatile uint8_t       state;
+    volatile bool_t        txMntOngoing;
 }serial_t;
 
 /*
@@ -522,7 +523,7 @@ void Serial_RingProduceChar(serialRingState_t *ring, uint8_t byte)
 * \param[in] interfaceType  the type of the interface: UART/SPI/IIC/USB
 * \param[in] instance       the instance of the HW module (ex: if UART1 is used, this value should be 1)
 *
-* \return The interface number if success or gSerialManagerInvalidInterface_c if an error occured.
+* \return The interface number if success or gSerialManagerInvalidInterface_c if an error occurred.
 *
 ********************************************************************************** */
 serialStatus_t Serial_InitInterface( uint8_t *pInterfaceId,
@@ -671,7 +672,7 @@ serialStatus_t Serial_InitInterface( uint8_t *pInterfaceId,
                 break;
 
             case gSerialMgrCustom_c:
-                /* Nothing to do here. The initialization is done outsinde SerialManager */
+                /* Nothing to do here. The initialization is done outside SerialManager */
                 break;
 
             default:
@@ -948,7 +949,7 @@ serialStatus_t Serial_SyncWrite( uint8_t InterfaceId,
     if( (gSerial_InvalidParameter_c != status) &&
         (gSerial_OutOfMemory_c != status) )
     {
-        /* Wait until Tx finishes. The sem will be released by the SMGR task */
+        /* Wait until Tx finishes. The semaphore will be released by the SMGR task */
 #if gSMGR_UseOsSemForSynchronization_c
         if( cb )
         {
@@ -1294,7 +1295,7 @@ serialStatus_t Serial_Print( uint8_t InterfaceId, const char* pString, serialBlo
 *
 * \param[in] InterfaceId the interface number
 * \param[in] hex pointer to the number to be printed
-* \param[in] len the number ob bytes of the number
+* \param[in] len the number of bytes of the number
 * \param[in] flags specify display options: comma, space, new line
 *
 * \return The status of the operation
@@ -1369,7 +1370,7 @@ serialStatus_t Serial_PrintHex( uint8_t InterfaceId,
 *
 * \return The status of the operation
 *
-* \remarks The task will waituntil the tx has finished
+* \remarks The task will wait until the tx has finished
 *
 ********************************************************************************** */
 serialStatus_t Serial_PrintDec( uint8_t InterfaceId, uint32_t nr )
@@ -1760,11 +1761,17 @@ static serialStatus_t Serial_WriteInternal( uint8_t InterfaceId )
 
 #if gSerialMgrUseCustomInterface_c
     case gSerialMgrCustom_c:
+#if ENABLE_UART_SERIAL_IF
+        OSA_InterruptEnable();
+#endif
         /* The Serial_CustomSendData() function must be implemented by the custom protocol. */
         if( Serial_CustomSendData(pSer->txQueue[idx].pData, pSer->txQueue[idx].dataSize) )
         {
             status = gSerial_InternalError_c;
         }
+#if ENABLE_UART_SERIAL_IF
+        OSA_InterruptDisable();
+#endif
         break;
 #endif
 
@@ -1833,7 +1840,7 @@ void SerialManager_VirtualComRxNotify(uint8_t* pData, uint16_t dataSize, uint8_t
 *
 * \return none
 *
-* \remarks Called from usb task
+* \remarks Called from USB task
 *
 ********************************************************************************** */
 #if gSerialMgrUseUSB_VNIC_c
@@ -1986,7 +1993,7 @@ void SerialManager_RxNotify( uint32_t i )
         break;
     }
 
-    /* Signal SMGR task if not allready done */
+    /* Signal SMGR task if not already done */
     if( !pSer->events )
     {
         pSer->events |= gSMGR_Rx_c;
@@ -2085,7 +2092,7 @@ void SerialManager_TxNotify( uint32_t i )
         }
     }
 
-    /* Signal SMGR task if not allready done */
+    /* Signal SMGR task if not already done */
     if( (pSer->events & gSMGR_TxDone_c) == 0)
     {
     pSer->events |= gSMGR_TxDone_c;
@@ -2098,7 +2105,7 @@ void SerialManager_TxNotify( uint32_t i )
 
 /*! *********************************************************************************
 * \brief   This function will mark all finished TX queue entries as empty.
-*          If a calback was provided, it will be run.
+*          If a callback was provided, it will be run.
 *
 * \param[in] pSer pointer to the serial interface internal structure
 *
@@ -2106,12 +2113,11 @@ void SerialManager_TxNotify( uint32_t i )
 static void Serial_TxQueueMaintenance(serial_t *pSer)
 {
     uint32_t i;
-    static volatile bool_t txMntOngoing = FALSE;
 
     OSA_InterruptDisable();
-    if( FALSE == txMntOngoing )
+    if( FALSE == pSer->txMntOngoing )
     {
-        txMntOngoing = TRUE;
+    	pSer->txMntOngoing = TRUE;
         OSA_InterruptEnable();
 
         while( pSer->txQueue[pSer->txOut].dataSize == 0 )
@@ -2126,7 +2132,7 @@ static void Serial_TxQueueMaintenance(serial_t *pSer)
             OSA_InterruptEnable();
             mSerial_IncIdx_d(pSer->txOut, gSerialMgrTxQueueSize_c)
 
-            /* Run Calback */
+            /* Run Callback */
             if( pSer->txQueue[i].txCallback )
             {
                 pSer->txQueue[i].txCallback( pSer->txQueue[i].pTxParam );
@@ -2159,7 +2165,7 @@ static void Serial_TxQueueMaintenance(serial_t *pSer)
 */
         }
 
-        txMntOngoing = FALSE;
+        pSer->txMntOngoing = FALSE;
     }
     else
     {
@@ -2184,7 +2190,7 @@ static void Serial_SyncTxCallback(void *pSer)
 * \brief   This function will return the interfaceId for the specified interface
 *
 * \param[in] type     the interface type
-* \param[in] channel  the instance of the interfacte
+* \param[in] channel  the instance of the interface
 *
 * \return The mSerials index for the specified interface type and channel
 *
@@ -2233,7 +2239,7 @@ static uint32_t Serial_GetInterfaceIdFromType(serialInterfaceType_t type)
 #endif
 
 /*! *********************************************************************************
-* \brief   SPI transfet complete ISR callback
+* \brief   SPI transfer complete ISR callback
 *
 * \param[in] instance     the instance of the SPI module
 *
@@ -2455,7 +2461,7 @@ uint32_t Serial_CustomReceiveData(uint8_t InterfaceId, uint8_t *pRxData, uint32_
         OSA_InterruptEnable();
     }
 
-    /* Signal SMGR task if not allready done */
+    /* Signal SMGR task if not already done */
     pSer->events |= gSMGR_Rx_c;
 #if USE_SDK_OSA
     (void)OSA_EventSet(mSMTaskEventId, gSMGR_Rx_c);

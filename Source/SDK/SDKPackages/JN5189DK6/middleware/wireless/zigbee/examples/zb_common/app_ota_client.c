@@ -248,7 +248,7 @@ static uint8_t nbBlob = 0;
     u8MaxSectorPerImage = 9 ;  /* 9 *32* 1024 = 288K is the maximum size of the image */
 #else
     uint8 u8StartSector[1] = {0};
-    u8MaxSectorPerImage = 16;
+    u8MaxSectorPerImage = 146; /* Max allowed size 4096*146 = 584K. Could be changed if default SSBL size/PDM size is changed */
 #endif
 
     if (eZCL_Status != E_ZCL_SUCCESS)

@@ -47,7 +47,10 @@
 
 #include "FunctionLib.h"
 #include "fsl_debug_console.h"
+
 #include "Flash_Adapter.h"
+#include "Panic.h"
+
 #include "PDM.h"
 
 typedef struct
@@ -83,7 +86,10 @@ typedef struct
 /****************************************************************************/
 /***        Exported Variables                                            ***/
 /****************************************************************************/
-
+#ifndef DEBUG
+extern uint32_t NV_STORAGE_END_ADDRESS[];
+extern uint32_t NV_STORAGE_START_ADDRESS[];
+#endif
 /****************************************************************************/
 /***        Local Variables                                               ***/
 /****************************************************************************/
@@ -234,6 +240,14 @@ int PDM_Init(void)
 #if gUsePdm_d
     static bool pdm_init_done = false;
 
+#ifdef DEBUG
+    flash_config_t *pFlashConfig = &gFlashConfig;
+#ifdef PDM_EXT_FLASH
+    flash_config_t gExtFlashConfif = {0x0, 0x00100000, 4096};
+    pFlashConfig = &gExtFlashConfif;
+#endif
+#endif
+
     do {
         if (pdm_init_done)
         {
@@ -241,28 +255,41 @@ int PDM_Init(void)
             break;
         }
 
-        NV_Init(); /* used to setup the gFlashConfig.PFlashTotalSize value */
-
         PDM_teStatus st = PDM_E_STATUS_INTERNAL_ERROR;
         uint8_t *base = (uint8_t*)NV_STORAGE_END_ADDRESS;
         size_t len = (size_t)((uint32_t)NV_STORAGE_START_ADDRESS + 1 - (uint32_t)NV_STORAGE_END_ADDRESS);
 #ifdef DEBUG
-        uint8_t * flash_top = (uint8_t*)(gFlashConfig.PFlashTotalSize + gFlashConfig.PFlashBlockBase);
-        uint8_t * flash_base = (uint8_t*)gFlashConfig.PFlashBlockBase;
+        NV_Init(); /* used to setup the gFlashConfig.PFlashTotalSize value */
+        uint8_t * flash_top = (uint8_t*)(pFlashConfig->PFlashTotalSize + pFlashConfig->PFlashBlockBase);
+        uint8_t * flash_base = (uint8_t*)pFlashConfig->PFlashBlockBase;
         assert(base >= flash_base);
         assert(base + len <= flash_top);
         assert(len > FLASH_PAGE_SIZE*2);
 #endif
-#if !defined gPdmNbSegments || (gPdmNbSegments < NV_STORAGE_MAX_SECTORS)
-#error "gPdmNbSegments should match NV_STORAGE_MAX_SECTORS"
+#if !defined gPdmNbSegments
+#error "gPdmNbSegments must be defined in app_preinclude.h"
 #endif
-        uint32_t sect_sz_log = Flib_Log2(gFlashConfig.PFlashSectorSize);
-        st = PDM_eInitialise(ADDR2SEG(base, sect_sz_log),
-                             SIZE2SEGNB(len, sect_sz_log), NULL);
+        /* Need to volatile read in NV_STORAGE_MAX_SECTORS for the compiler to generate the code. otherwise
+         * it is skipped
+         */
+        volatile uint32_t nv_storage_sz = (uint32_t)NV_STORAGE_MAX_SECTORS;
+        if (gPdmNbSegments != nv_storage_sz)
+        {
+            /* The number of PDM segments must be sufficient for NV_STORAGE_MAX_SECTORS PDM sectors
+             * gPdmNbSegments is necessary for Pdm pool dimensioning but NV_STORAGE_MAX_SECTORS is only determined at link time
+             */
+#if defined DEBUG
+            PRINTF("PDM/NVM NV storage sectors mismatch nv_storage_sz=%d\r\n", nv_storage_sz);
+#endif
+            break;
+        }
+
+        len /= gPdmNbSegments; /* calculate segment size */
+        st = PDM_eInitialise((uint32_t)base / len, gPdmNbSegments, NULL);
 
         if (st != PDM_E_STATUS_OK)
         {
-#ifdef DEBUG
+#if defined DEBUG
             PRINTF("PDM/NVM misconfiguration\r\n");
 #endif
             assert(st != PDM_E_STATUS_OK);
@@ -272,6 +299,12 @@ int PDM_Init(void)
         pdm_init_done = true;
         status = 0;
     } while (0);
+#endif
+#ifdef DEBUG
+    assert(status == 0);
+#else
+    if (status != 0)
+    	panic(0,0,0,0);
 #endif
     return status;
 }

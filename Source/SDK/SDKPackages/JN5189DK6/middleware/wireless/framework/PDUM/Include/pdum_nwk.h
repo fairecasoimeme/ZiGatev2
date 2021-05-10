@@ -50,6 +50,7 @@ extern "C" {
 #define PDUM_NPDU_ASCENDING(npdu)   (((pdum_tsNPdu *)(npdu))->u8Footer >= ((pdum_tsNPdu *)(npdu))->u8Header)
 
 #define TRACE_NPDU_MAX TRUE
+#define PDUM_NPDU_FREETAG (0xFF)
 
 /****************************************************************************/
 /***        Type Definitions                                              ***/
@@ -78,6 +79,7 @@ typedef struct pdum_tsNPdu_tag {
 #ifdef PDUM_PEDANTIC_CHECKS
     uint8 au8Magic2[4];
 #endif
+    uint8 u8Tag;
 } pdum_tsNPdu;
 /* [I SP001259_sfr 3] end */
 
@@ -134,6 +136,7 @@ PUBLIC void vCheckNPduPoolValid(void);
 #if TRACE_NPDU_MAX
 PUBLIC uint8 PDUM_u8GetMaxNpduUse(void);
 PUBLIC uint8 PDUM_u8GetNpduUse(void);
+PUBLIC uint8 PDUM_u8GetNpduPool(void);
 #endif
 
 /****************************************************************************/

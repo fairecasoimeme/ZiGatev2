@@ -1,3 +1,21 @@
+/****************************************************************************
+ *
+ * Copyright 2020 NXP.
+ *
+ * NXP Confidential.
+ *
+ * This software is owned or controlled by NXP and may only be used strictly
+ * in accordance with the applicable license terms.
+ * By expressly accepting such terms or by downloading, installing, activating
+ * and/or otherwise using the software, you are agreeing that you have read,
+ * and that you agree to comply with and are bound by, such license terms.
+ * If you do not agree to be bound by the applicable license terms,
+ * then you may not retain, install, activate or otherwise use the software.
+ *
+ *
+ ****************************************************************************/
+
+
 /*###############################################################################
 #
 # MODULE:      BDB
@@ -7,30 +25,7 @@
 # DESCRIPTION: BDB(Base Device Behaviour) Interface
 #              
 #
-###############################################################################
-#
-# This software is owned by NXP B.V. and/or its supplier and is protected
-# under applicable copyright laws. All rights are reserved. We grant You,
-# and any third parties, a license to use this software solely and
-# exclusively on NXP products [NXP Microcontrollers such as JN514x, JN516x, JN517x].
-# You, and any third parties must reproduce the copyright and warranty notice 
-# and any other legend of ownership on each  copy or partial copy of the software.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"  
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
-# POSSIBILITY OF SUCH DAMAGE. 
-# 
-# Copyright NXP B.V. 2015-2016. All rights reserved
-#
-###############################################################################*/
+################################################################################*/
 
 #ifndef BDB_API_INCLUDED
 #define BDB_API_INCLUDED
@@ -134,13 +129,21 @@ extern "C" {
 #define BDB_NODE_JOIN_LINK_KEY_TYPE             (0x00)                  /* bdbNodeJoinLinkKeyType */
 #endif
 #ifndef BDB_PRIMARY_CHANNEL_SET
-#define BDB_PRIMARY_CHANNEL_SET                 (0x02108800)            /* bdbPrimaryChannelSet */
-#endif
+#ifndef ENABLE_SUBG_IF
+	#define BDB_PRIMARY_CHANNEL_SET                 (0x02108800)            /* bdbPrimaryChannelSet */
+#else
+	#define BDB_PRIMARY_CHANNEL_SET                 (0x07FFFFFF)            /* bdbPrimaryChannelSet */
+#endif /* ENABLE_SUBG_IF */
+#endif /* BDB_PRIMARY_CHANNEL_SET */
 #ifndef BDB_SCAN_DURATION
 #define BDB_SCAN_DURATION                       (0x04)                  /* bdbScanDuration */
 #endif
 #ifndef BDB_SECONDARY_CHANNEL_SET
-#define BDB_SECONDARY_CHANNEL_SET               (0x07FFF800 ^ BDB_PRIMARY_CHANNEL_SET)  /* bdbSecondaryChannelSet */
+#ifndef ENABLE_SUBG_IF
+	#define BDB_SECONDARY_CHANNEL_SET               (0x07FFF800 ^ BDB_PRIMARY_CHANNEL_SET)  /* bdbSecondaryChannelSet */
+#else
+	#define BDB_SECONDARY_CHANNEL_SET               (0)  /* bdbSecondaryChannelSet */
+#endif
 #endif
 #ifndef BDB_TC_LINK_KEY_EXCHANGE_ATTEMPTS
 #define BDB_TC_LINK_KEY_EXCHANGE_ATTEMPTS       (0x00)                  /* bdbTCLinkKeyExchangeAttempts */
@@ -204,9 +207,16 @@ extern "C" {
 
 #define BDB_ZTIMER_STORAGE              (1 + BDB_INCLUDE_NS_TIMER + BDB_INCLUDE_FB_TIMER + BDB_INCLUDE_TL_TIMER)
 
+#ifdef ENABLE_SUBG_IF
+#define BDB_CHANNEL_MIN (0)
+#define BDB_CHANNEL_MAX (26)
 
+#define SUBG_PAGE_28	0xE0000000
+
+#else
 #define BDB_CHANNEL_MIN (11)
 #define BDB_CHANNEL_MAX (26)
+#endif
 
 
 /****************************************************************************/

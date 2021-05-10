@@ -105,8 +105,6 @@ PUBLIC void APP_vGenCallback(uint8 u8Endpoint, ZPS_tsAfEvent *psStackEvent)
     uint16                 u16Length =  0;
 	uint8                  au8LinkTxBuffer[50];
 
-
-
     DBG_vPrintf(TRACE_BDB, "BDB: APP_vGenCallback [EP:%d src:%d dst:%d status:%d time:%ld cluster:%02x - type:%d] \n",
     					u8Endpoint,
     					psStackEvent->uEvent.sApsDataIndEvent.u8SrcEndpoint,
@@ -122,10 +120,11 @@ PUBLIC void APP_vGenCallback(uint8 u8Endpoint, ZPS_tsAfEvent *psStackEvent)
     	u16Length =  0;
     	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ 0 ],  u8Endpoint,     u16Length );
     	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ],  psStackEvent->eType,     u16Length );
-    	vSL_WriteMessage ( 0x9997,
+    	ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ],  psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr,     u16Length );
+    	/*vSL_WriteMessage ( 0x9997,
     	                                   u16Length,
     	                                   au8LinkTxBuffer,
-    	                                   0);
+    	                                   0);*/
     	if (psStackEvent->uEvent.sApsDataIndEvent.hAPduInst!=NULL)
     	    		PDUM_eAPduFreeAPduInstance(psStackEvent->uEvent.sApsDataIndEvent.hAPduInst);
     }else{

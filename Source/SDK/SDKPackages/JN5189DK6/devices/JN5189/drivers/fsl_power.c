@@ -126,7 +126,11 @@ static const LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_reset = {
     .LDOMEMBOOST        = 0x13, // 1.05V
     .LDOCORE            = 0x5,  // 1.1V
     .LDOFLASHNV         = 0x5,  // 1.9V
+#if defined(gPWR_LdoFlashOptim) && (gPWR_LdoFlashOptim > 0)
+    .LDOFLASHCORE       = 0x5,  // 1.10V
+#else
     .LDOFLASHCORE       = 0x6,  // 1.15V
+#endif
     .LDOADC             = 0x5,  // 1.1V
     .LDOPMUBOOST_ENABLE = 1,    // Force Boost activation on LDOPMU
 };
@@ -138,7 +142,13 @@ static const LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_min = {
     .LDOMEMBOOST        = 0xA, // 0.96V
     .LDOCORE            = 0x3, // 1V
     .LDOFLASHNV         = 0x5, // 1.9V
-    .LDOFLASHCORE       = 0x6, // 1.15V
+#if defined(gPWR_LdoFlashOptim) && (gPWR_LdoFlashOptim == 2)
+    .LDOFLASHCORE       = 0x3,  // 1V
+#elif defined(gPWR_LdoFlashOptim) && (gPWR_LdoFlashOptim == 1)
+    .LDOFLASHCORE       = 0x5,  // 1.1V
+#else
+    .LDOFLASHCORE       = 0x6,  // 1.15V
+#endif
     .LDOADC             = 0x5, // 1.1V
     .LDOPMUBOOST_ENABLE = 1,   // Force Boost activation on LDOPMU
 };
@@ -632,7 +642,7 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
     lp_config.SLEEPPOSTPONE = 0;
     lp_config.GPIOLATCH     = 0;
 
-#if gPWR_LDOMEM_0_9V_PD /* Warning : do not apply this flag , for experimental use only */
+#if gPWR_LDOMEM_0_9V_PD
     voltage_mem_down       = VOLTAGE_MEM_DOWN_0_9V;
     voltage_membootst_down = VOLTAGE_MEMBOOST_DOWN_0_85V;
 #else

@@ -706,6 +706,7 @@ typedef struct
     uint16 u16VsFixedAlcAddr;                               /**< Vendor specific - fixed allocated address */
     uint64 u64VsLastPanIdConflict;                          /**< Vendor specific - EPID of other network in last Pan Id conflict detection */
     uint16 u16TxTotal;                                      /**< nwkTxTotal */
+    uint16 u16BufferedSuccess;                              /**< Frames buffered and later sent successfully */
     uint16 u16RouteDiscInitiated;                           /**< Diagnostics - counter of initiated Route Disc and Route request identifier */
     uint16 u16NeighborAddedDisc;                            /**< Diagnostics - neighbor add operations in Discovery context */
     uint16 u16NeighborAdded;                                /**< Diagnostics - neighbor add operations */
@@ -724,6 +725,7 @@ typedef struct
     uint16 u16RReqRetry;                                    /**< TX Route Request broadcast retries */
     uint16 u16RReqProcDropped;                              /**< RX Route Request processing dropped */
     uint16 u16RReqProcCompleted;                            /**< RX Route Request processing completed */
+    uint16 u16DfcmDropped;                                  /**< Timed deferred confirms not delivered due to overflow */
 
     /**** Tables ****/
     zps_tsNwkSlist       sActvSortedList;                   /**< Linked list of sorted NT entries */

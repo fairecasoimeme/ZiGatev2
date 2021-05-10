@@ -36,13 +36,19 @@
 #define THUMB_ENTRY(x)                 (void*)((x) | 1)
 #define CRC_FINALIZE(x)                ((x) ^ ~0UL)
 
+#ifdef PDM_EXT_FLASH
+#define BOOT_BLOCK_OFFSET_MAX_VALUE     0x9de00
+#else
 #define BOOT_BLOCK_OFFSET_MAX_VALUE     0x96000
+#endif
+
 #define SIGNATURE_WRD_LEN               (SIGNATURE_LEN / 4)
 
 #define ROM_API_efuse_LoadUniqueKey      THUMB_ENTRY(0x030016f4)
 #define ROM_API_aesLoadKeyFromOTP        THUMB_ENTRY(0x0300146c)
 #define ROM_API_crc_update               THUMB_ENTRY(0x0300229c)
 #define ROM_API_boot_CheckVectorSum      THUMB_ENTRY(0x03000648)
+#define ROM_API_flash_GetDmaccStatus     THUMB_ENTRY(0x03001f64)
 
 #define BUFFER_SHA_LENGTH                16
 #define OTA_UTILS_DEBUG(...)
@@ -78,6 +84,7 @@ typedef int (*efuse_LoadUniqueKey_t)(void);
 typedef uint32_t (*aesLoadKeyFromOTP_t)(AES_KEY_SIZE_T keySize);
 typedef uint32_t (*crc_update_t)(uint32_t crc, const void* data, size_t data_len);
 typedef uint32_t (*boot_CheckVectorSum_t)(const IMG_HEADER_T *image);
+typedef uint32_t (*flash_GetDmaccStatus_t)(uint8_t *address);
 
 /************************************************************************************
 *************************************************************************************
@@ -89,6 +96,7 @@ const static efuse_LoadUniqueKey_t efuse_LoadUniqueKey   = (efuse_LoadUniqueKey_
 const static aesLoadKeyFromOTP_t aesLoadKeyFromOTP       = (aesLoadKeyFromOTP_t) ROM_API_aesLoadKeyFromOTP;
 const static crc_update_t crc_update                       = (crc_update_t)ROM_API_crc_update;
 const static boot_CheckVectorSum_t boot_CheckVectorSum     = (boot_CheckVectorSum_t)ROM_API_boot_CheckVectorSum;
+const static flash_GetDmaccStatus_t flash_GetDmaccStatus   = (flash_GetDmaccStatus_t) ROM_API_flash_GetDmaccStatus;
 
 /******************************************************************************
 *******************************************************************************
@@ -297,6 +305,29 @@ static bool_t OtaUtils_VerifySignature(uint32_t address,
     return result;
 }
 
+static bool_t OtaUtils_FindBlankPage(uint32_t startAddr, uint16_t size)
+{
+	bool_t result = FALSE;
+	uint32_t addrIterator = startAddr;
+
+
+	while (addrIterator < startAddr+size)
+	{
+		if (flash_GetDmaccStatus((uint8_t *)addrIterator) == 0)
+		{
+			result = TRUE;
+			break;
+		}
+		addrIterator += FLASH_PAGE_SIZE;
+	}
+
+	/* Check the endAddr */
+	if (!result && flash_GetDmaccStatus((uint8_t *)startAddr+size) == 0)
+		result = TRUE;
+
+	return result;
+}
+
 /******************************************************************************
 *******************************************************************************
 * Public functions
@@ -312,12 +343,10 @@ otaUtilsResult_t OtaUtils_ReadFromInternalFlash(uint16_t nbBytesToRead,
     otaUtilsResult_t result = gOtaUtilsError_c;
 
     do {
-        uint8_t * startBlankCheck = NULL;
-        uint8_t * endBlankCheck = NULL;
-        startBlankCheck = (uint8_t*)address;
-        endBlankCheck   = startBlankCheck + nbBytesToRead;
-        /* Blank check */
-        if (OtaUtils_IsInternalFlashAddr(address) && FLASH_BlankCheck(FLASH, startBlankCheck, endBlankCheck) == FLASH_DONE)
+        if (!OtaUtils_IsInternalFlashAddr(address))
+            break;
+        /* If one blank page is found return error */
+        if (OtaUtils_FindBlankPage(address, nbBytesToRead))
             break;
         if (pFunctionEepromRead == NULL || pOutbuf == NULL)
             break;

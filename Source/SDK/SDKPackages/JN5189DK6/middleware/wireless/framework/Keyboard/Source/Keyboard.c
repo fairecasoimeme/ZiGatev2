@@ -1025,6 +1025,8 @@ void KBD_PrepareEnterLowPower(void)
 #else
     /* For the CPU_JN518X family stop the KeyScan timer */
     KBD_TimerStop();
+    /* schedule TMR_Task to effectively stop running timer */
+    TMR_MakeTMRThreadReady();
 #endif
 }
 /******************************************************************************

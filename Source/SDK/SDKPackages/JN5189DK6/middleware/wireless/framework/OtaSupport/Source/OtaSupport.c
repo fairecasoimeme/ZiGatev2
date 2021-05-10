@@ -401,7 +401,6 @@ otaResult_t OTA_StartImage(uint32_t length)
 otaResult_t OTA_StartImageWithMaxSize(uint32_t length, uint32_t maxAllowedArchSize)
 {
     otaResult_t status = gOtaSuccess_c;
-    psector_page_data_t * mPage0Hdl = NULL;
     OTA_DEBUG_TRACE("%s - %d bytes gEepromParams_StartOffset_c=%x  total=0x%x\r\n", __FUNCTION__, length , gEepromParams_StartOffset_c, gEepromParams_TotalSize_c);
     OTA_DBG_LOG("bytes=%d StartOffset=0x%x total=0x%x", length , gEepromParams_StartOffset_c, gEepromParams_TotalSize_c);
     do {
@@ -441,8 +440,7 @@ otaResult_t OTA_StartImageWithMaxSize(uint32_t length, uint32_t maxAllowedArchSi
     #if (gOtaErasePolicy_c == gOtaEraseAtImageStart_c)
         OTA_EraseStorageArea(mHandle.CurrentEepromAddress, mHandle.OtaImageTotalLength);
     #endif
-        mPage0Hdl = psector_GetPage0Handle();
-        if (mPage0Hdl == NULL) RAISE_ERROR(status, gOtaError_c);
+
     #if ( gEepromParams_bufferedWrite_c == 1)
         OTA_SetInvalidateFlag(TRUE);
     #endif
@@ -1079,6 +1077,13 @@ void OTA_SetNewImageFlag(void)
 #endif /* (gEepromType_d != gEepromDevice_None_c) && (!gEnableOTAServer_d || (gEnableOTAServer_d && gUpgradeImageOnCurrentDevice_d)) */
 }
 
+static uint8_t OTA_ReadDataMemCpy(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
+{
+  FLib_MemCpy(inbuf, (void*)(Addr), NoOfBytes);
+  return 0;
+}
+
+
 /*! *********************************************************************************
 * \brief        Image validation + authenfication if a root certificate is found
  *              and authentication level > 0
@@ -1093,14 +1098,15 @@ otaImageAuthResult_t OTA_ImageAuthenticate()
     uint16_t authLevelVal = 0;
     otaImageAuthResult_t result = gOtaImageAuthFail_c;
     uint8_t *pParam = NULL;
-    uint32_t imgAddrOta = gBootData_Image_Offset_c;
-    OtaUtils_EEPROM_ReadData pFunctionEepromRead = (OtaUtils_EEPROM_ReadData) EEPROM_ReadData;
+    uint32_t imgAddrOta = gEepromParams_StartOffset_c;
+    OtaUtils_EEPROM_ReadData pFunctionEepromRead = (OtaUtils_EEPROM_ReadData) OTA_ReadDataMemCpy;
 #if gEepromType_d == gEepromDevice_InternalFlash_c
     bool_t imgIsRemappable = TRUE;
     OtaUtils_ReadBytes pFunctionRead = OtaUtils_ReadFromInternalFlash;
 #else
     bool_t imgIsRemappable = FALSE;
     OtaUtils_ReadBytes pFunctionRead = OtaUtils_ReadFromUnencryptedExtFlash;
+    pFunctionEepromRead = (OtaUtils_EEPROM_ReadData) EEPROM_ReadData;
 #if gExternalFlashIsCiphered_d
     sOtaUtilsSoftwareKey softKey;
     switch (mHandle.ciphered_mode) {
@@ -1633,12 +1639,28 @@ static otaResult_t OTA_ReadDecipher(uint16_t NoOfBytes, uint32_t Addr, uint8_t *
 *****************************************************************************/
 static uint32_t OTA_GetMaxAllowedArchSize(void)
 {
-#ifdef CPU_JN518X
+#if gEepromType_d == gEepromDevice_InternalFlash_c 
     uint32_t current_app_stated_size = (*(uint32_t *)((*(uint32_t *)BOOT_BLOCK_OFFSET_VALUE)+APP_STATED_SIZE_OFFSET));
+
     return gFlashMaxStatedSize*2 - current_app_stated_size;
 #else
-    return gFlashParams_MaxImageLength_c;
+    /* Read the value from the psector img directory */
+    uint32_t allowedSize = 0;
+    uint8_t i;
+    psector_page_data_t * mPage0Hdl = psector_GetPage0Handle();
+    if (mPage0Hdl != NULL)
+    {
+        image_directory_entry_t * currentEntry = mPage0Hdl->page0_v3.img_directory;
+        for (i=0; i<IMG_DIRECTORY_MAX_SIZE; i++)
+        {
+            if (currentEntry->img_nb_pages > allowedSize)
+                allowedSize = currentEntry->img_nb_pages*512;
+            currentEntry++;
+        }
+    }
+    return allowedSize;
 #endif
+
 }
 
 /*****************************************************************************

@@ -57,9 +57,7 @@ extern "C" {
 /**************************/
 /**** TYPE DEFINITIONS ****/
 /**************************/
-#define ZPS_NWK_INTERPAN_HANDLE     0x55
-#define ZPS_NWK_GP_BASE_HANDLE      0x80
-#define ZPS_NWK_GP_MAX_HANDLE       0x90
+
 /**
  * Device type.
  * What sort of device we are

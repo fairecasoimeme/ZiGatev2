@@ -270,6 +270,20 @@ PUBLIC void BDB_vStart(void)
 
 PUBLIC void BDB_vRestart(void)
 {
+/* Close ZTimers to be used in BDB */
+	if(ZPS_ZDO_DEVICE_COORD != ZPS_eAplZdoGetDeviceType())
+	{
+		ZTIMER_eClose(u8TimerBdbRejoin);
+	}
+#if (defined BDB_SUPPORT_NWK_STEERING)
+	ZTIMER_eClose(u8TimerBdbNs);
+#endif
+#if (defined BDB_SUPPORT_FIND_AND_BIND_INITIATOR)
+	ZTIMER_eClose(u8TimerBdbFb);
+#endif
+#if (defined BDB_SUPPORT_TOUCHLINK)
+	ZTIMER_eClose(u8TimerBdbTl);
+#endif
    bdb_vStart(FALSE);
 }
 

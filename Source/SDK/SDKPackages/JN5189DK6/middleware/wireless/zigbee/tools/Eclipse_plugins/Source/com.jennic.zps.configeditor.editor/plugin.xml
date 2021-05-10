@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<!--
+ <copyright>
+ </copyright>
+
+ $Id$
+-->
+
+<plugin>
+
+   <extension point="org.eclipse.ui.newWizards">
+      <category
+            id="com.jennic.new_file_category"
+            name="%_UI_Wizard_category"/>
+      <wizard
+            id="ZPSConfiguration.presentation.ZPSConfigurationModelWizardID"
+            name="%_UI_ZPSConfigurationModelWizard_label"
+            class="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationModelWizard"
+            category="com.jennic.new_file_category"
+            icon="icons/full/obj16/ZPSConfigurationModelFile.png">
+         <description>%_UI_ZPSConfigurationModelWizard_description</description>
+         <selection class="org.eclipse.core.resources.IResource"/>
+      </wizard>
+   </extension>
+
+   <extension point="org.eclipse.ui.editors">
+      <editor
+            id="ZPSConfiguration.presentation.ZPSConfigurationEditorID"
+            name="%_UI_ZPSConfigurationEditor_label"
+            icon="icons/full/obj16/ZPSConfigurationModelFile.png"
+            extensions="zpscfg"
+            class="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationEditor"
+            contributorClass="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationActionBarContributor">
+      </editor>
+   </extension>
+
+   <extension point="org.eclipse.ui.newWizards">
+      <!-- @generated ZPSConfig -->
+      <category
+            id="org.eclipse.emf.ecore.Wizard.category.ID"
+            name="%_UI_Wizard_category"/>
+      <wizard
+            id="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationModelWizardID"
+            name="%_UI_ZPSConfigurationModelWizard_label"
+            class="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationModelWizard"
+            category="org.eclipse.emf.ecore.Wizard.category.ID"
+            icon="icons/full/obj16/ZPSConfigurationModelFile.gif">
+         <description>%_UI_ZPSConfigurationModelWizard_description</description>
+         <selection class="org.eclipse.core.resources.IResource"/>
+      </wizard>
+   </extension>
+
+   <extension point="org.eclipse.ui.editors">
+      <!-- @generated ZPSConfig -->
+      <editor
+            id="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationEditorID"
+            name="%_UI_ZPSConfigurationEditor_label"
+            icon="icons/full/obj16/ZPSConfigurationModelFile.gif"
+            extensions="zpscfg"
+            class="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationEditor"
+            contributorClass="com.jennic.ZPSConfiguration.presentation.ZPSConfigurationActionBarContributor">
+      </editor>
+   </extension>
+</plugin>

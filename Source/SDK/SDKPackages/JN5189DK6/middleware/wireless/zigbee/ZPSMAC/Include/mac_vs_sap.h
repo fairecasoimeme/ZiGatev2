@@ -124,6 +124,10 @@ extern "C" {
 
 #define MIN_TX_BUFFERS (5)
 
+#define ZPS_NWK_INTERPAN_HANDLE     0xF5
+#define ZPS_NWK_GP_BASE_HANDLE      0xE0
+#define ZPS_NWK_GP_MAX_HANDLE       0xF0
+
 
 /**********************/
 /**** MCPS Request ****/
@@ -203,6 +207,7 @@ typedef struct
 {
     uint8 u8Status; /**< Status of request @sa MAC_Enum_e */
     uint8 u8Handle; /**< Handle matching associated request */
+    uint16 u16MacId;/**< DFCM interface source */
     uint32 u32Timestamp; /**< SFD TX time    */
 } MAC_tsMcpsVsCfmData;
 

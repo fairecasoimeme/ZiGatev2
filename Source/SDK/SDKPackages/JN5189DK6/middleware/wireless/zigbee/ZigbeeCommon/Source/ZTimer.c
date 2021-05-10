@@ -46,7 +46,11 @@
     #include "AppHardwareApi.h"
 #else
     #include "fsl_os_abstraction.h"
-    #include "fsl_os_abstraction_bm.h"
+    #ifndef FSL_RTOS_FREE_RTOS
+        #include "fsl_os_abstraction_bm.h"
+    #else
+        #include "fsl_os_abstraction_free_rtos.h"
+    #endif
 #endif
 
 
@@ -317,7 +321,12 @@ PUBLIC void ZTIMER_vTask(void)
 #endif
         DBG_vPrintf(TRACE_ZTIMER, "ZT: Timer %d expired\n", n);
 
+#if ZIGBEE_USE_FRAMEWORK
+        OSA_InterruptEnableRestricted(&u32Store);
+#else
         MICRO_DISABLE_AND_SAVE_INTERRUPTS(u32Store);
+#endif
+
         /* Mark the timer as expired. We must do this _before_ calling the callback
          * in case the user restarts the timer in the callback */
         psTimer->eState = E_ZTIMER_STATE_EXPIRED;
@@ -329,7 +338,11 @@ PUBLIC void ZTIMER_vTask(void)
         {
             PWRM_eFinishActivity();        
         }
+#if ZIGBEE_USE_FRAMEWORK
+        OSA_InterruptEnableRestore(&u32Store);
+#else
         MICRO_RESTORE_INTERRUPTS(u32Store);
+#endif
         /* If the timer has  a valid callback, call it */
         if(psTimer->pfCallback != NULL)
         {
@@ -415,15 +428,23 @@ PUBLIC ZTIMER_teStatus ZTIMER_eClose(uint8 u8TimerIndex)
         return E_ZTIMER_FAIL;
     }
 
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestricted(&u32Store);
+#else
     MICRO_DISABLE_AND_SAVE_INTERRUPTS(u32Store);
+#endif
     /* If the timer is currently running, decrease power manager activity count */
-    if(ZTIMER_sCommon.psTimers[u8TimerIndex].eState == E_ZTIMER_STATE_RUNNING)
-    {
-        PWRM_eFinishActivity();
-    }
+    if((ZTIMER_sCommon.psTimers[u8TimerIndex].u8Flags & ZTIMER_FLAG_PREVENT_SLEEP) && (ZTIMER_sCommon.psTimers[u8TimerIndex].eState == E_ZTIMER_STATE_RUNNING))
+	{
+		PWRM_eFinishActivity();
+	}
 
     ZTIMER_sCommon.psTimers[u8TimerIndex].eState = E_ZTIMER_STATE_CLOSED;
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestore(&u32Store);
+#else
     MICRO_RESTORE_INTERRUPTS(u32Store);
+#endif
 
     DBG_vPrintf(TRACE_ZTIMER, "Success\n");
     
@@ -484,7 +505,11 @@ PUBLIC ZTIMER_teStatus ZTIMER_eStart(uint8 u8TimerIndex, uint32 u32Time)
         DBG_vPrintf(TRACE_ZTIMER, "Failed\n");
         return E_ZTIMER_FAIL;
     }
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestricted(&u32Store);
+#else
     MICRO_DISABLE_AND_SAVE_INTERRUPTS(u32Store);
+#endif
     /* If this timer should prevent sleeping while running and the timer is not currently running, increase power manager activity count */
     if((ZTIMER_sCommon.psTimers[u8TimerIndex].u8Flags & ZTIMER_FLAG_PREVENT_SLEEP) && (ZTIMER_sCommon.psTimers[u8TimerIndex].eState != E_ZTIMER_STATE_RUNNING))
     {
@@ -493,7 +518,11 @@ PUBLIC ZTIMER_teStatus ZTIMER_eStart(uint8 u8TimerIndex, uint32 u32Time)
     /* Load the timer and start it */
     ZTIMER_sCommon.psTimers[u8TimerIndex].u32Time = u32Time;
     ZTIMER_sCommon.psTimers[u8TimerIndex].eState = E_ZTIMER_STATE_RUNNING;
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestore(&u32Store);
+#else
     MICRO_RESTORE_INTERRUPTS(u32Store);
+#endif
     DBG_vPrintf(TRACE_ZTIMER, "Success\n");
 
     return E_ZTIMER_OK;
@@ -522,7 +551,11 @@ PUBLIC ZTIMER_teStatus ZTIMER_eStop(uint8 u8TimerIndex)
         DBG_vPrintf(TRACE_ZTIMER, "Failed\n");
         return E_ZTIMER_FAIL;
     }
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestricted(&u32Store);
+#else
     MICRO_DISABLE_AND_SAVE_INTERRUPTS(u32Store);
+#endif
     /* If this timer should prevent sleeping while running and the timer is currently running, decrease power manager activity count */
     if((ZTIMER_sCommon.psTimers[u8TimerIndex].u8Flags & ZTIMER_FLAG_PREVENT_SLEEP) && (ZTIMER_sCommon.psTimers[u8TimerIndex].eState == E_ZTIMER_STATE_RUNNING))
     {
@@ -531,7 +564,11 @@ PUBLIC ZTIMER_teStatus ZTIMER_eStop(uint8 u8TimerIndex)
 
     /* Stop the timer */
     ZTIMER_sCommon.psTimers[u8TimerIndex].eState = E_ZTIMER_STATE_STOPPED;
+#if ZIGBEE_USE_FRAMEWORK
+    OSA_InterruptEnableRestore(&u32Store);
+#else
     MICRO_RESTORE_INTERRUPTS(u32Store);
+#endif
     DBG_vPrintf(TRACE_ZTIMER, "Success\n");
 
     return E_ZTIMER_OK;

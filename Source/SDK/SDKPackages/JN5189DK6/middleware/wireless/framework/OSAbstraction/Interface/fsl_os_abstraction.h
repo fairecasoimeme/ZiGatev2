@@ -592,6 +592,11 @@ uint32_t OSA_TimeGetMsec(void);
 void OSA_TimeResetMsec(void);
 
 /*!
+ * @brief This function reads the tick counter
+*/
+uint32_t OSA_GetTickCount(void);
+
+/*!
  * @brief Installs the interrupt handler.
  *
  * @param IRQNumber IRQ number of the interrupt.

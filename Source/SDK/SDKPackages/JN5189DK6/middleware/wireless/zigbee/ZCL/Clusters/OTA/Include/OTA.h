@@ -77,6 +77,11 @@ extern "C" {
         #define OTA_BOOTLOADER_BLOCK_LENGTH                    8
         #define OTA_BOOTLOADER_HEADER_MARKER_OFFSET            0x20
         #define NVM_BYTES_PER_SEGMENT                          512
+#if (defined gEepromType_d) && (gEepromType_d != gEepromDevice_InternalFlash_c)
+        #define OTA_SECTOR_CONVERTION                          1
+#else
+		#define OTA_SECTOR_CONVERTION                          64
+#endif
         #define OTA_SECTOR_CONVERTION                          64
         #define OTA_IV_LOCATION                                0x260
         #ifdef APP0 /* Building with selective OTA */

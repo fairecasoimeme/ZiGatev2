@@ -117,6 +117,9 @@ PUBLIC PWRM_teStatus PWRM_eScheduleActivity(
         uint32 u32TimeMs,
         void (*prCallbackfn)(void));
 
+PUBLIC PWRM_teStatus PWRM_eRemoveActivity(
+        pwrm_tsWakeTimerEvent *psWake);
+
 PUBLIC void vAppRegisterPWRMCallbacks(void);
 
 /*

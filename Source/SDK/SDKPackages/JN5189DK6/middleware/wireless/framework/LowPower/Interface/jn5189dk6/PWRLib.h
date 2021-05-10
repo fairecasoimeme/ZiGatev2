@@ -37,6 +37,18 @@
  *---------------------------------------------------------------------------*
  *****************************************************************************/
 
+/*
+ *  define gSwdWakeupReconnect_c as 1 to ensure that SWD can wake device up and
+ *  attach debugger when powered down
+ */
+#ifndef gSwdWakeupReconnect_c
+#define  gSwdWakeupReconnect_c 0
+#endif
+
+#ifndef SWDIO_GPIO_PIN
+#define SWDIO_GPIO_PIN 13U
+#endif
+
 /*****************************************************************************
  *                        PRIVATE TYPE DEFINITIONS                           *
  *---------------------------------------------------------------------------*
@@ -159,4 +171,3 @@ void PWR_UpdateWakeupReason(void);
 uint32_t PWRLib_u32RamBanksSpanned(uint32_t u32Start, uint32_t u32Length);
 
 #endif /* __PWR_LIB_H__ */
-

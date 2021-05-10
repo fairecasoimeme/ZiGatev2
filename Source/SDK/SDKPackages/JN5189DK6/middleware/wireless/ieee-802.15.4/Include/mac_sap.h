@@ -388,7 +388,7 @@ typedef enum
 
     MAC_PIB_ATTR_MACFRAMECOUNTER = 0x77,               /**< mac security outgoing frame counter */
 
-
+    MAC_PIB_ATTR_VS_ALL = 0xFE,                        /**< all vendor specific stats */
     NUM_MAC_ATTR_PIB                                    /**< (endstop) */
 } MAC_PibAttr_e;
 
@@ -518,6 +518,14 @@ typedef union
     uint8        u8MaxFrameRetries; /**<macMaxFrameRetries */
 
     uint32                          u32MacFrameCounter;
+    struct
+    {
+        uint8 u8TxQ;                /**< vs total size of MAC Tx queue */
+        uint8 u8RxQ;                /**< vs total size of MAC Rx queue */
+        uint8 u8TxQFree;            /**< vs free frames in MAC Tx queue */
+        uint8 u8RxQFree;            /**< vs free frames in MAC Rx queue */
+        uint8 u16Unused[4];
+    };
 } MAC_Pib_u;
 
 /**

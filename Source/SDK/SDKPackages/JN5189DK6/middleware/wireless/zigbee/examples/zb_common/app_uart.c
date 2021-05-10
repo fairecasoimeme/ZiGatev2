@@ -16,6 +16,10 @@
 #include "fsl_usart.h"
 #include "usart_dma_rxbuffer.h"
 #include "app_uart.h"
+#ifdef FSL_RTOS_FREE_RTOS
+#include "FreeRTOSConfig.h"
+#include "FreeRTOS.h"
+#endif
 #include "portmacro.h"
 /****************************************************************************/
 /***        Macro Definitions                                             ***/

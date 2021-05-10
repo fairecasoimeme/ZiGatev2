@@ -341,7 +341,6 @@ endif
     APPSRC += ZQueue.c
     APPSRC += ZTimer.c
     APPSRC += app_zps_link_keys.c
-    APPSRC += fsl_os_abstraction_bm.c
     APPSRC += appZdpExtraction.c
     APPSRC += appZpsBeaconHandler.c
     APPSRC += appZpsExtendedDebug.c
@@ -420,6 +419,7 @@ endif
 
 
 include $(SDK2_BASE_DIR)/devices/$(SDK_DEVICE_FAMILY)/gcc/config.mk
+include $(SDK2_BASE_DIR)/middleware/wireless/zigbee/BuildConfig/ZBPro/Build/config_OSA.mk
 
 INCFLAGS += -I$(COMPONENTS_BASE_DIR)/SerialMAC/Include
 INCFLAGS += -I$(COMPONENTS_BASE_DIR)/ZPSMAC/Include
@@ -489,15 +489,6 @@ CFLAGS  += -DENABLE_RAM_VECTOR_TABLE
 
 CFLAGS  += -DSDK_DEVICE_FAMILY=$(SDK_DEVICE_FAMILY)
 ifneq ($(SELOVERIDE),1)
-CFLAGS  += -DosNumberOfSemaphores=0
-CFLAGS  += -DosNumberOfMutexes=0
-CFLAGS  += -DosNumberOfMessageQs=0
-CFLAGS  += -DosNumberOfMessages=0
-CFLAGS  += -DosNumberOfEvents=0
-CFLAGS  += -DgMainThreadStackSize_c=0
-CFLAGS  += -DgMainThreadPriority_c=0
-CFLAGS  += -DgTaskMultipleInstancesManagement_c=0
-CFLAGS  += -DFSL_OSA_BM_TIMER_CONFIG=FSL_OSA_BM_TIMER_SYSTICK
 ifeq ($(FRAMEWORK_SWITCH),1)
 CFLAGS  += -DgPWRM_Support=1
 CFLAGS  += -DgSupportBle=0
@@ -642,7 +633,7 @@ else
     ZPS_APL_LIB = $(COMPONENTS_BASE_DIR)/Library/libZPSAPL_WWAH.a
 endif
 
-ZIGBEE_BASE_SRC = $(ZIGBEE_COMMON_SRC):$(OS_ABSTRACT_SRC):$(GENERIC_LIST_SRC):$(BOARD_LEVEL_SRC)\
+ZIGBEE_BASE_SRC = $(OSA_BASE_SRC):$(ZIGBEE_COMMON_SRC):$(OS_ABSTRACT_SRC):$(GENERIC_LIST_SRC):$(BOARD_LEVEL_SRC)\
                   :$(CHIP_STARTUP_SRC):$(CHIP_SYSTEM_SRC):$(FSL_EXCEPTIONS_SRC):$(DEBUG_FIFO_SRC)\
                   :$(FRMWK_RNG_SRC):$(FRMWK_SECLIB_SRC):$(FRMWK_FUNCLIB_SRC):$(FRMWK_MSG_SRC)\
                   :$(ZIGBEE_COMMON_SRC)/../SelectiveOtaApp0/Source:$(FRMWK_MEMMGR_SRC)\

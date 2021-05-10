@@ -66,6 +66,10 @@ typedef int (*fpRngEntropy_t) (void *data,
 * \return  Status of the RNG initialization procedure.
 *
 ********************************************************************************** */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint8_t RNG_Init (void);
 
 
@@ -190,5 +194,8 @@ uint32_t RND_u32GetRand256(void);
 ********************************************************************************** */
 uint32_t RND_u32GetRand(uint32_t u32Min, uint32_t u32Max);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _RNG_INTERFACE_H_ */

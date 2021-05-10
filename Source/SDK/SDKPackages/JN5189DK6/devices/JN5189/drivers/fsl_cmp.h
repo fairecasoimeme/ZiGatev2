@@ -64,6 +64,7 @@ typedef enum _cmp_input
 typedef struct _cmp_config
 {
     bool enLowHysteris; /*!< low hysteresis */
+    bool enInputSwap;   /*!< input swap */
     cmp_input_t src;    /*!< input source select */
     cmp_mode_t mode;    /*!< cmp work mode */
 } cmp_config_t;

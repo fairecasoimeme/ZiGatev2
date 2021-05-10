@@ -32,23 +32,25 @@
 #define _number_of_blocks_  ,
 #define _pool_id_(a) , a ,
 #define _eol_  },
-
+#define padding {0, 0}
 
 poolInfo_t poolInfo[] =
 {
   PoolsDetails_c
-  {0, 0, 0} /*termination tag*/
+  {0, 0, 0, {0, 0}} /*termination tag*/
 };
 
 #undef _block_size_
 #undef _number_of_blocks_
 #undef _eol_
 #undef _pool_id_
+#undef padding
 
 #define _block_size_ (sizeof(listHeader_t)+
 #define _number_of_blocks_ ) *
 #define _eol_  +
 #define _pool_id_(a)
+#define padding
 
 #define heapSize_c (PoolsDetails_c 0)
 
@@ -60,11 +62,13 @@ const uint32_t heapSize = heapSize_c;
 #undef _number_of_blocks_
 #undef _eol_
 #undef _pool_id_
+#undef padding
 
 #define _block_size_ 0 *
 #define _number_of_blocks_ + 0 *
 #define _eol_  + 1 +
 #define _pool_id_(a)
+#define padding
 
 #define poolCount (PoolsDetails_c 0)
 
@@ -78,6 +82,7 @@ pools_t  memPoolsSnapShot[poolCount];
 #undef _number_of_blocks_
 #undef _eol_
 #undef _pool_id_
+#undef padding
 
 #ifdef MEM_TRACKING
 
@@ -89,6 +94,7 @@ pools_t  memPoolsSnapShot[poolCount];
 #define _number_of_blocks_ +
 #define _eol_  +
 #define _pool_id_(a)
+#define padding
 
 #define mTotalNoOfMsgs_d (PoolsDetails_c 0)
 static const uint16_t mTotalNoOfMsgs_c = mTotalNoOfMsgs_d;
@@ -98,6 +104,7 @@ blockTracking_t memTrack[mTotalNoOfMsgs_d];
 #undef _number_of_blocks_
 #undef _eol_
 #undef _pool_id_
+#undef padding
 
 #endif /*MEM_TRACKING*/
 

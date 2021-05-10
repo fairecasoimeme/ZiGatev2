@@ -30,6 +30,21 @@
 * Public macros
 *************************************************************************************
 ************************************************************************************/
+
+#ifndef gTimestampUseWtimer_c
+#if defined gLoggingActive_d && gTimerMgrLowPowerTimers != 0
+#define gTimestampUseWtimer_c           (1)
+#else
+#if defined mAppUseTickLessMode_c && (mAppUseTickLessMode_c > 0)
+#define gTimestampUseWtimer_c           (1)
+#endif
+#endif
+#endif
+
+#if defined mAppUseTickLessMode_c && (mAppUseTickLessMode_c > 0)
+#define gTimerMgrLowPowerTimers 1
+#endif
+
 #ifdef CPU_JN518X
 #if gTimestamp_Enabled_d || gTimerMgrLowPowerTimers
 /* */
@@ -46,6 +61,9 @@
 #ifndef gTimerMgrUseLpcRtc_c
 #define gTimerMgrUseLpcRtc_c	        (0)
 #endif
+#endif
+#ifndef gTimestampUseWtimer_c
+#define gTimestampUseWtimer_c           (1)
 #endif
 #endif
 
@@ -104,6 +122,13 @@
 #else
 #define gStackTimerMaxCountValue_c  0xffffffff
 #endif
+#ifdef CPU_JN518X
+#define RTC1KHZTICKS_TO_MILLISECONDS(x)    (((x) *125)>>7)
+#define MILLISECONDS_TO_RTC1KHZTICKS(x)   (((x)<<7)/125)
+#define TICKS32K_TO_MILLISECONDS(x)   ((uint32_t)(((uint64_t)(x)*125)>>12)) /* mult by 1000 divided by 32768*/
+#define MILLISECONDS_TO_TICKS32K(x)   ((uint32_t)(((uint64_t)(x)<<12)/125))
+#endif
+
 /************************************************************************************
 *************************************************************************************
 * Public types
@@ -137,6 +162,29 @@ uint32_t StackTimer_ClearIntFlag(void);
 uint32_t StackTimer_GetInputFrequency(void);
 uint32_t StackTimer_GetCounterValue(void);
 void StackTimer_SetOffsetTicks(uint32_t offset);
+void StackTimer_ConsumeIrq(void);
+
+/* FreeRTOS SysTick suppressed tick mode related functions */
+void StackTimer_PrePowerDownWakeCounterSet(uint32_t expected_idle_time_ms);
+
+void StackTimer_LowPowerWakeTimerStart(void);      /*< Start the wake timer either RTC 1kHz or WTIMER */
+void SysTick_Configure(void);     /*< Setup the Core frequency, the tick duration etc ... */
+void SysTickTimeStampLastTick(void);             /*< Remember reference time of previous SysTick interrupt occurrence */
+void SysTick_StopAndReadRemainingValue(void);
+void SysTick_RestartAfterSleepAbort(void);
+uint32_t SysTick_RestartAfterSleep(uint32_t now);
+
+uint32_t PWR_GetTotalSleepDuration32kTicks(uint32_t now);
+void StackTimer_ReprogramDeadline(uint32_t sleep_duration_ticks);
+
+
+/* Uncomment line below if you intend to measure 
+ * the drift between SysTick count and 32k timer */
+//#define PostStepTickAssess 1
+
+void SystickCheckDrift(void);
+
+
 
 #ifndef ENABLE_RAM_VECTOR_TABLE
 void StackTimer_ISR_withParam(uint32_t param);

@@ -33,7 +33,8 @@ void CMP_Init(cmp_config_t *config)
 
     anaComp |= (config->src << PMC_ANAMUXCOMP_COMP_INNINT_SHIFT) |
                (config->mode << PMC_ANAMUXCOMP_COMP_LOWPOWER_SHIFT) |
-               (((uint32_t)(config->enLowHysteris)) << PMC_ANAMUXCOMP_COMP_HYST_SHIFT);
+               (((uint32_t)(config->enLowHysteris)) << PMC_ANAMUXCOMP_COMP_HYST_SHIFT) |
+               (((uint32_t)(config->enInputSwap)) << PMC_ANAMUXCOMP_COMP_INPUTSWAP_SHIFT);
 
     PMC->ANAMUXCOMP = anaComp;
 }

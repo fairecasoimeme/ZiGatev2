@@ -464,6 +464,7 @@ typedef union
 typedef struct {
     ZPS_teAfEventType eType;
     ZPS_tuAfEventData uEvent;
+    uint8 u8BaseSqn;
 } ZPS_tsAfEvent;
 
 typedef struct {

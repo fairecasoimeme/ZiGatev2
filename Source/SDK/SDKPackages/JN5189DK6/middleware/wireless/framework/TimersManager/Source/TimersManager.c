@@ -1331,6 +1331,8 @@ void TMR_TimeStampInit(void)
 {
 #if mTMR_PIT_Timestamp_Enabled_d
     TMR_PITInit();
+#elif  gTimestampUseWtimer_c
+    Timestamp_Init();
 #else
     TMR_RTCInit();
 #if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
@@ -1347,6 +1349,8 @@ uint64_t TMR_GetTimestamp(void)
 {
 #if mTMR_PIT_Timestamp_Enabled_d
     return TMR_PITGetTimestamp();
+#elif  gTimestampUseWtimer_c
+    return Timestamp_Get_uSec();
 #else
 #if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
     return TMR_CTGetTimestamp();

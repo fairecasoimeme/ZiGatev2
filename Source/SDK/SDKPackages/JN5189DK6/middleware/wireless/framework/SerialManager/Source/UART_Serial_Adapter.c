@@ -789,21 +789,7 @@ uint32_t LPSCI_IsWakeupSource(uint32_t instance)
 ********************************************************************************** */
 void USART_PinInitialize(uint32_t instance)
 {
-    switch(instance)
-    {
-    case DEBUG_SERIAL_INTERFACE_INSTANCE:
-#if gUartDebugConsole_d
-        BOARD_InitDebugConsole();
-#endif
-        break;
-    case APP_SERIAL_INTERFACE_INSTANCE:
-#if gUartAppConsole_d
-        BOARD_InitHostInterface();
-#endif
-        break;
-    default:
-        break;
-    }
+    BOARD_Init_UART_Pins(instance);
 }
 
 #if FSL_FEATURE_SOC_USART_COUNT

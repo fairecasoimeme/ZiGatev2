@@ -159,7 +159,9 @@ PUBLIC BDB_teStatus BDB_eNfStartNwkFormation(void)
         bDoPrimaryScan = FALSE;
         u32ScanChannels = sBDB.sAttrib.u32bdbSecondaryChannelSet;
     }
-
+#ifdef ENABLE_SUBG_IF
+    u32ScanChannels |= SUBG_PAGE_28;
+#endif
     /* Backup and restore after NwkForm confirmation */
     u32BackUpApsChannelMask = ZPS_psAplAibGetAib()->pau32ApsChannelMask[0];
     ZPS_psAplAibGetAib()->pau32ApsChannelMask[0] = u32ScanChannels;
@@ -356,6 +358,12 @@ PRIVATE void vNfFormDistributedNwk(void)
     sStartParams.sNwkParams.u8KeyIndex = 0;
     sStartParams.sNwkParams.u8NwkupdateId = 1;
 
+#ifdef ENABLE_SUBG_IF
+    void *pvNwk = ZPS_pvAplZdoGetNwkHandle();
+	ZPS_vNwkNibSetMacEnhancedMode(pvNwk, TRUE);
+
+    ZPS_u8MacMibIeeeSetPolicy(FALSE);
+#endif
     /* This sets up the device, starts as router and sends device ance */
     eStatus = ZPS_eAplFormDistributedNetworkRouter(&sStartParams.sNwkParams, FALSE);
 

@@ -281,7 +281,7 @@ PUBLIC teZCL_Status eGP_CreateGreenPower(
         psCustomDataStructure->asZgpDuplicateFilterTable[u8Count].u16AgingTime = 0;
     }
 
-    psCustomDataStructure->u8GPDataReqHandle = 0x81;
+    psCustomDataStructure->u8GPDataReqHandle = ZPS_NWK_GP_BASE_HANDLE +1;
     ((tsCLD_GreenPower*)pvEndPointSharedStructPtr)->u32FeatureMap = 0;
     ((tsCLD_GreenPower*)pvEndPointSharedStructPtr)->u16ClusterRevision = 1;
 

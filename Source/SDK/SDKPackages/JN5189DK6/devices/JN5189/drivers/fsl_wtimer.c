@@ -49,6 +49,8 @@ typedef struct
     volatile uint32_t *wkt_load_msb_reg;
     const volatile uint32_t *wkt_val_lsb_reg;
     const volatile uint32_t *wkt_val_msb_reg;
+    const uint32_t wkt_val_lsb_mask;
+    const uint32_t wkt_val_msb_mask;
     uint8_t wkt_irq_id;
 } timer_param_t;
 
@@ -62,7 +64,9 @@ static const timer_param_t timer_param[2] = {
         .wkt_load_lsb_reg          = &SYSCON->WKT_LOAD_WKT0_LSB,
         .wkt_load_msb_reg          = &SYSCON->WKT_LOAD_WKT0_MSB,
         .wkt_val_lsb_reg           = &SYSCON->WKT_VAL_WKT0_LSB,
-        .wkt_val_msb_reg           = NULL,
+        .wkt_val_msb_reg           = &SYSCON->WKT_VAL_WKT0_MSB,
+        .wkt_val_lsb_mask          = SYSCON_WKT_LOAD_WKT0_LSB_WKT0_LOAD_LSB_MASK,
+        .wkt_val_msb_mask          = SYSCON_WKT_LOAD_WKT0_MSB_WKT0_LOAD_MSB_MASK,
         .wkt_irq_id                = WAKE_UP_TIMER0_IRQn,
     },
     {
@@ -75,6 +79,8 @@ static const timer_param_t timer_param[2] = {
         .wkt_load_msb_reg          = NULL,
         .wkt_val_lsb_reg           = &SYSCON->WKT_VAL_WKT1,
         .wkt_val_msb_reg           = NULL,
+        .wkt_val_lsb_mask          = SYSCON_WKT_LOAD_WKT0_LSB_WKT0_LOAD_LSB_MASK,
+        .wkt_val_msb_mask          = 0,
         .wkt_irq_id                = WAKE_UP_TIMER1_IRQn,
     },
 };
@@ -97,9 +103,13 @@ static const timer_param_t timer_param[2] = {
  */
 void WTIMER_Init(void)
 {
-    /* set clock and divider */
-    SYSCON->AHBCLKCTRLS[0] |= SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK;
-    SYSCON->WKTCLKSEL = SYSCON_WKTCLKSEL_SEL(0); // & ~SYSCON_WKTCLKSEL_SEL_MASK ;
+    if ((0 == (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK)) ||
+        (0 != (SYSCON->WKTCLKSEL & SYSCON_WKTCLKSEL_SEL_MASK)))
+    {
+        /* set clock and divider */
+        SYSCON->AHBCLKCTRLS[0] |= SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK;
+        SYSCON->WKTCLKSEL = SYSCON_WKTCLKSEL_SEL(0);
+    }
 }
 
 /*!
@@ -110,9 +120,13 @@ void WTIMER_Init(void)
  */
 void WTIMER_DeInit(void)
 {
-    /* set clock and divider */
-    SYSCON->AHBCLKCTRLS[0] &= ~SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK;
-    SYSCON->WKTCLKSEL = SYSCON_WKTCLKSEL_SEL(2); // No Clock ;
+    if ((SYSCON->WKT_CTRL & (SYSCON_WKT_CTRL_WKT1_ENA_MASK | SYSCON_WKT_CTRL_WKT0_ENA_MASK)) != 0)
+    {
+       /* set clock and divider */
+        SYSCON->AHBCLKCTRLS[0] &= ~SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK;
+        SYSCON->WKTCLKSEL = SYSCON_WKTCLKSEL_SEL(2); /* No Clock */
+    }
+
 }
 
 /*!
@@ -164,9 +178,11 @@ void WTIMER_EnableInterrupts(WTIMER_timer_id_t timer_id)
  * -start the timer
  *
  * param timer_id   Wtimer Id
- * param count      number of 32KHz clock periods before expiration
+ * param msb_count      number of 32KHz clock periods before expiration divided by 2^32
+ * param lsb_count      number of 32KHz clock periods before expiration modulo 2^32
+ *
  */
-void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
+void WTIMER_StartTimerLarge(WTIMER_timer_id_t timer_id, uint64_t count)
 {
     const timer_param_t *timer_param_l = &timer_param[timer_id];
 
@@ -188,10 +204,13 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
         __asm volatile("nop");
     }
 
-    *(timer_param_l->wkt_load_lsb_reg) = count;
+    uint32_t lsb_count = (count & 0xffffffff);
+
+    *(timer_param_l->wkt_load_lsb_reg) = lsb_count  & timer_param_l->wkt_val_lsb_mask;
     if (timer_id == WTIMER_TIMER0_ID)
     {
-        *(timer_param_l->wkt_load_msb_reg) = 0;
+        uint32_t msb_count = (uint32_t)((uint64_t)count>>32);
+        *(timer_param_l->wkt_load_msb_reg) = msb_count & timer_param_l->wkt_val_msb_mask;
     }
 
     /* handle as a critical  section because if an interrupt that triggers immediately after the timer enable can cause
@@ -209,6 +228,22 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
     EnableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
 
     PRINTF("<<-- vAHI_WakeTimerStart[%d] : STAT=%x WKT_INTSTAT=%x\n", timer_id, SYSCON->WKT_STAT, SYSCON->WKT_INTSTAT);
+}
+
+
+/*!
+ * brief Starts the Timer counter.
+ * The function performs:
+ * -stop the timer if running, clear the status and interrupt flag if set (WTIMER_ClearStatusFlags())
+ * -set the counter value
+ * -start the timer
+ *
+ * param timer_id   Wtimer Id
+ * param count      number of 32KHz clock periods before expiration
+ */
+void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
+{
+    WTIMER_StartTimerLarge(timer_id, (uint64_t)count);
 }
 
 /*!
@@ -284,4 +319,70 @@ void WTIMER_StopTimer(WTIMER_timer_id_t timer_id)
     }
 
     WTIMER_ClearStatusFlags(timer_id);
+}
+
+/*!
+ * brief Read the LSB counter of the wake timer
+ * API checks the next counter update (next 32KHz clock edge) so the value is uptodate
+ * Important note : The counter shall be running otherwise, the API gets locked and never return
+ *
+ * param timer_id   Wtimer Id
+ * return  Number of 32kHz clock ticks recombined from values read in LSB and MSB registers for WTIMER0.
+ *         LSB ony for WTIMER1
+ */
+uint64_t WTIMER_ReadTimerLargeSafe(WTIMER_timer_id_t timer_id)
+{
+    uint64_t ts;
+    const timer_param_t *timer_param_l    = &timer_param[timer_id];
+    volatile uint32_t lsb32_ini = *timer_param_l->wkt_val_lsb_reg;
+    volatile uint32_t lsb32     = *timer_param_l->wkt_val_lsb_reg;
+
+    while (lsb32 == lsb32_ini)
+        lsb32 = *timer_param_l->wkt_val_lsb_reg;
+
+
+    if (timer_id == WTIMER_TIMER0_ID)
+    {
+        uint32_t msb32 = *timer_param_l->wkt_val_msb_reg;
+        lsb32 = *timer_param_l->wkt_val_lsb_reg;
+        if (lsb32 == 0)
+        {
+            /* read MSB again: it may have changed when propagating the carry */
+             msb32 = *timer_param_l->wkt_val_msb_reg;
+        }
+
+        ts = ((uint64_t)(msb32 & timer_param_l->wkt_val_msb_mask) << 32) | lsb32;
+    }
+    else
+    {
+        ts  = (uint64_t)lsb32;
+    }
+
+    return ts;
+}
+
+uint64_t WTIMER_ReadTimerLarge(WTIMER_timer_id_t timer_id)
+{
+    uint64_t ts;
+    const timer_param_t *timer_param_l = &timer_param[timer_id];
+
+    if (timer_id == WTIMER_TIMER0_ID)
+    {
+        uint32_t msb32 = *timer_param_l->wkt_val_msb_reg;
+        uint32_t lsb32 = *timer_param_l->wkt_val_lsb_reg;
+        if (lsb32 == 0)
+        {
+            /* read MSB again: it may have changed when propagating the carry */
+             msb32 = *timer_param_l->wkt_val_msb_reg;
+        }
+
+        ts = ((uint64_t)(msb32 & timer_param_l->wkt_val_msb_mask) << 32) | lsb32;
+    }
+    else
+    {
+        ts  = (uint64_t)WTIMER_ReadTimer(timer_id);
+    }
+
+    return ts;
+
 }

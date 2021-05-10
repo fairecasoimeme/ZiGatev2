@@ -62,6 +62,7 @@ PRIVATE void vNsAfterNwkJoin(void);
 PRIVATE void vNsStartTclk(void);
 PRIVATE void vNsTclkSendNodeDescReq(void);
 PRIVATE void vNsTclkSendReqKey(void);
+PRIVATE void vNsTclkResendVerKey(void);
 PRIVATE void vNsLeaveNwk(void);
 PRIVATE void vNsTerminateNwkSteering(void);
 PRIVATE void vNsSendPermitJoin(void);
@@ -240,17 +241,24 @@ PUBLIC void BDB_vNsStateMachine(BDB_tsZpsAfEvent *psZpsAfEvent)
                         /* 8.3-3 If the Status parameter from the NLME-NETWORK-DISCOVERY.confirm
                              primitive is not equal to SUCCESS, indicating that the channel scan was not
                              successful, the node SHALL continue from step 12 (8.3-12). */
-                        vNsDiscoverNwk();
+#if ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
                         if((!u32ScanChannels) || (u8ScanChannel > BDB_CHANNEL_MAX))
                         {
                             if(bDoPrimaryScan == FALSE)
+#else
+                        if (TRUE)
+                        {
+#endif
                             {
                                 /* 8.3.16 ... set bdbCommissioningStatus to NO_NETWORK and then it SHALL terminate
                                 the network steering procedure for a node not on a network. */
                                 vNsTerminateNwkSteering();;
                             }
                         }
-
+                        else
+                        {
+                            vNsDiscoverNwk();
+                        }
                     }
                     break;
                 default:
@@ -343,9 +351,18 @@ PUBLIC void BDB_vNsStateMachine(BDB_tsZpsAfEvent *psZpsAfEvent)
             break;
 
         case E_NS_TCLK_WAIT_SEND_REQ_KEY:
+        case E_NS_TCLK_WAIT_SEND_VER_KEY:
             switch(psZpsAfEvent->sStackEvent.eType)
             {
                 case ZPS_EVENT_TC_STATUS:
+                	if ( (psZpsAfEvent->sStackEvent.uEvent.sApsTcEvent.u8Status == ZPS_APL_APS_E_SECURED_LINK_KEY) &&
+                	                         (psZpsAfEvent->sStackEvent.uEvent.sApsTcEvent.uTcData.u64ExtendedAddress == ZPS_psAplAibGetAib()->u64ApsTrustCenterAddress) )
+					{
+						DBG_vPrintf(TRACE_BDB,"ZPS_EVENT_TC_STATUS Received Transport Key from TC\n");
+						eNS_State = E_NS_TCLK_WAIT_SEND_VER_KEY;
+						sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttempts = 0;
+						break;
+					}
                     ZTIMER_eStop(u8TimerBdbNs);
                     if(psZpsAfEvent->sStackEvent.uEvent.sApsTcEvent.u8Status == 0x00)
                     {
@@ -365,7 +382,8 @@ PUBLIC void BDB_vNsStateMachine(BDB_tsZpsAfEvent *psZpsAfEvent)
                     }
                     break;
                 default:
-                    DBG_vPrintf(1,"psZpsAfEvent->sStackEvent.eType=%d\n\n",psZpsAfEvent->sStackEvent.eType);
+                	DBG_vPrintf(1,"psZpsAfEvent->sStackEvent.eType=%d if ErrCode %d\n",
+                	        psZpsAfEvent->sStackEvent.eType, psZpsAfEvent->sStackEvent.uEvent.sAfErrorEvent.eError);
                     break;
             }
             break;
@@ -461,12 +479,20 @@ PUBLIC void BDB_vNsTimerCb(void *pvParam)
                 vNsLeaveNwk();
             }
             break;
+        case E_NS_TCLK_WAIT_SEND_VER_KEY:
         case E_NS_TCLK_WAIT_SEND_REQ_KEY:
             DBG_vPrintf(TRACE_BDB, "BDB: BDB_vNsTimerCb 3\n");
 
             if(sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttempts < sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttemptsMax)
             {
-                vNsTclkSendReqKey();
+            	if (eNS_State == E_NS_TCLK_WAIT_SEND_REQ_KEY)
+				{
+					vNsTclkSendReqKey();
+				}
+				else
+				{
+					vNsTclkResendVerKey();
+				}
             }
             else
             {
@@ -518,7 +544,10 @@ PRIVATE void vNsDiscoverNwk()
             return;
         }
     }
-
+#ifdef ENABLE_SUBG_IF
+    void *pvNwk = ZPS_pvAplZdoGetNwkHandle();
+	ZPS_vNwkNibSetMacEnhancedMode(pvNwk, TRUE);
+#endif
     /* 8.3-2 The node SHALL perform a channel scan in order to discover which networks
              are available within its radio range on a set of channels. */
     while(u8ScanChannel <= BDB_CHANNEL_MAX)
@@ -528,7 +557,11 @@ PRIVATE void vNsDiscoverNwk()
             BDB_vSetAssociationFilter();
             ZPS_vNwkNibClearDiscoveryNT(ZPS_pvAplZdoGetNwkHandle());
             eNS_State = E_NS_WAIT_DISCOVERY;
+#ifdef ENABLE_SUBG_IF
+            if(ZPS_E_SUCCESS == ZPS_eAplZdoDiscoverNetworks(SUBG_PAGE_28 | (u32ScanChannels & (1<<u8ScanChannel))))
+#else
             if(ZPS_E_SUCCESS == ZPS_eAplZdoDiscoverNetworks(u32ScanChannels & (1<<u8ScanChannel)))
+#endif
             {
                 DBG_vPrintf(TRACE_BDB,"BDB: Disc on Ch %d from 0x%08x\n", u8ScanChannel, u32ScanChannels);
                 /* Rest of the process starts after DicsoveryComplete event. */
@@ -591,7 +624,7 @@ PRIVATE void vNsTryNwkJoin(bool_t bStartWithIndex0,
     }
     pNwkDescr = ZPS_psGetNetworkDescriptors( &u8NumOfNwks );
 
-    DBG_vPrintf(TRACE_BDB,"BDB: vNsTryNwkJoin - index %d of %d Nwks \n",u8NwkIndex, u8NumOfNwks);
+    DBG_vPrintf(TRACE_BDB,"BDB: vNsTryNwkJoin - try %d index %d of %d Nwks \n", u8RecSameNwkRetryAttempts, u8NwkIndex, u8NumOfNwks);
     while(u8NwkIndex < u8NumOfNwks)
     {
         if((pNwkDescr[u8NwkIndex].u8PermitJoining) && \
@@ -860,6 +893,23 @@ PRIVATE void vNsTclkSendReqKey(void)
     sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttempts++;
 }
 
+/****************************************************************************
+ *
+ * NAME: vNsTclkResendVerKey
+ *
+ * DESCRIPTION:
+ *  Resend APS verify key initially sent by the stack
+ *
+ * RETURNS:
+ * void
+ *
+ ****************************************************************************/
+PRIVATE void vNsTclkResendVerKey(void)
+{
+    ZPS_eAfVerifyKeyReqRsp(ZPS_psAplAibGetAib()->u64ApsTrustCenterAddress, 4 /*ZPS_APL_REQ_KEY_TC_LINK_KEY*/);
+    ZTIMER_eStart(u8TimerBdbNs, ZTIMER_TIME_MSEC(BDBC_TC_LINK_KEY_EXCHANGE_TIMEOUT*1000));
+    sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttempts++;
+}
 /****************************************************************************/
 /***        END OF FILE                                                   ***/
 /****************************************************************************/

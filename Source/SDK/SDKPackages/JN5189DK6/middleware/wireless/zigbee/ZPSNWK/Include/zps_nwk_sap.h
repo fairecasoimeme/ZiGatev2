@@ -1063,6 +1063,28 @@ typedef struct
  */
 typedef struct
 {
+    uint8  u8NwkState;                              /**< Nwk state */
+    uint8  u8MACTxFree;                             /**< Free MAC frames */
+    uint8  u8MACTxTotal;                            /**< Total MAC frames */
+    uint8  u8MACRxFree;                             /**< Free MAC frames */
+    uint8  u8MACRxTotal;                            /**< Total MAC frames */
+    uint8  u8NPdusFree;                             /**< Free NPDUs */
+    uint8  u8NPdusPeak;                             /**< Peak allocated NPDUs */
+    uint8  u8NPdusTotal;                            /**< Total NPDUs */
+    uint16 u16APdusFree;                            /**< Free APDUs */
+    uint16 u16APdusTotal;                           /**< Total APDUs */
+    uint8  u8MCPSHandlesFree;                       /**< Free MCPS handles */
+    uint8  u8MCPSHandlesTotal;                      /**< Total MCPS handles */
+    uint16 u16ActCnt;                               /**< Activity counter */
+} ZPS_tsNwkNlmeCfmGetResources;
+
+/**
+ * @brief Structure for NLME-ROUTE-DISCOVERY.confirm
+ *
+ * Route discovery - confirmation
+ */
+typedef struct
+{
     uint8 u8Status;                                /**< Status of scan request */
     uint8 u8ResultListSize;                        /**< Size of ED results list */
     uint8 au8EnergyDetect[ZPS_NWK_MAX_ED_RESULTS]; /**< ED results list */
@@ -1220,6 +1242,7 @@ typedef enum
     ZPS_NWK_NLME_REQ_SET,                     /**< Use with ZPS_tsNwkNlmeReqSet */
     ZPS_NWK_NLME_REQ_SET_INTERFACE,           /**< Use with ZPS_tsNwkNlmeReqSetInterface */
     ZPS_NWK_NLME_REQ_GET_INTERFACE,           /**< Use with ZPS_tsNwkNlmeReqGetInterface */
+	ZPS_NWK_NLME_REQ_GET_RESOURCES,           /**< No parameters */
     NUM_ZPS_NWK_NLME_REQ                      /**< (endstop) */
 } ZPS_teNwkNlmeReqRspType;
 
@@ -1302,6 +1325,7 @@ typedef union
     ZPS_tsNwkNlmeCfmSet              sCfmSet;              /**< Set confirm */
     ZPS_tsNwkNlmeCfmSetInterface     sCfmSetInterface;     /**< Set Interface confirm */
     ZPS_tsNwkNlmeCfmGetInterface     sCfmGetInterface;     /**< Get Interface confirm */
+    ZPS_tsNwkNlmeCfmGetResources     sCfmGetResources;     /**< Get Resources confirm */
 } ZPS_tuNlmeSyncCfmParam;
 
 /**
@@ -1551,6 +1575,7 @@ typedef struct
 typedef enum
 {
     ZPS_NWK_NLDE_REQ_DATA = 0,  /**< Use with ZPS_tsNwkNldeReqData */
+	ZPS_NWK_NLDE_REQ_DATA_JIT,  /**< Data w/ jitter, Use with ZPS_tsNwkNldeReqData */
     NUM_ZPS_NWK_NLDE_REQ        /**> (endstop) */
 } ZPS_teNwkNldeReqRspType;
 

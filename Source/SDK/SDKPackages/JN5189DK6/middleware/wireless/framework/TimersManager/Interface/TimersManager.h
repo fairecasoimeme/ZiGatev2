@@ -773,6 +773,33 @@ void TMR_PITInit(void);
  *---------------------------------------------------------------------------*/
 uint64_t TMR_PITGetTimestamp(void);
 
+
+
+#define TICKS32kHz_TO_USEC(x) (((x)*15625U) >> 9)
+#define TICKS32kHz_TO_MSEC(x) (((x)*125U) >> 12)
+#define TICKS1kHz_TO_MSEC(x) (((x))
+#define TICKS1kHz_TO_USEC(x) (((x)*1000U)
+
+
+typedef struct
+{
+    void (*start_service)(void);
+    void (*stop_service)(void);
+    uint64_t (*get_timestamp64_ticks)(void);
+    uint32_t (*get_timestamp32_ticks)(void);
+    uint64_t (*get_timestamp_usec)(void);
+
+} timestamp_ops_t;
+
+void     Timestamp_Init(void);
+uint32_t Timestamp_GetCounter32bit(void);
+uint64_t Timestamp_GetCounter64bit(void);
+uint64_t Timestamp_Get_uSec(void);
+uint64_t Timestamp_Get_mSec(void);
+void     Timestamp_Deinit(void);
+
+
+
 #if defined gLoggingActive_d && (gLoggingActive_d > 0)
 #include "dbg_logging.h"
 #ifndef DBG_TMR

@@ -38,6 +38,8 @@
 /***        Include Files                                                 ***/
 /****************************************************************************/
 
+#include "EmbeddedTypes.h"
+
 #define PUBLIC
 
 #if defined __cplusplus

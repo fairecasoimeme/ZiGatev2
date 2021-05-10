@@ -45,12 +45,17 @@ typedef enum
     WTIMER_TIMER1_ID = 1,
 } WTIMER_timer_id_t;
 
+
 typedef enum
 {
     WTIMER_STATUS_NOT_RUNNING = 0,
     WTIMER_STATUS_RUNNING     = 1,
     WTIMER_STATUS_EXPIRED     = 2,
 } WTIMER_status_t;
+
+#define WTIMER0_MAX_VALUE ((uint64_t)(1LL<<41) -1)
+#define WTIMER1_MAX_VALUE ((uint64_t)(1LL<<28) -1)
+
 
 /*******************************************************************************
  * API
@@ -136,20 +141,27 @@ void WTIMER_ClearStatusFlags(WTIMER_timer_id_t timer_id);
 void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count);
 
 /*!
+ * brief Starts the Timer counter.
+ * The function performs:
+ * -stop the timer if running, clear the status and interrupt flag if set (WTIMER_ClearStatusFlags())
+ * -set the counter value
+ * -start the timer
+ *
+ * param timer_id   Wtimer Id
+ * param count      number of 32KHz clock periods before expiration
+ *
+ */
+ void WTIMER_StartTimerLarge(WTIMER_timer_id_t timer_id, uint64_t count);
+
+
+/*!
  * @brief Stops the Timer counter.
  *
  * @param timer_id   Wtimer Id
  */
 void WTIMER_StopTimer(WTIMER_timer_id_t timer_id);
 
-/*!
- * @brief Calibrate the 32KHz clock to be used by the wake timer versus the 32MHz crystal clock source
- * The Applicaton shall switches OFF the 32MHz clock if no longer used by the chip using CLOCK_DisableClock() in
- * fsl_clock.h
- *
- * @return  32KHz clock frequency (number of 32KHz clock in one sec) - expect to have 32768
- */
-uint32_t WTIMER_CalibrateTimer(void);
+
 
 /*!
  * @brief Read the LSB counter of the wake timer
@@ -163,6 +175,18 @@ uint32_t WTIMER_CalibrateTimer(void);
 uint32_t WTIMER_ReadTimer(WTIMER_timer_id_t timer_id);
 
 /*!
+ * @brief Read the MSB and LSB counters of the wake timer
+ * This API is unsafe. If the counter has just been started, the counter value may not be
+ * up to date until the next 32KHz clock edge.
+ * Use WTIMER_ReadTimerSafeLarge() instead
+ * Note that using this API makes sense for WTIMER0 only but
+ *
+ * @param timer_id   Wtimer Id
+ * @return  counter value - number of ticks before expiration if running
+ */
+uint64_t WTIMER_ReadTimerLarge(WTIMER_timer_id_t timer_id);
+
+/*!
  * @brief Read the LSB counter of the wake timer
  * API checks the next counter update (next 32KHz clock edge) so the value is uptodate
  * Important note : The counter shall be running otherwise, the API gets locked and never return
@@ -172,24 +196,16 @@ uint32_t WTIMER_ReadTimer(WTIMER_timer_id_t timer_id);
  */
 uint32_t WTIMER_ReadTimerSafe(WTIMER_timer_id_t timer_id);
 
-#ifdef NOT_IMPLEMENTED_YET
 /*!
- * @brief Starts the Timer counter.
+ * @brief Read the MSB and LSB counters of the wake timer
+ * API checks the next counter update (next 32KHz clock edge) so the value is up to date
+ * Important note : The counter shall be running otherwise, the API gets locked and never return
  *
  * @param timer_id   Wtimer Id
- * @param count      number of 32KHz clock periods before expiration
+ * @return  32KHz clock frequency (number of 32KHz clock in one sec) - expect to have 32768
  */
-void WTIMER_StartTimerLarge(WTIMER_timer_id_t timer_id, uint64_t count);
+uint64_t WTIMER_ReadTimerLargeSafe(WTIMER_timer_id_t timer_id);
 
-/*!
- * @brief Read the LSB + MSB counter of the 48bit wake timer, Read the LSB counter for 32bit wale timer
- *
- *
- * @param timer_id   Wtimer Id
- * @return wake timer counter
- */
-uint64_t WTIMER_ReadTimerLarge(WTIMER_timer_id_t timer_id);
-#endif
 
 #if defined(__cplusplus)
 }

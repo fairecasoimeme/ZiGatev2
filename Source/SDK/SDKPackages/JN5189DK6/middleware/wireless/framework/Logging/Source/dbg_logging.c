@@ -33,6 +33,8 @@
 #include "fsl_clock.h"
 #include "board.h"
 
+#include "TimersManager.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -99,17 +101,6 @@ static DbgLog_t log_handle;
 #endif
 
 
-WEAK void Dbg_Start32kCounter(void)
-{
-    return;
-}
-
-WEAK uint32_t  Dbg_Get32kTimestamp(void)
-{
-    return 0UL;
-}
-
-
 /*******************************************************************************
  * Public variables
  *******************************************************************************/
@@ -160,7 +151,7 @@ static void vDbgLogAdd(
             log->write_index = 0;
         }
 
-        entry->timestamp = Dbg_Get32kTimestamp();
+        entry->timestamp = (uint32_t)Timestamp_GetCounter32bit();
 #if gLoggingWithExtraTs
         entry->extra_ts = extra_ts;
 #endif
@@ -196,7 +187,6 @@ void DbgLogInit(uint32_t log_buffer_addr, uint32_t sz)
 {
     if (!log_handle.log_array)
     {
-        Dbg_Start32kCounter();
         log_handle.read_index = log_handle.write_index = (uint16_t)0;
         log_handle.nb_entries = (uint16_t)0;
         log_handle.lock = (uint16_t)0;
@@ -206,7 +196,7 @@ void DbgLogInit(uint32_t log_buffer_addr, uint32_t sz)
             PRINTF("Log buffer not large enough!\r\n");
             return;
         }
-
+        Timestamp_Init(); /* does nothing if already started */
         log_handle.log_array = (LogEntry_t *)log_buffer_addr;
     }
 }
@@ -274,7 +264,7 @@ void DbgLogDump(bool stop)
     log_handle.lock = 1;
     static char tab[LOG_ITEM_MAX_SZ];
     memset(tab, 0, LOG_ITEM_MAX_SZ);
-    PRINTF("Dumping log time=%d read=%d write=%d\r\n", Dbg_Get32kTimestamp(),
+    PRINTF("Dumping log time=%d read=%d write=%d\r\n", Timestamp_GetCounter32bit(),
             log->read_index,
             log->write_index);
     while (log->nb_entries > 0)
@@ -328,4 +318,3 @@ void DbgLogDump(bool stop)
 #endif
 
 }
-
