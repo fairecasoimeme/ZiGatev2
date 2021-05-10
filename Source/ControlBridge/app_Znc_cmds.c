@@ -104,7 +104,7 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x0004031E
+#define VERSION    0x0105031E
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
@@ -1228,9 +1228,26 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                     vLog_Printf ( TRACE_APP, LOG_DEBUG, "\nAdd Group ID: %x", u16GroupId );
                     vLog_Printf ( TRACE_APP, LOG_DEBUG, "\nAdd EndPoint: %x", au8LinkRxBuffer[4] );
 
-                    /* Request to add the bridge to a group, no name supported... */
+                    // Request to add the bridge to a group, no name supported...
                     u8Status    = ZPS_eAplZdoGroupEndpointAdd ( u16GroupId,
                                                                 au8LinkRxBuffer [ 4 ] );
+
+					uint16                 u16Length =  0;
+					uint8                  au8LinkTxBuffer[64];
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [0],          u8Status,                               u16Length );
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length],  CONTROLBRIDGE_ZLO_ENDPOINT,          u16Length );
+					ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length],  GENERAL_CLUSTER_ID_GROUPS,    u16Length );
+
+					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length],         u8Status,       u16Length );
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],         u16GroupId,     u16Length );
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],         0x0000,         u16Length );
+
+
+					vSL_WriteMessage ( E_SL_MSG_ADD_GROUP_RESPONSE,
+										   u16Length,
+										   au8LinkTxBuffer,
+										   0 );
+
 
                     for ( i = 0; i < psAplAib->psAplApsmeGroupTable->u32SizeOfGroupTable; i++ )
                     {
@@ -1270,6 +1287,21 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                     /* Request is for the control bridge */
                     u8Status    =  ZPS_eAplZdoGroupEndpointRemove ( u16GroupId,
                                                                     au8LinkRxBuffer [ 4 ] );
+                    uint16                 u16Length =  0;
+					uint8                  au8LinkTxBuffer[64];
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [0],          u8Status,                               u16Length );
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length],  CONTROLBRIDGE_ZLO_ENDPOINT,          u16Length );
+					ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length],  GENERAL_CLUSTER_ID_GROUPS,    u16Length );
+
+					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length],         u8Status,       u16Length );
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],         u16GroupId,     u16Length );
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],         0x0000,         u16Length );
+
+
+					vSL_WriteMessage ( E_SL_MSG_REMOVE_GROUP_RESPONSE,
+										   u16Length,
+										   au8LinkTxBuffer,
+										   0 );
                 }
                 else
                 {
@@ -1296,6 +1328,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
                     /* Request is for the control bridge */
                     u8Status =  ZPS_eAplZdoGroupAllEndpointRemove( au8LinkRxBuffer [ 4 ] );
+
                 }
                 else
                 {
@@ -1335,39 +1368,68 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
             case (E_SL_MSG_VIEW_GROUP):
             {
-                tsCLD_Groups_ViewGroupRequestPayload    sRequest;
 
-                sRequest.u16GroupId    =  ZNC_RTN_U16 ( au8LinkRxBuffer, 5 );
-                u8Status    =  eCLD_GroupsCommandViewGroupRequestSend ( au8LinkRxBuffer[3],
-                                                                        au8LinkRxBuffer[4],
-                                                                        &sAddress,
-                                                                        &u8SeqNum,
-                                                                        &sRequest );
-                u8RequestSent = 1;
+				tsCLD_Groups_ViewGroupRequestPayload    sRequest;
+
+				sRequest.u16GroupId    =  ZNC_RTN_U16 ( au8LinkRxBuffer, 5 );
+				u8Status    =  eCLD_GroupsCommandViewGroupRequestSend ( au8LinkRxBuffer[3],
+																		au8LinkRxBuffer[4],
+																		&sAddress,
+																		&u8SeqNum,
+																		&sRequest );
+				u8RequestSent = 1;
+
             }
             break;
 
             case (E_SL_MSG_GET_GROUP_MEMBERSHIP):
             {
-                tsCLD_Groups_GetGroupMembershipRequestPayload    sRequest;
-                uint16                                           au16GroupList [ 10 ];
-                uint8                                            i = 0 ;
 
-                while ( ( i < 10 ) &&
-                        ( i < au8LinkRxBuffer [ 5 ] ) )
-                {
-                    au16GroupList[i]    =  ZNC_RTN_U16( au8LinkRxBuffer, ( 6 + ( i * 2) ) );
-                    i++;
-                }
-                sRequest.pi16GroupList    =  ( zint16* ) au16GroupList;
-                sRequest.u8GroupCount     =  au8LinkRxBuffer [ 5 ];
+            	if (0x0000 == u16TargetAddress)
+            	{
+            		uint8           i;
+            		uint16                 u16Length =  0;
+            		uint8                  au8LinkTxBuffer[64];
+            		ZPS_tsAplAib    *psAplAib = ZPS_psAplAibGetAib();
+            		uint8    groupCount = psAplAib->psAplApsmeGroupTable->u32SizeOfGroupTable;
+            		ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [0],          0,                               u16Length );
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length],  CONTROLBRIDGE_ZLO_ENDPOINT,          u16Length );
+					ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length],  GENERAL_CLUSTER_ID_GROUPS,    u16Length );
 
-                u8Status    =  eCLD_GroupsCommandGetGroupMembershipRequestSend ( au8LinkRxBuffer [ 3 ],
-                                                                                 au8LinkRxBuffer [ 4 ],
-                                                                                 &sAddress,
-                                                                                 &u8SeqNum,
-                                                                                 &sRequest );
-                u8RequestSent = 1;
+            		ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length],          psAplAib->psAplApsmeGroupTable->u32SizeOfGroupTable,    u16Length );
+					ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length],          groupCount,                                                           u16Length );
+
+            		for ( i = 0; i < groupCount; i++ )
+					{
+            			ZNC_BUF_U16_UPD   ( &au8LinkTxBuffer [u16Length],     psAplAib->psAplApsmeGroupTable->psAplApsmeGroupTableId[i].u16Groupid,    u16Length );
+					}
+            		ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length], 0x0000,    u16Length );
+
+					vSL_WriteMessage ( E_SL_MSG_GET_GROUP_MEMBERSHIP_RESPONSE,
+									   u16Length,
+									   au8LinkTxBuffer,
+									   0 );
+            	}else{
+					tsCLD_Groups_GetGroupMembershipRequestPayload    sRequest;
+					uint16                                           au16GroupList [ 10 ];
+					uint8                                            i = 0 ;
+
+					while ( ( i < 10 ) &&
+							( i < au8LinkRxBuffer [ 5 ] ) )
+					{
+						au16GroupList[i]    =  ZNC_RTN_U16( au8LinkRxBuffer, ( 6 + ( i * 2) ) );
+						i++;
+					}
+					sRequest.pi16GroupList    =  ( zint16* ) au16GroupList;
+					sRequest.u8GroupCount     =  au8LinkRxBuffer [ 5 ];
+
+					u8Status    =  eCLD_GroupsCommandGetGroupMembershipRequestSend ( au8LinkRxBuffer [ 3 ],
+																					 au8LinkRxBuffer [ 4 ],
+																					 &sAddress,
+																					 &u8SeqNum,
+																					 &sRequest );
+					u8RequestSent = 1;
+            	}
             }
             break;
 
@@ -2673,18 +2735,22 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             //vLog_Printf(TRACE_APP,LOG_DEBUG, "\nPacket Type %x \n",u16PacketType );
 
 			u8Length    =  0;
-			if (u8RequestSent == 1){
+			//if (u8RequestSent == 1){
 				//u8SeqApsNum = u8ZCL_GetApsSequenceNumberOfLastTransmit ();
 				//zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
 				//u8SeqApsNum =s_sApl->sApsContext.sDcfmRecordPool.psDcfmRecords->u8SeqNum;
-				u8SeqApsNum =psZCL_Common->u8ApsSequenceNumberOfLastTransmit;
+				//u8SeqApsNum =psZCL_Common->u8ApsSequenceNumberOfLastTransmit;
+				/*PDUM_thAPduInstance hAPduInst;
+				hAPduInst = PDUM_hAPduAllocateAPduInstance(psZCL_Common->hZCL_APdu);
+				u8SeqApsNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[0];
+				PDUM_eAPduFreeAPduInstance(hAPduInst);*/
+
 				//u8SeqApsNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[0];
 				//u8SeqApsNum = s_sApl->sApsContext.u8SeqNum - 1 ;
-			}else{
+			//}else{
 				zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
-
-				u8SeqApsNum =s_sApl->sZdpContext.u8ZdpSeqNum;
-			}
+				u8SeqApsNum =s_sApl->sApsContext.u8SeqNum-1;
+			//}
 			ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8Status,      u8Length );
 			ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8SeqNum,      u8Length );
 			ZNC_BUF_U16_UPD ( &au8values [ u8Length ], u16PacketType, u8Length );
