@@ -599,15 +599,8 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
 				ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataAckEvent.u16DstAddr,       u16Length );
 				ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataAckEvent.u8DstEndpoint,       u16Length );
 				ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataAckEvent.u16ClusterId,       u16Length );
-				uint8_t u8SeqApsNum;
-				if ((psStackEvent->uEvent.sApsDataAckEvent.u8SrcEndpoint !=0) && (psStackEvent->uEvent.sApsDataAckEvent.u8DstEndpoint !=0) )
-				{
-					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataAckEvent.u8SequenceNum,       u16Length );
-				}else{
-					zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
-					u8SeqApsNum =s_sApl->sZdpContext.u8ZdpSeqNum;
-					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], u8SeqApsNum,       u16Length );
-				}
+				ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataAckEvent.u8SequenceNum,       u16Length );
+
 				/*uint8_t u8SeqApsNum;
 				zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
 				//ZPS_tsApsCounters *psApsCounters = ZPS_psApsGetCounters(ZPS_pvAplZdoGetAplHandle());
@@ -642,16 +635,8 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
 			{
 				ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataConfirmEvent.uDstAddr.u16Addr, u16Length );
 			}
+		    ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataConfirmEvent.u8SequenceNum,       u16Length );
 
-		    if ((psStackEvent->uEvent.sApsDataConfirmEvent.u8SrcEndpoint !=0) && (psStackEvent->uEvent.sApsDataConfirmEvent.u8DstEndpoint !=0) )
-			{
-				ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataConfirmEvent.u8SequenceNum,       u16Length );
-			}else{
-				uint8_t u8SeqApsNum;
-				zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
-				u8SeqApsNum =s_sApl->sZdpContext.u8ZdpSeqNum;
-				ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], u8SeqApsNum,       u16Length );
-			}
 			//ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psStackEvent->uEvent.sApsDataConfirmEvent.u8SequenceNum,       u16Length );
 
 			ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer[ u16Length ], PDUM_u8GetNpduUse(),   u16Length );
@@ -1600,7 +1585,17 @@ PUBLIC void Znc_vSendDataIndicationToHost ( ZPS_tsAfEvent*    psStackEvent,
     vSL_WriteMessage ( E_SL_MSG_DATA_INDICATION,
                        u16Length,
                        pau8LinkTxBuffer,
-                       u8LinkQuality );
+                       u8LinkQuality);
+
+    tsZCL_HeaderParams sZCL_HeaderParams;
+	u16ZCL_ReadCommandHeader(psStackEvent->uEvent.sApsDataIndEvent.hAPduInst,
+									 &sZCL_HeaderParams);
+	if(!(sZCL_HeaderParams.bDisableDefaultResponse))
+			eZCL_SendDefaultResponse(psStackEvent, E_ZCL_CMDS_SUCCESS);
+
+
+
+
 }
 
 /****************************************************************************
