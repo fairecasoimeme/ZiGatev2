@@ -41,7 +41,7 @@ typedef struct {
 
 
 typedef struct {
-    uint8 au8VsOUIBytes[ZPS_APL_ZDO_VSOUI_LENGTH] __attribute__ ((aligned (16)));
+    uint8 au8VsOUIBytes[ZPS_APL_ZDO_VSOUI_LENGTH];
     uint8 eNetworkState; /* ZPS_teZdoNetworkState */
     uint8 eZdoDeviceType; /* ZPS_teZdoDeviceType */
     uint8 eNwkKeyState; /* ZPS_teZdoNwkKeyState */
@@ -198,6 +198,7 @@ typedef struct {
     uint16    *psDuplicateTableSrcAddr;
     uint32    *psDuplicateTableHash;
     uint8     *psDuplicateTableApsCnt;
+    uint32    *psDuplicateTableIncomingFrameCounter;
     uint8     u8TableIndex;
 } zps_tsApsDuplicateTable;
 
@@ -335,6 +336,8 @@ typedef struct {
     uint8 u8SyncMsgPoolSize;
     uint8 u8MaxFragBlockSize;
     zps_tsDcfmRecordPool sDcfmRecordPool;
+    ZPS_tsApsCounters *psApsCounters;
+
     zps_tsFragRxPool sFragRxPool;
     zps_tsFragTxPool sFragTxPool;
     ZPS_teStatus (*preStartFragmentTransmission)(void *, ZPS_tsAplApsdeReqRsp *, uint16, uint8);
