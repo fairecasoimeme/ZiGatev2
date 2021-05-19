@@ -199,7 +199,7 @@ void APP_isrUart ( void )
 
 PUBLIC void UART_vRtsStopFlow ( void )
 {
-	//USART_EnableCTS(UART, TRUE);
+	USART_EnableCTS(UART, TRUE);
 
 }
 
@@ -214,7 +214,7 @@ PUBLIC void UART_vRtsStopFlow ( void )
 
 PUBLIC void UART_vRtsStartFlow(void)
 {
-	//USART_EnableCTS(UART, FALSE);
+	USART_EnableCTS(UART, FALSE);
 }
 /* [I SP001222_P1 283] end */
 
