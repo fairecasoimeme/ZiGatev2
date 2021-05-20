@@ -289,6 +289,8 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
 			ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer[ u16Length ], 0,   u16Length );
 
 
+
+
 			if ( psStackEvent->uEvent.sApsDataConfirmEvent.u8Status )
 			{
 
@@ -1586,10 +1588,11 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_DATE):
         case(E_ZCL_FLOAT_SINGLE):
         {
-            uint32 u32Val = *pu8Struct++;
-            u32Val |= (*pu8Struct++) << 8;
-            u32Val |= (*pu8Struct++) << 16;
-            u32Val |= (*pu8Struct++) << 24;
+        	uint32 u32Val;
+            u32Val = (*pu8Struct++) << 24;
+			u32Val |= (*pu8Struct++) << 16;
+			u32Val |= (*pu8Struct++) << 8;
+			u32Val |= (*pu8Struct++);
             memcpy(pu8Data, &u32Val, sizeof(uint32));
             break;
         }
@@ -1601,14 +1604,15 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_IEEE_ADDR):
         case(E_ZCL_FLOAT_DOUBLE):
         {
-            uint64 u64Val = (uint32)*pu8Struct++;
-            u64Val |= (uint64)(*pu8Struct++) << 8;
-            u64Val |= (uint64)(*pu8Struct++) << 16;
-            u64Val |= (uint64)(*pu8Struct++) << 24;
-            u64Val |= (uint64)(*pu8Struct++) << 32;
-            u64Val |= (uint64)(*pu8Struct++) << 40;
-            u64Val |= (uint64)(*pu8Struct++) << 48;
-            u64Val |= (uint64)(*pu8Struct++) << 56;
+        	uint64 u64Val;
+            u64Val = (uint64)(*pu8Struct++) << 56;
+			u64Val |= (uint64)(*pu8Struct++) << 48;
+			u64Val |= (uint64)(*pu8Struct++) << 40;
+			u64Val |= (uint64)(*pu8Struct++) << 32;
+			u64Val |= (uint64)(*pu8Struct++) << 24;
+			u64Val |= (uint64)(*pu8Struct++) << 16;
+			u64Val |= (uint64)(*pu8Struct++) << 8;
+			u64Val |= (uint32)(*pu8Struct++);
             memcpy(pu8Data, &u64Val, sizeof(uint64));
             break;
         }
@@ -1619,9 +1623,10 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_INT24):
         case(E_ZCL_BMAP24):
         {
-            uint32 u32Val = *pu8Struct++;
-            u32Val |= (*pu8Struct++) << 8;
-            u32Val |= (*pu8Struct)   << 16;
+        	uint32 u32Val;
+            u32Val = (*pu8Struct) << 16;
+            u32Val |= (*pu8Struct++)   << 8;
+            u32Val |= (*pu8Struct++);
             // account for signed-ness
             if(eAttributeDataType == E_ZCL_INT24)
             {
@@ -1644,11 +1649,12 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_INT40):
         case(E_ZCL_BMAP40):
         {
-            uint64 u64Val = (uint32)*pu8Struct++;
-            u64Val |= (uint64)(*pu8Struct++) << 8;
-            u64Val |= (uint64)(*pu8Struct++) << 16;
+        	uint64 u64Val;
+            u64Val = (uint64)(*pu8Struct) << 32;
             u64Val |= (uint64)(*pu8Struct++) << 24;
-            u64Val |= (uint64)(*pu8Struct) << 32;
+			u64Val |= (uint64)(*pu8Struct++) << 16;
+			u64Val |= (uint64)(*pu8Struct++) << 8;
+			u64Val |= (uint64)(*pu8Struct++);
             // account for signed-ness
             if(eAttributeDataType == E_ZCL_INT40)
             {
@@ -1670,12 +1676,13 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_INT48):
         case(E_ZCL_BMAP48):
         {
-            uint64 u64Val = (uint32)*pu8Struct++;
-            u64Val |= (uint64)(*pu8Struct++) << 8;
-            u64Val |= (uint64)(*pu8Struct++) << 16;
-            u64Val |= (uint64)(*pu8Struct++) << 24;
-            u64Val |= (uint64)(*pu8Struct++) << 32;
-            u64Val |= (uint64)(*pu8Struct) << 40;
+        	uint64 u64Val;
+            u64Val = (uint64)(*pu8Struct) << 40;
+			u64Val |= (uint64)(*pu8Struct++) << 32;
+			u64Val |= (uint64)(*pu8Struct++) << 24;
+			u64Val |= (uint64)(*pu8Struct++) << 16;
+			u64Val |= (uint64)(*pu8Struct++) << 8;
+			u64Val |= (uint64)(*pu8Struct++);
             // account for signed-ness
             if(eAttributeDataType == E_ZCL_INT48)
             {
@@ -1697,13 +1704,14 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_INT56):
         case(E_ZCL_BMAP56):
         {
-            uint64 u64Val = (uint32)*pu8Struct++;
-            u64Val |= (uint64)(*pu8Struct++) << 8;
-            u64Val |= (uint64)(*pu8Struct++) << 16;
-            u64Val |= (uint64)(*pu8Struct++) << 24;
-            u64Val |= (uint64)(*pu8Struct++) << 32;
-            u64Val |= (uint64)(*pu8Struct++) << 40;
-            u64Val |= (uint64)(*pu8Struct) << 48;
+        	uint64 u64Val;
+            u64Val = (uint64)(*pu8Struct) << 48;
+			u64Val |= (uint64)(*pu8Struct++) << 40;
+			u64Val |= (uint64)(*pu8Struct++) << 32;
+			u64Val |= (uint64)(*pu8Struct++) << 24;
+			u64Val |= (uint64)(*pu8Struct++) << 16;
+			u64Val |= (uint64)(*pu8Struct++) << 8;
+			u64Val |= (uint64)(*pu8Struct++);
             // account for signed-ness
             if(eAttributeDataType == E_ZCL_INT56)
             {
