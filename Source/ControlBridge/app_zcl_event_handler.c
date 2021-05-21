@@ -774,6 +774,9 @@ PRIVATE void APP_ZCL_cbEndpointCallback ( tsZCL_CallBackEvent*    psEvent )
             ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryResponse.eAttributeDataType,         u16Length );
             ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryResponse.u16AttributeEnum,           u16Length );
             ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryExtenedResponse.u8AttributeFlags,    u16Length );
+	    ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr,          u16Length );
+            ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsDataIndEvent.u8SrcEndpoint,                u16Length );
+            ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->psClusterInstance->psClusterDefinition->u16ClusterEnum,          u16Length );
 
             vSL_WriteMessage ( E_SL_MSG_ATTRIBUTE_EXT_DISCOVERY_RESPONSE,
                                u16Length,
