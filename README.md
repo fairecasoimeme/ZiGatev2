@@ -9,3 +9,6 @@
 * Fix reactive flow control
 * Fix overflow on 0x8032 command
 
+### Version 3.1e
+
+initial version
