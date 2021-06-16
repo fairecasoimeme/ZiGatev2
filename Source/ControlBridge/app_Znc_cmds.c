@@ -104,7 +104,7 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x0105031F
+#define VERSION    0x01050320
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
@@ -426,7 +426,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8RequestSent, u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8SeqApsNum,   u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], PDUM_u8GetNpduUse(),   u8Length );
-                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], 0,   u8Length );
+                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ],  u8GetApduUsed(apduZDP),   u8Length );
 
 
                 vSL_WriteMessage ( E_SL_MSG_STATUS,
@@ -518,7 +518,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8RequestSent, u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8SeqApsNum,   u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], PDUM_u8GetNpduUse(),   u8Length );
-                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], 0,   u8Length );
+                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8GetApduUsed(apduZDP),   u8Length );
 
 
                 vSL_WriteMessage ( E_SL_MSG_STATUS,
@@ -559,7 +559,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8RequestSent, u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8SeqApsNum,   u8Length );
                 ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], PDUM_u8GetNpduUse(),   u8Length );
-                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], 0,   u8Length );
+                ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8GetApduUsed(apduZDP),   u8Length );
 
 
                 vSL_WriteMessage ( E_SL_MSG_STATUS,
@@ -2735,6 +2735,8 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             //vLog_Printf(TRACE_APP,LOG_DEBUG, "\nPacket Type %x \n",u16PacketType );
 
 			u8Length    =  0;
+
+
 			//if (u8RequestSent == 1){
 				//u8SeqApsNum = u8ZCL_GetApsSequenceNumberOfLastTransmit ();
 				//zps_tsApl *  s_sApl = ( zps_tsApl * ) ZPS_pvAplZdoGetAplHandle ();
@@ -2757,8 +2759,9 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8RequestSent, u8Length );
             ZNC_BUF_U8_UPD  ( &au8values [ u8Length ], u8SeqApsNum,   u8Length );
             ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], PDUM_u8GetNpduUse(),   u8Length );
-            ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], 0,   u8Length );
-			vSL_WriteMessage ( E_SL_MSG_STATUS,
+            ZNC_BUF_U8_UPD  ( &au8values[ u8Length ], u8GetApduUsed(apduZDP),   u8Length );
+
+            vSL_WriteMessage ( E_SL_MSG_STATUS,
 							   u8Length,
 							   au8values,
 							   0 );
@@ -4581,6 +4584,22 @@ PRIVATE ZPS_teStatus APP_eZdpUserDescReq( uint16    u16Addr,
 PUBLIC void vHandleIdentifyRequest(uint16 u16Duration)
 {
     APP_vIdentifyEffect ( &u16Duration );
+}
+
+
+PUBLIC uint8 u8GetApduUsed(PDUM_thAPdu pAPdu)
+{
+    uint8 i;
+    uint8 count;
+    count = 0;
+    for(i=0; i< pAPdu->u16NumInstances; i++)
+    {
+        if(pAPdu->psAPduInstances[i].u16NextAPduInstIdx == PDUM_ALLOC_IDX)
+        {
+            count++;
+        }
+    }
+    return count;
 }
 
 

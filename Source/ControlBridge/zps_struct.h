@@ -10,6 +10,7 @@
 
 
 #define ZPS_APL_ZDO_VSOUI_LENGTH		3
+#define PDUM_ALLOC_IDX  (0xeeee)    /* indicates APDU instance has been allocated */
 /*** ZDP Context **************************************************/
 
 typedef struct {
@@ -377,6 +378,12 @@ typedef struct {
 } zps_tsApl;
 /*** APL Context **************************************************/
 
+struct pdum_tsAPdu_tag {
+    struct pdum_tsAPduInstance_tag *psAPduInstances;
+    uint16 u16FreeListHeadIdx;
+    uint16 u16Size;
+    uint16 u16NumInstances;
+};
 
 
 
