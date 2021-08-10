@@ -228,6 +228,14 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
      * If the 1 second tick timer has expired, restart it and pass
      * the event on to ZCL
      */
+    vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "ZCL_Task got event %d\r\n",psStackEvent->eType );
+
+
+
+
+
+
+
     if ( ZTIMER_eGetState( u8TickTimer ) ==  E_ZTIMER_STATE_EXPIRED )
     {
 
@@ -244,13 +252,21 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
 
     }
 
+
     vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "ZCL_Task got event %d\r\n",psStackEvent->eType );
+    /*if (psStackEvent->uEvent.sApsDataIndEvent.u8SrcEndpoint == 3)
+	{
+			ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ 0 ], 0 ,     u16Length );
+			vSL_WriteMessage ( 0x6666,
+											   u16Length,
+											   au8LinkTxBuffer,
+											   0);
+	}*/
 
     switch ( psStackEvent->eType )
     {
 
         case ZPS_EVENT_APS_DATA_INDICATION:
-
             if (sZllState.u8RawMode == RAW_MODE_HYBRID)
                     Znc_vSendDataIndicationToHost(psStackEvent, au8LinkTxBuffer);
 
@@ -259,6 +275,7 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
                     psStackEvent->uEvent.sApsDataIndEvent.u8DstEndpoint,
                     psStackEvent->uEvent.sApsDataIndEvent.u16ProfileId,
                     psStackEvent->uEvent.sApsDataIndEvent.u16ClusterId);
+
             break;
 
         case ZPS_EVENT_APS_DATA_CONFIRM:
@@ -333,6 +350,7 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
         default:
             break;
     }
+
     sCallBackEvent.eEventType = E_ZCL_CBET_ZIGBEE_EVENT;
     sCallBackEvent.pZPSevent = psStackEvent;
     vZCL_EventHandler(&sCallBackEvent);
@@ -774,9 +792,6 @@ PRIVATE void APP_ZCL_cbEndpointCallback ( tsZCL_CallBackEvent*    psEvent )
             ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryResponse.eAttributeDataType,         u16Length );
             ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryResponse.u16AttributeEnum,           u16Length );
             ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->uMessage.sAttributeDiscoveryExtenedResponse.u8AttributeFlags,    u16Length );
-	    ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr,          u16Length );
-            ZNC_BUF_U8_UPD   ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsDataIndEvent.u8SrcEndpoint,                u16Length );
-            ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->psClusterInstance->psClusterDefinition->u16ClusterEnum,          u16Length );
 
             vSL_WriteMessage ( E_SL_MSG_ATTRIBUTE_EXT_DISCOVERY_RESPONSE,
                                u16Length,
@@ -1574,8 +1589,9 @@ PUBLIC uint16 APP_u16ZncWriteDataPattern ( uint8*                    pu8Data,
         case(E_ZCL_BMAP16):
         case(E_ZCL_FLOAT_SEMI):
         {
-            uint16 u16Val = *pu8Struct++;
-            u16Val |= (*pu8Struct++) << 8;
+            uint16 u16Val;
+            u16Val = (*pu8Struct++) << 8;
+            u16Val |= (*pu8Struct++);
             // Unsafe due to alignment issues - replaced by memcpy
             //*(uint16 *)(pu8Struct) = u16Val;
             memcpy(pu8Data, &u16Val, sizeof(uint16));
@@ -1762,6 +1778,8 @@ PUBLIC void APP_vBdbCallback(BDB_tsBdbEvent *psBdbEvent)
     uint8 au8Buffer[20];
 
     vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "Got bdb event %d\n", psBdbEvent->eEventType);
+
+
 
     switch(psBdbEvent->eEventType)
     {
