@@ -324,7 +324,8 @@ PUBLIC void BDB_vNsStateMachine(BDB_tsZpsAfEvent *psZpsAfEvent)
             switch(psZpsAfEvent->sStackEvent.eType)
             {
                 case ZPS_EVENT_APS_DATA_INDICATION:
-                    if(0 == psZpsAfEvent->u8EndPoint)
+                    if ((psZpsAfEvent->sStackEvent.uEvent.sApsDataIndEvent.u16ClusterId == ZPS_ZDP_NODE_DESC_RSP_CLUSTER_ID) &&
+                        (0 == psZpsAfEvent->u8EndPoint))
                     {
                         ZPS_tsAfZdpEvent sAfZdpEvent;
                         ZTIMER_eStop(u8TimerBdbNs);
@@ -668,20 +669,26 @@ PRIVATE void vNsTryNwkJoin(bool_t bStartWithIndex0,
         }
     }
 
-    /* 8.3-5 If a suitable network is not found on the channel scan, the node SHALL
-             continue from step 12. */
-    DBG_vPrintf(TRACE_BDB," BDB: No suitable network! Continue Discovery \n");
-    vNsDiscoverNwk();
+#if ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
     if((!u32ScanChannels) || (u8ScanChannel > BDB_CHANNEL_MAX))
     {
         if(bDoPrimaryScan == FALSE)
+#else
+    if (TRUE)
+    {
+#endif
         {
            /* 8.3.16 ... set bdbCommissioningStatus to NO_NETWORK and then it SHALL terminate
               the network steering procedure for a node not on a network. */
-            vNsTerminateNwkSteering();;
+            vNsTerminateNwkSteering();
+            return;
         }
-
     }
+
+    /* 8.3-5 If a suitable network is not found on the channel scan, the node SHALL
+             continue from step 12. */
+    DBG_vPrintf(TRACE_BDB,"BDB: No suitable network! Continue Discovery\n");
+    vNsDiscoverNwk();
 }
 
 /****************************************************************************
