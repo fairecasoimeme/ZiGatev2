@@ -114,27 +114,23 @@ PUBLIC void APP_vGenCallback(uint8 u8Endpoint, ZPS_tsAfEvent *psStackEvent)
     					psStackEvent->uEvent.sApsDataIndEvent.u16ClusterId,
     					psStackEvent->eType);
 
-    if (((u8Endpoint > 1) && (psStackEvent->uEvent.sApsDataIndEvent.u8SrcEndpoint != psStackEvent->uEvent.sApsDataIndEvent.u8DstEndpoint)) && (psStackEvent->eType==ZPS_EVENT_APS_DATA_INDICATION)) //Fix duplicate DATAIND with different EP + Free persistent APDU
+    if (((u8Endpoint > 1) &&
+    		(psStackEvent->uEvent.sApsDataIndEvent.u8SrcEndpoint != psStackEvent->uEvent.sApsDataIndEvent.u8DstEndpoint)) &&
+    		(psStackEvent->eType==ZPS_EVENT_APS_DATA_INDICATION) &&
+			(psStackEvent->uEvent.sApsDataIndEvent.u16ClusterId != HVAC_CLUSTER_ID_THERMOSTAT)) //Fix duplicate DATAIND with different EP + Free persistent APDU
     {
 
-    	u16Length =  0;
+    	/*u16Length =  0;
     	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ 0 ],  u8Endpoint,     u16Length );
     	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ],  psStackEvent->eType,     u16Length );
     	ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ],  psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr,     u16Length );
-    	/*vSL_WriteMessage ( 0x9997,
+    	vSL_WriteMessage ( 0x9997,
     	                                   u16Length,
     	                                   au8LinkTxBuffer,
     	                                   0);*/
     	if (psStackEvent->uEvent.sApsDataIndEvent.hAPduInst!=NULL)
     	    		PDUM_eAPduFreeAPduInstance(psStackEvent->uEvent.sApsDataIndEvent.hAPduInst);
     }else{
-    	u16Length =  0;
-		ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ 0 ],  u8Endpoint,     u16Length );
-		ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ],   psStackEvent->eType,     u16Length );
-		/*vSL_WriteMessage ( 0x9998,
-    	                                   u16Length,
-    	                                   au8LinkTxBuffer,
-    	                                   0);*/
 		/* Before passing to queue; copy is required to combine two arguments from stack */
 
 		sZpsAfEvent.u8EndPoint = u8Endpoint;
