@@ -403,6 +403,16 @@
       <OutputClusters Cluster="Diagnostics" TxAPDUs="ControlBridge->apduZDP" Discoverable="true"/>
       <OutputClusters Cluster="ZLL_Commissioning" TxAPDUs="ControlBridge->apduZDP" Discoverable="true"/>
     </Endpoints>
+        <Endpoints Id="3" Enabled="true" ApplicationDeviceId="2112" ApplicationDeviceVersion="0" Profile="ZLO" Message="APP_msgZpsEvents_ZCL" Name="WISER2">
+      <InputClusters Cluster="Basic" RxAPDU="ControlBridge->apduZDP" Discoverable="true"/>
+      <InputClusters Cluster="Metering" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
+      <InputClusters Cluster="OTA" RxAPDU="ControlBridge->apduZDP" Discoverable="true"/>
+      <InputClusters Cluster="Thermostat" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
+      <InputClusters Cluster="MEASUREMENT_AND_SENSING_CLUSTER_ID_TEMPERATURE_MEASUREMENT" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
+      <InputClusters Cluster="Power_Configuration" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
+      <InputClusters Cluster="Default" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
+      <OutputClusters Cluster="Basic" TxAPDUs="ControlBridge->apduZDP" Discoverable="true"/>
+    </Endpoints>
     <Endpoints Id="11" Enabled="true" ApplicationDeviceId="2112" ApplicationDeviceVersion="0" Profile="ZLO" Message="APP_msgZpsEvents_ZCL" Name="WISER">
       <InputClusters Cluster="Basic" RxAPDU="ControlBridge->apduZDP" Discoverable="true"/>
       <InputClusters Cluster="Metering" RxAPDU="ControlBridge->apduZDP" Discoverable="false"/>
