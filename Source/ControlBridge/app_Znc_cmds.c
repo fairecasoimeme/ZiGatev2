@@ -104,7 +104,7 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x01050320
+#define VERSION    0x00050320
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
@@ -258,6 +258,10 @@ PRIVATE ZPS_teStatus APP_eZdpUserDescReq( uint16    u16Addr,
                                           uint8*    pu8Seq );
 
 #endif
+PRIVATE void APP_vUpdateReportableChange( tuZCL_AttributeReportable *puAttributeReportable,
+                                          teZCL_ZCLAttributeType    eAttributeDataType,
+                                          uint8                     *pu8Buffer,
+                                          uint8                     *pu8Offset );
 /****************************************************************************/
 /***    Exported Variables                        ***/
 /****************************************************************************/
@@ -2267,7 +2271,8 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
                 for (i = 0; i < au8LinkRxBuffer[11]; i++)
                 {
-                    if (i < 10)
+                	if ( ( i < 10 )  &&
+                	     ( u8Offset < 256 ) )
                     {
                     /* Destination structure is not packed so we have to manually load rather than just copy */
                         asAttribReportConfigRecord [ i ].u8DirectionIsReceived          =  au8LinkRxBuffer [ u8Offset++ ];
@@ -2284,7 +2289,10 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                         asAttribReportConfigRecord [ i ].u16TimeoutPeriodField          =  ZNC_RTN_U16_OFFSET ( au8LinkRxBuffer,
                                                                                                             u8Offset,
                                                                                                             u8Offset );
-                        asAttribReportConfigRecord[i].uAttributeReportableChange.zuint8ReportableChange = au8LinkRxBuffer [u8Offset++ ];
+                        APP_vUpdateReportableChange( &asAttribReportConfigRecord[i].uAttributeReportableChange,
+                                                                             asAttribReportConfigRecord [ i ].eAttributeDataType,
+                                                                             au8LinkRxBuffer,
+                                                                             &u8Offset);
                     }
                 }
 
@@ -4110,6 +4118,7 @@ PUBLIC  teZCL_Status  APP_eSendWriteAttributesRequest ( uint8               u8So
 
     if ( PDUM_E_OK != PDUM_eAPduInstanceSetPayloadSize(myPDUM_thAPduInstance, ( u32PdumPayloadSize) ) )
     {
+        PDUM_eAPduFreeAPduInstance(myPDUM_thAPduInstance);
         return(E_ZCL_ERR_ZBUFFER_FAIL);
     }
 
@@ -4491,6 +4500,8 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
     return eStatus;
 }
 
+
+
 #ifdef LEGACY_SUPPORT
 /****************************************************************************
  **
@@ -4584,6 +4595,59 @@ PRIVATE ZPS_teStatus APP_eZdpUserDescReq( uint16    u16Addr,
 PUBLIC void vHandleIdentifyRequest(uint16 u16Duration)
 {
     APP_vIdentifyEffect ( &u16Duration );
+}
+
+/****************************************************************************
+ **
+ ** NAME:       APP_vUpdateReportableChange
+ **
+ **
+ ****************************************************************************/
+PRIVATE void APP_vUpdateReportableChange( tuZCL_AttributeReportable *puAttributeReportable,
+                                          teZCL_ZCLAttributeType    eAttributeDataType,
+                                          uint8                     *pu8Buffer,
+                                          uint8                     *pu8Offset )
+{
+
+    if( eAttributeDataType >= E_ZCL_UINT8 &&
+        eAttributeDataType <= E_ZCL_INT64 )
+    {
+        switch ( eAttributeDataType )
+        {
+        case E_ZCL_UINT8:
+        case E_ZCL_INT8:
+            puAttributeReportable->zuint8ReportableChange = pu8Buffer[(*pu8Offset)++];
+            break;
+        case E_ZCL_UINT16:
+        case E_ZCL_INT16:
+            puAttributeReportable->zuint16ReportableChange =  ZNC_RTN_U16_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
+            break;
+        case E_ZCL_UINT24:
+        case E_ZCL_INT24:
+        case E_ZCL_UINT32:
+        case E_ZCL_INT32:
+            puAttributeReportable->zuint32ReportableChange =  ZNC_RTN_U32_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
+            break;
+        case E_ZCL_UINT40:
+        case E_ZCL_INT40:
+        case E_ZCL_UINT48:
+        case E_ZCL_INT48:
+        case E_ZCL_UINT56:
+        case E_ZCL_INT56:
+        case E_ZCL_UINT64:
+        case E_ZCL_INT64:
+            puAttributeReportable->zuint64ReportableChange =  ZNC_RTN_U64_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
+            break;
+        default:
+            break;
+        }
+    }
+    else
+    {
+        /* WARNING : We should not be sent anything from the higher layer as there should be no reportable change field
+         * If we do get something for this record it's an error and the rest of the records will be all wrong.
+         *  */
+    }
 }
 
 
