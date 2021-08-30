@@ -98,6 +98,7 @@ typedef enum
     E_SL_MSG_GET_VERSION                                       =   0x0010,
     E_SL_MSG_VERSION_LIST                                      =   0x8010,
 
+	E_SL_MSG_HEARTBEAT										   =   0x8008,
     E_SL_MSG_NETWORK_STATE_REQ                                 =   0x0009, /* Not yet implemented see JN-AN-1216 */
     E_SL_MSG_NETWORK_STATE_RSP                                 =   0x8009, /* Not yet implemented see JN-AN-1216 */
 

@@ -109,6 +109,8 @@
 #include "app_nci_icode.h"
 #endif
 
+#include "Flash_Adapter.h"
+
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
@@ -602,6 +604,9 @@ PRIVATE void vInitialiseApp ( void )
                                        au8values,
                                        0 );
 
+
+    //DBG_vPrintf(TRACE_APPSTART, "\r\nAPP: NV_STORAGE_START_ADDRESS @ %08x ",NV_STORAGE_START_ADDRESS);
+    //DBG_vPrintf(TRACE_APPSTART, "\r\nAPP: NV_STORAGE_END_ADDRESS @ %08x ",NV_STORAGE_END_ADDRESS);
     /* If the device state has been restored from flash, re-start the stack
      * and set the application running again.
      */
@@ -840,6 +845,7 @@ PUBLIC void APP_vInitResources ( void )
     #endif
 
     vZCL_RegisterHandleGeneralCmdCallBack (APP_vProfileWideCommandSupportedForCluster );
+    vZCL_RegisterCheckForManufCodeCallBack(APP_bZCL_IsManufacturerCodeSupported);
     DBG_vPrintf(TRACE_APPSTART, "APP: Initialising resources complete\n");
 }
 
@@ -1218,6 +1224,7 @@ PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,
 PRIVATE void APP_cbTimerZclTick (void*    pvParam)
 {
     static uint8 u8Tick100Ms = 9;
+    static uint8 u8Tick1S = 0;
     static uint32 u32RadioTempUpdateMs = 0;
 
     tsZCL_CallBackEvent sCallBackEvent;
@@ -1234,7 +1241,26 @@ PRIVATE void APP_cbTimerZclTick (void*    pvParam)
     u8Tick100Ms++;
     if(u8Tick100Ms > 9)
     {
+    	u8Tick1S++;
     	sControlBridge.sTimeServerCluster.utctTime++;
+    	if (u8Tick1S ==60)
+    	{
+    		u8Tick1S=0;
+    		if (sZllState.u8RawMode == RAW_MODE_ON)
+    		{
+				uint32  u32Data = sControlBridge.sTimeServerCluster.utctTime;
+				uint8   au8Datas[4];
+				uint8   u8L=0;
+
+				ZNC_BUF_U32_UPD ( &au8Datas[ u8L ], u32Data, u8L);
+
+
+				vSL_WriteMessage ( E_SL_MSG_HEARTBEAT,
+								   sizeof ( uint32 ),
+								   au8Datas,
+								   0);
+			}
+    	}
 #ifdef CLD_BAS_ATTR_APPLICATION_LEGRAND
     	sControlBridge.sBasicServerCluster.u32PrivateLegrand++;
 #endif
@@ -1267,6 +1293,11 @@ bool_t APP_vProfileWideCommandSupportedForCluster ( uint16 u16Clusterid )
 void hardware_init(void)
 {
     APP_vSetUpHardware();
+}
+
+bool_t APP_bZCL_IsManufacturerCodeSupported(uint16 u16ManufacturerCode)
+{
+	return TRUE;
 }
 
 /****************************************************************************/
