@@ -59,6 +59,8 @@
 #include "zps_apl.h"
 #include "zps_apl_af.h"
 #include "dbg.h"
+#include "app_common.h"
+#include "SerialLink.h"
 
 #ifdef DEBUG_CLD_IASZONE
 #define TRACE_IASZONE   TRUE
@@ -389,8 +391,8 @@ PRIVATE teZCL_Status eCLD_IASZoneHandleInitiateNormalModeOpRequest(
     eStatus = eZCL_WriteLocalAttributeValue(
                      psEndPointDefinition->u8EndPointNumber,                   //uint8                      u8SrcEndpoint,
                      SECURITY_AND_SAFETY_CLUSTER_ID_IASZONE,                    //uint16                     u16ClusterId,
-                     TRUE,                                                     //bool_t                       bIsServerClusterInstance,
-                     FALSE,                                                    //bool_t                       bManufacturerSpecific,
+                     TRUE,                                                     //bool                       bIsServerClusterInstance,
+                     FALSE,                                                    //bool                       bManufacturerSpecific,
                      FALSE,                                                    //bool_t                     bIsClientAttribute,
                      E_CLD_IASZONE_ATTR_ID_CURRENT_ZONE_SENSITIVITY_LEVEL,     //uint16                     u16AttributeId,
                      &psCommon->sTestMode.u8CurrentZoneSensitivityLevel        //void                      *pvAttributeValue
@@ -458,8 +460,8 @@ PRIVATE teZCL_Status eCLD_IASZoneHandleInitiateTestModeRequest(
     eStatus = eZCL_ReadLocalAttributeValue(
                      psEndPointDefinition->u8EndPointNumber,                   //uint8                      u8SrcEndpoint,
                      SECURITY_AND_SAFETY_CLUSTER_ID_IASZONE,                    //uint16                     u16ClusterId,
-                     TRUE,                                                     //bool_t                       bIsServerClusterInstance,
-                     FALSE,                                                    //bool_t                       bManufacturerSpecific,
+                     TRUE,                                                     //bool                       bIsServerClusterInstance,
+                     FALSE,                                                    //bool                       bManufacturerSpecific,
                      FALSE,                                                    //bool_t                     bIsClientAttribute,
                      E_CLD_IASZONE_ATTR_ID_CURRENT_ZONE_SENSITIVITY_LEVEL,     //uint16                     u16AttributeId,
                      &psCommon->sTestMode.u8CurrentZoneSensitivityLevel        //void                      *pvAttributeValue
@@ -468,8 +470,8 @@ PRIVATE teZCL_Status eCLD_IASZoneHandleInitiateTestModeRequest(
     eStatus = eZCL_WriteLocalAttributeValue(
                      psEndPointDefinition->u8EndPointNumber,                   //uint8                      u8SrcEndpoint,
                      SECURITY_AND_SAFETY_CLUSTER_ID_IASZONE,                    //uint16                     u16ClusterId,
-                     TRUE,                                                     //bool_t                       bIsServerClusterInstance,
-                     FALSE,                                                    //bool_t                       bManufacturerSpecific,
+                     TRUE,                                                     //bool                       bIsServerClusterInstance,
+                     FALSE,                                                    //bool                       bManufacturerSpecific,
                      FALSE,                                                    //bool_t                     bIsClientAttribute,
                      E_CLD_IASZONE_ATTR_ID_CURRENT_ZONE_SENSITIVITY_LEVEL,     //uint16                     u16AttributeId,
                      &sPayload.u8CurrentZoneSensitivityLevel                   //void                      *pvAttributeValue
@@ -581,9 +583,17 @@ PRIVATE teZCL_Status eCLD_IASZoneHandleZoneEnrollRequest(
     }
 
     /* Message data for callback */
-    psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload = &sPayload;
-    psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.e8EnrollResponseCode = E_CLD_IASZONE_ENROLL_RESP_NOT_SUPPORTED;
-    psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0;
+	psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload = &sPayload;
+
+	if (psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload->u16ManufacturerCode == 0x1002) //KONKE
+	{
+	psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.e8EnrollResponseCode = E_CLD_IASZONE_ENROLL_RESP_SUCCESS;
+	}
+	if (psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload->u16ManufacturerCode == 0x120B) //HEIMAN
+   	{
+       	psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0x52;
+   	}
+       //psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0x0;
     /* call callback */
     psEndPointDefinition->pCallBackFunctions(&psCommon->sCustomCallBackEvent);  
     
