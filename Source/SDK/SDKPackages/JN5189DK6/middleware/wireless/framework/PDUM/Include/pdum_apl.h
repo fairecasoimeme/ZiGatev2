@@ -53,6 +53,7 @@ PUBLIC PDUM_thAPdu PDUM_thAPduInstanceGetApdu(PDUM_thAPduInstance hAPduInst);
 PUBLIC PDUM_thAPduInstance PDUM_hAPduAllocateAPduInstance(PDUM_thAPdu hAPdu);
 PUBLIC PDUM_teStatus PDUM_eAPduFreeAPduInstance(PDUM_thAPduInstance hAPduInst);
 PUBLIC uint16 PDUM_u16APduGetSize(PDUM_thAPdu hAPdu);
+PUBLIC uint8 u8GetApduUsed(PDUM_thAPdu pAPdu);
 
 #ifdef DBG_ENABLE
 PUBLIC void PDUM_vDBGPrintAPduInstance(PDUM_thAPduInstance hAPduInst);
