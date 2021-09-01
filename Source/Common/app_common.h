@@ -168,6 +168,7 @@ typedef struct {
     uint8 u8OTAserverEP;
 #endif
     uint8_t u8RawMode;
+    uint8_t u8HeartBeat;
 }tsZllState;
 
 typedef struct {

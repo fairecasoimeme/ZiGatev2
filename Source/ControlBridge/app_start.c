@@ -1246,7 +1246,7 @@ PRIVATE void APP_cbTimerZclTick (void*    pvParam)
     	if (u8Tick1S ==60)
     	{
     		u8Tick1S=0;
-    		if (sZllState.u8RawMode == RAW_MODE_ON)
+    		if ((sZllState.u8HeartBeat == 1) || (sZllState.u8RawMode == RAW_MODE_ON))
     		{
 				uint32  u32Data = sControlBridge.sTimeServerCluster.utctTime;
 				uint8   au8Datas[4];
