@@ -1148,10 +1148,14 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 u8SrcEp                =  au8LinkRxBuffer[ offset++ ];
                 u16Clusterid           =  ZNC_RTN_U16_OFFSET ( au8LinkRxBuffer , offset, offset );
                 u8DstAddrMode          =  au8LinkRxBuffer[ offset++ ];
-                uDstAddress.u64Addr    =  ZNC_RTN_U64_OFFSET ( au8LinkRxBuffer , offset, offset );
 
-                if(u8DstAddrMode == 0x3)
+                if(u8DstAddrMode == 0x1)
                 {
+                	uDstAddress.u16Addr = ZNC_RTN_U16_OFFSET( au8LinkRxBuffer , offset , offset);
+
+                }else if(u8DstAddrMode == 0x3)
+                {
+                	uDstAddress.u64Addr    =  ZNC_RTN_U64_OFFSET ( au8LinkRxBuffer , offset, offset );
                     u8DstEp    =  au8LinkRxBuffer [ offset++ ] ;
                 }
 
@@ -3494,13 +3498,13 @@ PRIVATE ZPS_teStatus APP_eBindUnbindEntry ( bool_t           bBind,
         {
             if(bBind)
             {
-                ZPS_eAplZdoBindGroup ( u16ClusterId,
+            	eStatus = ZPS_eAplZdoBindGroup ( u16ClusterId,
                                        u8SrcEndpoint,
                                        puDstAddress->u16Addr );
             }
             else
             {
-                ZPS_eAplZdoUnbindGroup ( u16ClusterId,
+            	eStatus = ZPS_eAplZdoUnbindGroup ( u16ClusterId,
                                          u8SrcEndpoint,
                                          puDstAddress->u16Addr );
             }
