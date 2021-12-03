@@ -45,6 +45,8 @@
 #include "zps_apl.h"
 #include "zps_apl_af.h"
 
+#include "app_common.h"
+
 #ifdef CLD_ANALOG_INPUT_BASIC
 #include "AnalogInputBasic_internal.h"
 #include "AnalogInputBasic.h"
@@ -431,6 +433,13 @@ PUBLIC   void vZCL_HandleAttributesWriteRequest(
         psZCL_EndPointDefinition->pCallBackFunctions(&sZCL_CallBackEvent);
      }
 
+    //Fred Nov 21.
+    // if there is an error we send request to host
+    if (!bNoErrors)
+	{
+		uint8                  au8LinkTxBuffer[256];
+		Znc_vSendDataIndicationToHost(pZPSevent, au8LinkTxBuffer);
+	}
 
     // Daniel Nov 09.
     // Do we send back a default resonse (SUCCESS or ERROR) from a write no response?
