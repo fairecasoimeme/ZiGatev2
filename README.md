@@ -2,6 +2,16 @@
 
 ## Changelog
 
+### Version 3.21
+
+* Add 0x0b04 decodage
+* Add raw message when there are errors on write attribute command
+* Fix uint48 zcl values to the client
+* Fix for Xiaomi and Lumi devices which ask manufacture code (0x115f) whith node descriptor request
+* Fix BindGroup command
+* Fix manufacture code by default --> 0x1037
+
+
 ### Version 3.20
 
 * Add updateReportableChange conversion function
