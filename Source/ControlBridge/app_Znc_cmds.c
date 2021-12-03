@@ -104,7 +104,7 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x00050320
+#define VERSION    0x00050321
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
