@@ -158,8 +158,8 @@ typedef struct
        tsZCL_ClusterInstance sTimeServer;
     #endif
 
-	#if (defined CLD_ELECTRICAL_MEASUREMENT) && (defined ELECTRICAL_MEASUREMENT_SERVER)
-       tsZCL_ClusterInstance sElectricalMeasurementServer;
+	#if (defined CLD_ELECTRICAL_MEASUREMENT) && (defined ELECTRICAL_MEASUREMENT_CLIENT)
+       tsZCL_ClusterInstance sElectricalMeasurementClient;
     #endif
 
     /*
@@ -361,7 +361,7 @@ typedef struct
 
     #endif
 
-	#if (defined CLD_ELECTRICAL_MEASUREMENT) && (defined ELECTRICAL_MEASUREMENT_SERVER)
+	#if (defined CLD_ELECTRICAL_MEASUREMENT) && (defined ELECTRICAL_MEASUREMENT_CLIENT)
 
 		tsCLD_ElectricalMeasurement sCLD_ElectricalMeasurement;
 

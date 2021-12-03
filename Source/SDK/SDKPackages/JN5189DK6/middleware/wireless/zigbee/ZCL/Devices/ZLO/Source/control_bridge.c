@@ -464,9 +464,9 @@ PUBLIC teZCL_Status eZLO_RegisterControlBridgeEndPoint ( uint8                  
 
     #endif
 
-	#if (defined CLD_ELECTRICAL_MEASUREMENT && defined ELECTRICAL_MEASUREMENT_SERVER)
+	#if (defined CLD_ELECTRICAL_MEASUREMENT && defined ELECTRICAL_MEASUREMENT_CLIENT)
 		if (eCLD_ElectricalMeasurementCreateElectricalMeasurement(
-				&psDeviceInfo->sClusterInstance.sElectricalMeasurementServer,
+				&psDeviceInfo->sClusterInstance.sElectricalMeasurementClient,
 				TRUE,
 				&sCLD_ElectricalMeasurement,
 				&psDeviceInfo->sCLD_ElectricalMeasurement,
