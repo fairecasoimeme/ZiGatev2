@@ -46,7 +46,7 @@ extern "C" {
 /****************************************************************************/
 /***    Radio driver version (XYYY): X major version, YYY minor version   ***/
 /****************************************************************************/
-#define RADIO_VERSION (2094)
+#define RADIO_VERSION (2096)
 
 /****************************************************************************/
 /***    Radio calibration data record version                             ***/
@@ -69,13 +69,13 @@ extern "C" {
 /***	start init time.                                                  ***/
 /****************************************************************************/
 
-#define RADIO_FULL_INIT_FIRST_TIME (80300) // no record available and all cal to be done because TCur far from TCAL ATE
-#define RADIO_FULL_INIT_TIME (85500) // record available but all cal to be done because TCur far from TCAL ATE
+#define RADIO_FULL_INIT_FIRST_TIME (80370) // no record available and all cal to be done because TCur far from TCAL ATE
+#define RADIO_FULL_INIT_TIME (85570) // record available but all cal to be done because TCur far from TCAL ATE
 #define RADIO_INIT_ALL_CAL_IN_FLASH (850) // record available, no cal to be done and TCur close to TCAL ATE
 #define RADIO_INIT_NO_DCO_CAL_IN_FLASH (13500) // no record available, DCO cal only and TCur close to TCAL ATE
 #define RADIO_INIT_TIME_WITH_RETENTION_US (250) // can use retention values
 #define RADIO_RECAL_TIME_ALL_CAL_IN_FLASH_US (750) // recal with cal available in flash for TCur
-#define RADIO_RECAL_TIME_NO_CAL_IN_FLASH_US (86800) // recal with cal data not available in flash, all call to be done
+#define RADIO_RECAL_TIME_NO_CAL_IN_FLASH_US (86870) // recal with cal data not available in flash, all call to be done
 #define RADIO_RECAL_TIME_NO_DCO_CAL_IN_FLASH_US (16100) // recal with DCO cal to do
 #define RADIO_RECAL_TIME_NORECAL_US (8) // recal when not needed
 #define RADIO_GET_NEXT_RECAL_DURATION (20) // u32Radio_Get_Next_Recal_Duration max execution time

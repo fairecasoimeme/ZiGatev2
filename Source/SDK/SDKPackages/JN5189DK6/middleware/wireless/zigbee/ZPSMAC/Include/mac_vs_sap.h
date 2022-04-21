@@ -128,6 +128,12 @@ extern "C" {
 #define ZPS_NWK_GP_BASE_HANDLE      0xE0
 #define ZPS_NWK_GP_MAX_HANDLE       0xF0
 
+#define ZPS_MACVS_MCPS_REQ          0
+#define ZPS_MACVS_MCPS_REQ_OK       1
+#define ZPS_MACVS_MCPS_REQ_ERR      2
+#define ZPS_MACVS_MLME_REQ          10
+#define ZPS_MACVS_MLME_REQ_OK       11
+#define ZPS_MACVS_MLME_REQ_ERR      12
 
 /**********************/
 /**** MCPS Request ****/
@@ -525,6 +531,8 @@ PUBLIC uint32 		ZPS_u32MacSetTxBuffers(uint8 u8MaxTxBuffers);
 
 PUBLIC void 		ZPS_vMacRestoreInterfaceState(void);
 PUBLIC void         ZPS_vRestoreMacState (void);
+PUBLIC void         ZPS_vShimSetTransmitCallback(void* pvFn);
+
 /****************************************************************************/
 /***        Multimac Extensions                                           ***/
 /****************************************************************************/

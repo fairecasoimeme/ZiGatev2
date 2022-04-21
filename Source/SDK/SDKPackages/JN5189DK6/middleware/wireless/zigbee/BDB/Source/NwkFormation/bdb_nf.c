@@ -52,6 +52,8 @@
 #define BDB_TC_STATUS_STD_UNSEC_JOIN          1
 #define BDB_TC_STATUS_DEVICE_LEFT             2
 #define BDB_TC_STATUS_STD_UNSEC_REJOIN        3
+
+#define NUM_SUBG_HALF_MASKS                   2
 /****************************************************************************/
 /***        Type Definitions                                              ***/
 /****************************************************************************/
@@ -128,6 +130,13 @@ static uint32 u32BackUpApsChannelMask;
  ****************************************************************************/
 PUBLIC BDB_teStatus BDB_eNfStartNwkFormation(void)
 {
+#ifdef ENABLE_SUBG_IF
+    int i = 0;
+    bool bFirstHalf = TRUE;
+    uint8_t u8ScanChannel = 0;
+    uint32_t u32CurApsChanMask = 0;
+#endif
+
     if(!(sBDB.sAttrib.u8bdbCommissioningMode & BDB_COMMISSIONING_MODE_NWK_FORMATION) || \
         (ZPS_ZDO_DEVICE_ENDDEVICE == ZPS_eAplZdoGetDeviceType()))
     {
@@ -149,6 +158,7 @@ PUBLIC BDB_teStatus BDB_eNfStartNwkFormation(void)
 
     /* Network formation procedure - BDB specification section 8.4 */
     sBDB.sAttrib.ebdbCommissioningStatus = E_BDB_COMMISSIONING_STATUS_IN_PROGRESS;
+#ifndef ENABLE_SUBG_IF
     if(sBDB.sAttrib.u32bdbPrimaryChannelSet)
     {
         bDoPrimaryScan = TRUE;
@@ -159,12 +169,46 @@ PUBLIC BDB_teStatus BDB_eNfStartNwkFormation(void)
         bDoPrimaryScan = FALSE;
         u32ScanChannels = sBDB.sAttrib.u32bdbSecondaryChannelSet;
     }
-#ifdef ENABLE_SUBG_IF
-    u32ScanChannels |= SUBG_PAGE_28;
-#endif
     /* Backup and restore after NwkForm confirmation */
     u32BackUpApsChannelMask = ZPS_psAplAibGetAib()->pau32ApsChannelMask[0];
     ZPS_psAplAibGetAib()->pau32ApsChannelMask[0] = u32ScanChannels;
+#else
+    /* Parse mask to extract channel masks */
+    bDoPrimaryScan = FALSE;
+
+    /* Backup and restore after NwkForm confirmation */
+    u32ScanChannels = sBDB.sAttrib.u32bdbPrimaryChannelSet;
+    u32BackUpApsChannelMask = ZPS_psAplAibGetAib()->pau32ApsChannelMask[0];
+    ZPS_psAplAibGetAib()->pau32ApsChannelMask[0] = 0;
+
+    /* For SubG, the number of channels exceeds one 32bit quantity (62 channels).
+     * As such, in order to still retain compatibility with the 2G4 spirit,
+     * the channel numbers were split among the PRIMARY and SECONDARY channels.
+     * The purpose of the loop below is to ensure that both halves are being taken
+     * into account when creating the real channel mask to be used for creating
+     * the network.
+     *
+     * Please be aware, that even if all the SubG pages are supported by BDB,
+     * setting channels on two different pages will not lead to the desired
+     * result.
+     */
+    for (i = 0; i < NUM_SUBG_HALF_MASKS; i++) {
+        while(u8ScanChannel <= BDB_CHANNEL_MAX) {
+            if(u32ScanChannels & (1<<u8ScanChannel)) {
+                u32CurApsChanMask = ZPS_psAplAibGetAib()->pau32ApsChannelMask[0];
+                u32CurApsChanMask |= SUBG_CH2MASK(u8ScanChannel, bFirstHalf);
+                ZPS_psAplAibGetAib()->pau32ApsChannelMask[0] = u32CurApsChanMask;
+            }
+            u8ScanChannel++;
+        }
+
+        /* Continue, since we might have some MORE channels */
+        bFirstHalf = FALSE;
+        u8ScanChannel = BDB_CHANNEL_MIN;
+        u32ScanChannels = sBDB.sAttrib.u32bdbSecondaryChannelSet;
+    }
+
+#endif
 
     if(ZPS_ZDO_DEVICE_COORD == ZPS_eAplZdoGetDeviceType())
     {
@@ -307,6 +351,13 @@ PRIVATE void vNfDiscoverNwk()
         sStartParams.sNwkParams.u16PanId = RND_u32GetRand( 1, 0xfffe);
     }
 
+#ifdef ENABLE_SUBG_IF
+    void *pvNwk = ZPS_pvAplZdoGetNwkHandle();
+    ZPS_vNwkNibSetMacEnhancedMode(pvNwk, TRUE);
+
+    ZPS_u8MacMibIeeeSetPolicy(FALSE);
+#endif
+
     DBG_vPrintf(TRACE_BDB, "BDB: Disc to Form 0x%08x \n",ZPS_psAplAibGetAib()->pau32ApsChannelMask[0]);
     ZPS_vNwkNibClearDiscoveryNT(ZPS_pvAplZdoGetNwkHandle());
 
@@ -364,6 +415,7 @@ PRIVATE void vNfFormDistributedNwk(void)
 
     ZPS_u8MacMibIeeeSetPolicy(FALSE);
 #endif
+
     /* This sets up the device, starts as router and sends device ance */
     eStatus = ZPS_eAplFormDistributedNetworkRouter(&sStartParams.sNwkParams, FALSE);
 

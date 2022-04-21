@@ -267,8 +267,16 @@ PUBLIC void ZPS_vMacIFTClearCounts ( uint8 u8MacIntfIndx );
 PUBLIC uint32* ZPS_u32MacIFTGetApsCount ( uint8 u8MacIntfIndx );
 
 
+/****************************************************************************/
+/***        Exported Variables                                            ***/
+/****************************************************************************/
 
+/* TODO: Move this in the MAC INTERFACE TABLE */
+extern uint8  ZPS_g_u8LastLQI[MAC_ID_SERIAL2];
+extern int8  ZPS_g_i8LastRSSI[MAC_ID_SERIAL2];
 
+#define ZPS_u8MacIFTGetLastLQI(u8MacID) (ZPS_g_u8LastLQI[(u8MacID)])
+#define ZPS_i8MacIFTGetLastRSSI(u8MacID) (ZPS_g_i8LastRSSI[(u8MacID)])
 
 #if defined __cplusplus
 }

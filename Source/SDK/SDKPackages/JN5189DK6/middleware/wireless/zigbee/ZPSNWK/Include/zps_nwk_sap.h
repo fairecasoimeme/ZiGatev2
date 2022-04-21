@@ -1045,21 +1045,9 @@ typedef struct
 } ZPS_tsNwkNlmeCfmGetInterface;
 
 /**
- * @brief Structure for NLME-ROUTE-DISCOVERY.confirm
+ * @brief Structure for NLME-GET-RESOURCES.confirm
  *
- * Route discovery - confirmation
- */
-typedef struct
-{
-    uint16 u16DstAddress;      /**< destination address for which the route may be available */
-    uint8 u8Status;            /**< Status of route discovery @sa ZPS_teNwkEnum */
-    uint8 u8NetworkStatusCode; /**< Further information about a status of ROUTE_ERROR */
-} ZPS_tsNwkNlmeCfmRouteDiscovery;
-
-/**
- * @brief Structure for NLME-ED-SCAN.confirm
- *
- * Energy detect - confirmation
+ * NIB set - confirmation
  */
 typedef struct
 {
@@ -1082,6 +1070,18 @@ typedef struct
  * @brief Structure for NLME-ROUTE-DISCOVERY.confirm
  *
  * Route discovery - confirmation
+ */
+typedef struct
+{
+    uint16 u16DstAddress;      /**< destination address for which the route may be available */
+    uint8 u8Status;            /**< Status of route discovery @sa ZPS_teNwkEnum */
+    uint8 u8NetworkStatusCode; /**< Further information about a status of ROUTE_ERROR */
+} ZPS_tsNwkNlmeCfmRouteDiscovery;
+
+/**
+ * @brief Structure for NLME-ED-SCAN.confirm
+ *
+ * Energy detect - confirmation
  */
 typedef struct
 {
@@ -1242,7 +1242,7 @@ typedef enum
     ZPS_NWK_NLME_REQ_SET,                     /**< Use with ZPS_tsNwkNlmeReqSet */
     ZPS_NWK_NLME_REQ_SET_INTERFACE,           /**< Use with ZPS_tsNwkNlmeReqSetInterface */
     ZPS_NWK_NLME_REQ_GET_INTERFACE,           /**< Use with ZPS_tsNwkNlmeReqGetInterface */
-	ZPS_NWK_NLME_REQ_GET_RESOURCES,           /**< No parameters */
+    ZPS_NWK_NLME_REQ_GET_RESOURCES,           /**< No parameters */
     NUM_ZPS_NWK_NLME_REQ                      /**< (endstop) */
 } ZPS_teNwkNlmeReqRspType;
 
@@ -1575,7 +1575,6 @@ typedef struct
 typedef enum
 {
     ZPS_NWK_NLDE_REQ_DATA = 0,  /**< Use with ZPS_tsNwkNldeReqData */
-	ZPS_NWK_NLDE_REQ_DATA_JIT,  /**< Data w/ jitter, Use with ZPS_tsNwkNldeReqData */
     NUM_ZPS_NWK_NLDE_REQ        /**> (endstop) */
 } ZPS_teNwkNldeReqRspType;
 

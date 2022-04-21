@@ -249,6 +249,36 @@ osaTaskPriority_t OSA_TaskGetPriority(osaTaskId_t taskId)
   return handler->priority;
 }
 
+#if USE_RTOS == 0
+/*FUNCTION**********************************************************************
+ *
+ * Function Name : OSA_TaskShouldYield
+ * Description   : When this function returns TRUE, a task of higher priority
+ * has to run.
+ *
+ *END**************************************************************************/
+bool_t OSA_TaskShouldYield(void)
+{
+    bool_t status = false;
+    if ((p_taskListHead != NULL) && (p_taskListHead != g_curTask))
+    {
+        task_control_block_t *p_task = p_taskListHead;
+        uint32_t taskCnt = TASK_MAX_NUM;
+        while((p_task != g_curTask) && (taskCnt != 0U))
+        {
+            if(p_task->haveToRun == true)
+            {
+                status = true;
+                break;
+            }
+            p_task = p_task->next;
+            taskCnt--;
+        }
+    }
+    return status;
+}
+#endif
+
 /*FUNCTION**********************************************************************
  *
  * Function Name : OSA_TaskSetPriority

@@ -106,14 +106,14 @@ PUBLIC void vDisplayTableSizes(void)
     void * thisNet = ZPS_pvAplZdoGetNwkHandle();
     thisNib = ZPS_psNwkNibGetHandle(thisNet);
 
-    DBG_vPrintf(TRACE_ZBP_UTILS, "Address Map:Size: %d: Record %d: %d: Total: %d ",
+    DBG_vPrintf(TRACE_ZBP_UTILS, "Address Map:Size: %d: Record %d: %d: Total: %ld ",
                                 thisNib->sTblSize.u16AddrMap,
                                 10,
                                 (thisNib->sTblSize.u16AddrMap * 10)
                                 );
 
 
-    DBG_vPrintf(TRACE_ZBP_UTILS, "NT:Size: %d: Record %d: %d: Total: %d ",
+    DBG_vPrintf(TRACE_ZBP_UTILS, "NT:Size: %d: Record %d: %d: Total: %ld ",
                                 thisNib->sTblSize.u16NtActv,
                                 sizeof(ZPS_tsNwkActvNtEntry),
                                (thisNib->sTblSize.u16NtActv * sizeof(ZPS_tsNwkActvNtEntry))
@@ -121,18 +121,19 @@ PUBLIC void vDisplayTableSizes(void)
 
 
 
-    DBG_vPrintf(TRACE_ZBP_UTILS, "Routing Table:Size: %d: Record %d: %d: Total: %d ",
+    DBG_vPrintf(TRACE_ZBP_UTILS, "Routing Table:Size: %d: Record %d: %d: Total: %ld ",
                                 thisNib->sTblSize.u16Rt,
                                 sizeof(ZPS_tsNwkRtEntry),
                                 (thisNib->sTblSize.u16Rt * sizeof(ZPS_tsNwkRtEntry))
                                 );
 
 
-    DBG_vPrintf(TRACE_ZBP_UTILS, "Route Record:Size: %d: Record %d: %d: Total: %d ",
+    DBG_vPrintf(TRACE_ZBP_UTILS, "Route Record:Size: %d: Record %d: %d: Total: %ld ",
                                 thisNib->sTblSize.u16Rct,
                                 sizeof(ZPS_tsNwkRctEntry),
                                 (thisNib->sTblSize.u16Rct * sizeof(ZPS_tsNwkRctEntry))
                                 );
+
 }
 
 /****************************************************************************

@@ -99,7 +99,21 @@ typedef enum ZPS_teExtendedStatus_tag
     ZPS_XS_E_SIMPLE_DESCRIPTOR_NOT_FOUND, 	        // 0x88 The simple descriptor does not exist for this endpoint / cluster.
     ZPS_XS_E_BAD_PARAM_APSDE_REQ_RSP, 			 	// 0x89 A bad parameter has been found while processing an APSDE request or response
     ZPS_XS_E_NO_RT_ENTRY,                           // 0x8a No free Routing table entries left
-    ZPS_XS_E_NO_BTR                                 // 0x8b No free BTR entries left.
+    ZPS_XS_E_NO_BTR,                                 // 0x8b No free BTR entries left.
+
+    /* Errors below are due to security fails */
+    ZPS_XS_E_FRAME_COUNTER_ERROR = 0xC0,
+    ZPS_XS_E_CCM_INVALID_ERROR,
+    ZPS_XS_E_UNKNOWN_SRC_ADDR,
+    ZPS_XS_E_NO_KEY_DESCRIPTOR,
+    ZPS_XS_E_NULL_KEYDESCR,
+    ZPS_XS_E_PDUM_ERROR,
+    ZPS_XS_E_NULL_EXT_ADDR,
+    ZPS_XS_E_ENCRYPT_NULL_DESCR,
+    ZPS_XS_E_ENCRYPT_FRAME_COUNTER_FAIL,
+    ZPS_XS_E_ENCRYPT_DEFAULT,
+    ZPS_XS_E_FRAME_COUNTER_EXPIRED
+
 } ZPS_teExtendedStatus;
 
 /****************************/

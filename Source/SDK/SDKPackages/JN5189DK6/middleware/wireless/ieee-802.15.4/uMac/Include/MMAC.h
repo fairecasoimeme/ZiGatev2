@@ -194,6 +194,8 @@ PUBLIC void vMMAC_ConfigureRadio(void);
 PUBLIC void vMMAC_SetChannel(uint8 u8Channel);
 PUBLIC void vMMAC_SetChannelAndPower(uint8 u8Channel, int i8TxPower);
 PUBLIC int8 i8MMAC_GetTxPowerLevel(void);
+PUBLIC void vMMAC_EnableAntennaDiversity(void);
+PUBLIC void vMMAC_DisableAntennaDiversity(void);
 
 /* Interrupt control */
 PUBLIC void vMMAC_EnableInterrupts(void (*prHandler)(uint32 u32Mask));
@@ -252,6 +254,10 @@ PUBLIC void vMMAC_SetTxPowerMode(bool_t mode);
 #define CHIP_IS_HITXPOWER_CAPABLE() ((CHIP_K32W041AM == Chip_GetType()) || (CHIP_K32W041A == Chip_GetType()))
 #endif
 
+#if defined BUILD_OPT_DYNAMIC_MMAC
+PUBLIC void vMMAC_HandleAbortInt(void);
+PUBLIC void vMMAC_DynResume(void);
+#endif
 /****************************************************************************/
 /***        Exported Variables                                            ***/
 /****************************************************************************/

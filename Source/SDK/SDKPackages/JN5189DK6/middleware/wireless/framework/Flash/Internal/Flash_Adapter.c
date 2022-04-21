@@ -40,7 +40,25 @@
 
 #ifdef CPU_JN518X
 #include "rom_psector.h"
-void ResetMCU(void);
+#include "psector_api.h"
+
+#if (defined(gSupportBle) && (gSupportBle == 1))
+#if defined(__IAR_SYSTEMS_ICC__)
+extern uint32_t _SCRATCH_AREA_START_[];
+extern uint32_t _SCRATCH_AREA_END_[];
+#define ScratchStartAddr   (uint32_t)(_SCRATCH_AREA_START_)
+#define ScratchEndAddr     (uint32_t)(_SCRATCH_AREA_END_)
+#else
+extern uint32_t        _scratch_buf_start;
+extern uint32_t        _scratch_buf_end;
+#define ScratchStartAddr (uint32_t)&_scratch_buf_start
+#define ScratchEndAddr   (uint32_t)&_scratch_buf_end
+#endif
+#else
+#define ScratchStartAddr   (uint32_t)0x04000000UL
+#define ScratchEndAddr     (uint32_t)0x04000400UL
+#endif
+
 #endif
 /*! *********************************************************************************
 *************************************************************************************
@@ -283,7 +301,7 @@ uint32_t SwFlashVerifyErase (uint32_t start, uint32_t lengthInBytes)
             break;
         }
     } while(--lengthInBytes);
-    
+
     return (uint32_t)status;
 }
 #endif
@@ -343,7 +361,8 @@ void NV_FlashPerformAudit(void)
     uint32_t end =  (uint32_t)0x9ddff;
 
     uint32_t  failed_addr;
-    uint8_t buf[FLASH_PAGE_SIZE];
+    /* The scratch area is large enough to contain 2 flash pages */
+    uint8_t *buf = (uint8_t*)ScratchStartAddr;
 
     while (addr <= ROUND_FLOOR(end, 9))
     {
@@ -384,25 +403,22 @@ void NV_FlashPerformAudit(void)
 *************************************************************************************
 ********************************************************************************** */
 #ifdef CPU_JN518X
+
 int PsectorUpdateFlashAudit(uint32_t new_value)
 {
 	int res = 1;
-	psector_page_data_t page_buf;
+    /* We may use  a scratch buffer since we are to reset the MCU in this procedure */
+	psector_page_data_t *page_buf = (psector_page_data_t *)ScratchStartAddr;
 	psector_page_data_t  *page0 = (psector_page_data_t*)0x9e800;
-
-	memcpy(&page_buf, page0,  FLASH_PAGE_SIZE);
-
-	((psector_page_data_t*)&page_buf)->page0_v3.flash_audit_done = new_value;
-	page_buf.hdr.version ++;
-	page_buf.hdr.checksum = psector_CalculateChecksum((psector_page_t *)&page_buf);
-	if (psector_WriteUpdatePage(PSECTOR_PAGE0_PART, (psector_page_t *)&page_buf) != WRITE_OK)
-	{
-		res = -1;
-	}
-	else
-	{
-		ResetMCU(); /* Commit now by forcing reset */
-	}
+	do {
+        OSA_DisableIRQGlobal();
+        memcpy(page_buf, page0,  FLASH_PAGE_SIZE);
+        page_buf->page0_v3.flash_audit_done = new_value;
+        psector_CommitPageUpdates(page_buf, PSECTOR_PAGE0_PART);
+	} while (0);
+	/* This point is not reached if all goes well,
+	 * the reset has happened in psector_CommitPageUpdates and it does not return */
+	OSA_EnableIRQGlobal();
 	return res;
 }
 

@@ -222,11 +222,13 @@ ee_err_t EEPROM_Init(void)
     ee_err_t status = ee_ok;
     bool_t resReqCalled = FALSE;
 
+#if osNumberOfSemaphores
     if( (mExtEepromSemaphoreId == NULL)
-    		&& ((mExtEepromSemaphoreId = OSA_SemaphoreCreate(0)) == NULL))
+               && ((mExtEepromSemaphoreId = OSA_SemaphoreCreate(1)) == NULL))
     {
         panic( ID_PANIC(0,0), (uint32_t)EEPROM_Init, 0, 0 );
     }
+#endif
 
 #if defined gFlashBlockBitmap_d
     uint32_t i;
@@ -405,7 +407,10 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
 #if defined gFlashBlockBitmap_d
     uint32_t i = Addr / block_size;
 #endif
-
+    if (Addr >= gEepromParams_TotalSize_c)
+    {
+        return ee_error;
+    }
     EEPROM_DBG_LOG("");
 
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
@@ -462,7 +467,6 @@ ee_err_t EEPROM_EraseArea(uint32_t *Addr, int32_t *size, bool non_blocking)
 
     EEPROM_DBG_LOG("");
 
-
     do {
         bool skip = false;
 
@@ -470,6 +474,12 @@ ee_err_t EEPROM_EraseArea(uint32_t *Addr, int32_t *size, bool non_blocking)
         uint32_t block_nb;
         uint32_t sect_nb;
 #endif
+        if ((uint32_t)Addr >= gEepromParams_TotalSize_c)
+        {
+            status = ee_error;
+            break;
+        }
+
         if (!IS_SECTOR_ALIGNED(erase_addr))
         {
             status = ee_error;
@@ -563,6 +573,11 @@ ee_err_t EEPROM_EraseNextBlock(uint32_t Addr, uint32_t size)
     EEPROM_DBG_LOG("");
 
     do {
+        if (Addr >= gEepromParams_TotalSize_c)
+        {
+            break;
+        }
+
         if (size<=EEPROM_SECTOR_SIZE)
         {
             block_size = EEPROM_SECTOR_SIZE;
@@ -598,6 +613,10 @@ ee_err_t EEPROM_SectorAlignmentAfterReset(uint32_t Addr)
     uint32_t nbBytesToCopy =0;
     do
     {
+        if (Addr >= gEepromParams_TotalSize_c)
+        {
+            break;
+        }
         /* The address given should be aligned on EEPROM_PAGE_SIZE */
         if (Addr % EEPROM_PAGE_SIZE != 0)
             break;
@@ -639,6 +658,10 @@ ee_err_t EEPROM_WriteData(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
     ee_err_t retval = ee_ok;
 
     uint32_t bytes;
+    if (Addr >= gEepromParams_TotalSize_c)
+    {
+        return ee_error;
+    }   
 
     if (NoOfBytes > 0)
     {
@@ -712,6 +735,10 @@ void EEPROM_SetRead(void)
 ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
 {
 
+    if (Addr >= gEepromParams_TotalSize_c)
+    {
+        return ee_error;
+    }  
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
 
     while (EEPROM_isBusy());

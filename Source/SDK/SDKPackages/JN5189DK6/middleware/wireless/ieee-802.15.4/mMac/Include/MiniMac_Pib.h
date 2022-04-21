@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Copyright NXP B.V. 2013. All rights reserved
+ * Copyright NXP B.V. 2013,2022. All rights reserved
  *
  ***************************************************************************/
 
@@ -262,6 +262,7 @@ typedef struct
 
     /* Vendor-specific attributes (default to 0) */
     bool_t                      bPanCoordinator;
+    bool_t                      bCoordinator;    /**< MAC-style definition of a coordinator = ZB router */
     uint8                       u8BeaconRequestLqiThreshold; /* Replaces bIgnoreBeaconRequests: if non-zero,
                                                                 any received beacon requests with LQI less
                                                                 than or equal to this value will be discarded */

@@ -264,6 +264,21 @@ osaTaskId_t OSA_TaskGetId(void);
   */
 osaStatus_t OSA_TaskYield(void);
 
+
+#if USE_RTOS == 0
+/*!
+ * @brief Checks whether a task of higher priority than the current task got ready.
+ *
+ * The function makes sense only on BM since there is no preemption.
+ * It is meant to be called before entering low power,
+ * before/during time consuming actions and so on.
+ *
+ * @retval TRUE  A task of higher priority than the current task got ready.
+ * @retval FALSE No task of higher priority than the current task got ready.
+  */
+bool_t OSA_TaskShouldYield(void);
+#endif
+
 /*!
  * @brief Gets the priority of a task.
  *

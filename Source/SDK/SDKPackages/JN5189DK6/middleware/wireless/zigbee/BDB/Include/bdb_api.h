@@ -57,6 +57,36 @@ extern "C" {
     #define TRACE_BDB FALSE
 #endif
 
+/*
+ * For more information on how the channel number and the page is coded
+ * for SubG, please have a look at the bdb_api.h file
+ */
+#ifdef SINGLE_CHANNEL
+    #undef BDB_PRIMARY_CHANNEL_SET
+    #undef BDB_SECONDARY_CHANNEL_SET
+
+    #if !defined(ENABLE_SUBG_IF) || (SINGLE_CHANNEL_PAGE == 0)
+        #define BDB_PRIMARY_CHANNEL_SET                 (1<<SINGLE_CHANNEL)
+        #define BDB_SECONDARY_CHANNEL_SET               (0)
+    #else
+        #if SINGLE_CHANNEL_PAGE == 31
+            #define BDB_PRIMARY_CHANNEL_SET                 (0)
+            #define BDB_SECONDARY_CHANNEL_SET               (1<<(SINGLE_CHANNEL + 17))
+        #elif SINGLE_CHANNEL_PAGE == 30
+            #define BDB_PRIMARY_CHANNEL_SET                 (0)
+            #define BDB_SECONDARY_CHANNEL_SET               (1<<(SINGLE_CHANNEL + 5))
+        #elif SINGLE_CHANNEL_PAGE == 29
+            #if (SINGLE_CHANNEL <= 3)
+                #define BDB_PRIMARY_CHANNEL_SET                 (1<<(SINGLE_CHANNEL + 27))
+                #define BDB_SECONDARY_CHANNEL_SET               (0)
+            #else
+                #define BDB_PRIMARY_CHANNEL_SET                 (0)
+                #define BDB_SECONDARY_CHANNEL_SET               (1<<(SINGLE_CHANNEL - 4))
+            #endif
+        #endif
+    #endif
+#endif
+
 /* BDB Attribute bdbCommissioningMode fields */
 #define BDB_COMMISSIONING_MODE_TOUCHLINK            (1 << 0)
 #define BDB_COMMISSIONING_MODE_NWK_STEERING         (1 << 1)
@@ -132,7 +162,17 @@ extern "C" {
 #ifndef ENABLE_SUBG_IF
 	#define BDB_PRIMARY_CHANNEL_SET                 (0x02108800)            /* bdbPrimaryChannelSet */
 #else
-	#define BDB_PRIMARY_CHANNEL_SET                 (0x07FFFFFF)            /* bdbPrimaryChannelSet */
+
+    /* For SubG, here's how the channel & pages are coded in BDB_PRIMARY_CHANNEL_SET:
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *  |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *  | x|P29 ch. 0-3|                               P28 ch. 0 - 26                                   |
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *
+     * For the rest of the pages channels, please refer to BDB_SECONDARY_CHANNEL_SET
+     */
+    #define BDB_PRIMARY_CHANNEL_SET                 (0x7FFFFFFF)            /* bdbPrimaryChannelSet = P28 0 - 26, P29 0 - 3 */
 #endif /* ENABLE_SUBG_IF */
 #endif /* BDB_PRIMARY_CHANNEL_SET */
 #ifndef BDB_SCAN_DURATION
@@ -142,7 +182,16 @@ extern "C" {
 #ifndef ENABLE_SUBG_IF
 	#define BDB_SECONDARY_CHANNEL_SET               (0x07FFF800 ^ BDB_PRIMARY_CHANNEL_SET)  /* bdbSecondaryChannelSet */
 #else
-	#define BDB_SECONDARY_CHANNEL_SET               (0)  /* bdbSecondaryChannelSet */
+    /* For SubG, here's how the channel & pages are coded in BDB_SECONDARY_CHANNEL_SET:
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *  |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *  | x|             P31 ch. 0-12             |    P30 ch. 0 - 13                       |P29 ch. 4-7|
+     *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     *
+     * For the rest of the pages channels, please refer to BDB_PRIMARY_CHANNEL_SET
+ */
+	#define BDB_SECONDARY_CHANNEL_SET               (0x7FFFFFFF)  /* bdbSecondaryChannelSet = P29 4 - 7, P30 0-13, P31 - 0-12 */
 #endif
 #endif
 #ifndef BDB_TC_LINK_KEY_EXCHANGE_ATTEMPTS
@@ -209,9 +258,28 @@ extern "C" {
 
 #ifdef ENABLE_SUBG_IF
 #define BDB_CHANNEL_MIN (0)
-#define BDB_CHANNEL_MAX (26)
+#define BDB_CHANNEL_MAX (30)
 
-#define SUBG_PAGE_28	0xE0000000
+#define SUBG_CH2PAGE(ch) (((ch) < 27) ?                       MAC_PAGE_MASK_28 : \
+                          (((27u <= (ch)) && ((ch) < 35u))) ? MAC_PAGE_MASK_29 : \
+                          (((35u <= (ch)) && ((ch) < 49u))) ? MAC_PAGE_MASK_30 : \
+                                                              MAC_PAGE_MASK_31)
+#define SUBG_SCAN_CH2REAL_CH(p, ch)  ((ch) + ((p) ? 0u : 31u))
+
+#define SUBG_CH2PAGE_CH(ch) (((ch) < 27) ?                 (ch) :       \
+                       (((27u <= (ch)) && ((ch) < 35u))) ? (ch) - 27u : \
+                       (((35u <= (ch)) && ((ch) < 49u))) ? (ch) - 35u : \
+                                                           (ch) - 49u)
+
+#define SUBG_CH2MASK(ch,p)  \
+        (SUBG_CH2PAGE(SUBG_SCAN_CH2REAL_CH((p), (ch))) | \
+        (1 << SUBG_CH2PAGE_CH(SUBG_SCAN_CH2REAL_CH((p), (ch)))))
+
+#define SUBG_PG28_ALL_CHANNELS  0x07FFFFFF
+#define SUBG_PG29_CH_0_3        0x78000000
+#define SUBG_PG29_CH_4_7        0x0000000F
+#define SUBG_PG30_ALL_CHANNELS  0x0003FFF0
+#define SUBG_PG31_ALL_CHANNELS  0x7FFC0000
 
 #else
 #define BDB_CHANNEL_MIN (11)

@@ -232,6 +232,12 @@ PUBLIC PDM_teStatus PDM_eInitialise(uint16_t u16StartSegment,
                                     uint8_t u8NumberOfSegments,
                                     PDM_tpfvSystemEventCallback fpvPDM_SystemEventCallback);
 
+/*!
+ * @brief DeInitialise the PDM
+ *
+ * @retval PDM_E_STATUS_OK
+ */
+PUBLIC PDM_teStatus PDM_DeInitialise(void);
 
 /*!
  * @brief Save a PDM record

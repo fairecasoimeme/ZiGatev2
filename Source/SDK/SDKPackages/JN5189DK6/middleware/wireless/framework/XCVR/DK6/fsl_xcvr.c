@@ -253,8 +253,8 @@ xcvrStatus_t XCVR_WakeUpInit(void)
 {
     xcvrStatus_t res = gXcvrSuccess_c;
 
-    /* Do RadioInit on each wakeup */
-    vRadio_RadioInit((xcvr_ctx.TxPwrOperationRange == TxPwrOperationRangeLow) ? RADIO_MODE_STD_USE_INITCAL : RADIO_MODE_HTXP_USE_INITCAL);
+    /* Do RadioInit on each wakeup with previous calibration settings, radio calibration will be done at next low power entry if needed */
+    vRadio_RadioInit((xcvr_ctx.TxPwrOperationRange == TxPwrOperationRangeLow) ? RADIO_MODE_STD_USE_RETENTION : RADIO_MODE_HTXP_USE_RETENTION);
     if (XCVR_ModeCfg(xcvr_ctx.current_radio_mode, xcvr_ctx.current_data_rate, true) < 0)
         res = gXcvrInvalidParameters_c;
     return res;
@@ -290,8 +290,24 @@ void XCVR_Deinit(void)
 
 void XCVR_TemperatureUpdate(int32_t temperature)
 {
+
+#if defined gRadio_CalTemp
+    /* only temperature at POR is transmitted to Radio */
+    static int32_t tempInit= 0xFFFFFFFF;
+
+    if( tempInit == 0xFFFFFFFF)
+    {
+        tempInit = temperature;
+    }
+    else
+    {
+        temperature = tempInit;
+    }
+#endif
+
     /* temperature expected by Radio should be expressed in half of degree C */
     vRadio_Temp_Update((int16_t) (2*temperature));
+
 }
 
 void XCVR_Recalibrate(void)
@@ -301,7 +317,15 @@ void XCVR_Recalibrate(void)
 
 uint32_t XCVR_GetRecalDuration(void)
 {
-    return u32Radio_Get_Next_Recal_Duration();
+    uint32_t duration;
+
+    duration =  u32Radio_Get_Next_Recal_Duration();
+    if (duration <= RADIO_RECAL_TIME_NORECAL_US)
+    {
+        duration = 0;
+    }
+
+    return duration;
 }
 
 void XCVR_LockupCheckAndAbortRadio(void)
