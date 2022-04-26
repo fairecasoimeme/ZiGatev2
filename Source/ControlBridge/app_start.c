@@ -1156,6 +1156,9 @@ void vfExtendedStatusCallBack ( ZPS_teExtendedStatus    eExtendedStatus )
 			PDM_vDeleteDataRecord(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE);
 			RESET_SystemReset();
 			break;
+
+		default:
+			break;
 	}
 }
 
