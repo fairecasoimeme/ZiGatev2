@@ -203,6 +203,7 @@ PRIVATE void vInitialiseApp ( void );
 PRIVATE void APP_cbTimerZclTick (void*    pvParam);
 extern void vDebugExceptionHandlersInitialise(void);
 PUBLIC void APP_vRadioTempUpdate(bool_t bLoadCalibration);
+//PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,      PDM_eSystemEventCode    eSystemEventCode );
 
 /****************************************************************************/
 /***        Exported Variables                                            ***/
@@ -554,6 +555,7 @@ PRIVATE void vInitialiseApp ( void )
 
     PDM_eInitialise(1200, 63, NULL);
     PDUM_vInit();
+   // PDM_vRegisterSystemCallback(vPdmEventHandlerCallback);
 
     /* Update radio temperature (loading calibration) */
     APP_vRadioTempUpdate(TRUE);
@@ -1133,12 +1135,28 @@ void vfExtendedStatusCallBack ( ZPS_teExtendedStatus    eExtendedStatus )
 	uint8                  au8LinkTxBuffer[256];
 	vLog_Printf ( TRACE_EXC,LOG_DEBUG, "ERROR: Extended status %x\n", eExtendedStatus );
 
+	/*switch (eExtendedStatus)
+	{
+		case ZPS_XS_E_NO_FREE_EXTENDED_ADDR:
+
+			PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
+			break;
+	}*/
 	u16Length =  0;
 	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ 0 ],  eExtendedStatus,     u16Length );
 	vSL_WriteMessage ( 0x9999,
 							   u16Length,
 							   au8LinkTxBuffer,
 							   0);
+	switch (eExtendedStatus)
+	{
+		case ZPS_XS_E_NO_FREE_EXTENDED_ADDR:
+
+			//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
+			PDM_vDeleteDataRecord(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE);
+			RESET_SystemReset();
+			break;
+	}
 }
 
 #if (defined PDM_EEPROM && DBG_ENABLE)
@@ -1299,6 +1317,22 @@ bool_t APP_bZCL_IsManufacturerCodeSupported(uint16 u16ManufacturerCode)
 {
 	return TRUE;
 }
+
+/*PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,
+                                        PDM_eSystemEventCode    eSystemEventCode )
+{
+	 //RAJOUT FRED v3.1b
+	uint16_t u16Length =  0;
+	uint8    au8LinkTxBuffer[50];
+	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length] ,  eSystemEventCode,   u16Length );
+	ZNC_BUF_U32_UPD  ( &au8LinkTxBuffer [u16Length] ,  u32EventNumber,   u16Length );
+	vSL_WriteMessage ( E_SL_MSG_EVENT_PDM,
+			   u16Length,
+			   au8LinkTxBuffer,
+			   0);
+
+
+}*/
 
 /****************************************************************************/
 /***        END OF FILE                                                   ***/
