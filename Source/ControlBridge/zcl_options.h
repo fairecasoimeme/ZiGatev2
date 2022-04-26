@@ -64,7 +64,7 @@
 
 // Total number of group addresses required by all sub-device endpoints on the device
 #define GROUPS_REQUIRED                                     ( 16 )
-#define CLD_GROUPS_MAX_NUMBER_OF_GROUPS                     ( 5  )
+#define CLD_GROUPS_MAX_NUMBER_OF_GROUPS                     ( 16  )
 /* Sets the number of endpoints that will be created by the ZCL library */
 #define ZCL_NUMBER_OF_ENDPOINTS                             ( 6 )
 #define ZCL_NUMBER_DEVICES                                  ( 1 )
