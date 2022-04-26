@@ -128,15 +128,15 @@ typedef enum
     E_SL_MSG_ZLL_FACTORY_NEW                                   =   0x0013,
     E_SL_MSG_GET_PERMIT_JOIN                                   =   0x0014,
     E_SL_MSG_GET_PERMIT_JOIN_RESPONSE                          =   0x8014,
-    E_SL_MSG_GET_DISPLAY_ADDRESS_MAP_TABLE                       =   0x0015,
+    E_SL_MSG_GET_DISPLAY_ADDRESS_MAP_TABLE                     =   0x0015,
     E_SL_MSG_GET_DISPLAY_ADDRESS_MAP_TABLE_LIST                =   0x8015,
-    E_SL_MSG_SET_TIMESERVER                                       =   0x0016,
+    E_SL_MSG_SET_TIMESERVER                                    =   0x0016,
 
-    E_SL_MSG_GET_TIMESERVER                                       =   0x0017,
+    E_SL_MSG_GET_TIMESERVER                                    =   0x0017,
     E_SL_MSG_GET_TIMESERVER_LIST                               =   0x8017,
 
     E_SL_MSG_SET_LED                                           =   0x0018,
-    E_SL_MSG_SET_CE_FCC                                           =   0x0019,
+    E_SL_MSG_SET_CE_FCC                                        =   0x0019,
 
     E_SL_MSG_SET_FLOW_CONTROL								   =   0x002F,
     E_SL_MSG_BIND                                              =   0x0030,
@@ -147,6 +147,8 @@ typedef enum
     E_SL_MSG_BIND_GROUP_RESPONSE                               =   0x8032,
     E_SL_MSG_UNBIND_GROUP                                      =   0x0033,
     E_SL_MSG_UNBIND_GROUP_RESPONSE                             =   0x8033,
+
+	E_SL_MSG_EVENT_PDM                                         =   0x8035,
 
     E_SL_MSG_MANY_TO_ONE_ROUTE_REQUEST                         =   0x004F,
     E_SL_MSG_COMPLEX_DESCRIPTOR_REQUEST                        =   0x0531,
@@ -178,6 +180,10 @@ typedef enum
     E_SL_MSG_DEVICE_ANNOUNCE                                   =   0x004D,
     E_SL_MSG_MANAGEMENT_LQI_REQUEST                            =   0x004E,
     E_SL_MSG_MANAGEMENT_LQI_RESPONSE                           =   0x804E,
+	E_SL_MSG_REMOVE_PDM_INTERNAL_ADDRESS_MAP_TABLE			   =   0x0051,
+	E_SL_MSG_PDM_CHILD_SIZE									   =   0x0052,
+	E_SL_MSG_PDM_CHILD_SIZE_RESPONSE					 	   =   0x8052,
+
     E_SL_MSG_USER_DESC_SET                                     =   0x0533,
     E_SL_MSG_USER_DESC_REQ                                     =   0x0532,
     E_SL_MSG_USER_DESC_NOTIFY                                  =   0x8533,
