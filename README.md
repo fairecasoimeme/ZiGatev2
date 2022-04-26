@@ -2,6 +2,17 @@
 
 ## Changelog
 
+### Version 3.22
+
+* Add child table size function. Command 0x0052
+* Add delete PDM address map table function. Command 0x0051
+* Add automatic repair when 0x87 messages occurs. (This automatism delete adress map table and reset the ZiGate) 
+* Enhance group capacity for ZiGate 5 to 16
+* Fix inconsistent datas with 0x8002 messages due to bad default response with ZDP packet
+* Fix 0x8b warning messages. increase the BroadcastTransactionTableSize from 9 to 18
+* Update new SDK 2.6.5
+	- New error messages due to security fails
+
 ### Version 3.21
 
 * Add 0x0b04 decodage
