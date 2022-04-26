@@ -87,7 +87,7 @@ PUBLIC void APP_vCMDHandleAHICommand(uint16 u16PacketType,
         }
         case E_SL_MSG_AHI_DIO_SET_OUTPUT:
         {
-            vAPP_DIOSetOutput(u16PacketLength, pu8LinkRxBuffer, &eAHI_Status);
+           // vAPP_DIOSetOutput(u16PacketLength, pu8LinkRxBuffer, &eAHI_Status);
             break;
         }
         case E_SL_MSG_AHI_DIO_READ_INPUT:
@@ -126,7 +126,7 @@ PUBLIC void APP_vCMDHandleAHICommand(uint16 u16PacketType,
  ****************************************************************************/
 PRIVATE void vAPP_DIOSetDirection(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer, eAHI_Status *peAHIStatus)
 {
-    uint32 u32DioInputPinMask;
+    /*uint32 u32DioInputPinMask;
     uint32 u32DioOutputPinMask;
     uint32 u32BytesRead = 0;
 
@@ -136,16 +136,16 @@ PRIVATE void vAPP_DIOSetDirection(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer
 
     if (8 == u16PacketLength)
     {
-        /* Parse the information out */
+        // Parse the information out
         u32DioInputPinMask = ZNC_RTN_U32( pu8LinkRxBuffer, u32BytesRead );
         u32BytesRead += sizeof(u32DioInputPinMask);
         u32DioOutputPinMask = ZNC_RTN_U32( pu8LinkRxBuffer, u32BytesRead );
 
-        /* Configure the IPN */
-        vAHI_DioSetOutput(u32DioInputPinMask, u32DioOutputPinMask);
-
+        // Configure the IPN
+        //vAHI_DioSetOutput(u32DioInputPinMask, u32DioOutputPinMask);
+        /*GPIO_PinWrite(base, port, u32DioInputPinMask, u32DioOutputPinMask)
         *peAHIStatus = E_AHI_SUCCESS;
-    }
+    }*/
 }
 
 /****************************************************************************
@@ -166,7 +166,7 @@ PRIVATE void vAPP_DIOSetOutput(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer, e
     uint32 u32DioOffPinMask;
     uint32 u32BytesRead = 0;
 
-    *peAHIStatus = E_AHI_PARSE_ERROR;
+    /**peAHIStatus = E_AHI_PARSE_ERROR;
 
     DBG_vPrintf(TRUE, "AHI: %s", __FUNCTION__);
 
@@ -178,10 +178,11 @@ PRIVATE void vAPP_DIOSetOutput(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer, e
         u32DioOffPinMask = ZNC_RTN_U32( pu8LinkRxBuffer, u32BytesRead );
 
         /* Configure the IPN */
-        vAHI_DioSetDirection(u32DioOnPinMask, u32DioOffPinMask);
+       /* vAHI_DioSetDirection(u32DioOnPinMask, u32DioOffPinMask);
+        GPIO_PinWrite(base, port, pin, output)
 
         *peAHIStatus = E_AHI_SUCCESS;
-    }
+    }*/
 }
 
 /****************************************************************************
@@ -198,21 +199,21 @@ PRIVATE void vAPP_DIOSetOutput(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer, e
  ****************************************************************************/
 PRIVATE void vAPP_DIOSetReadInput(uint16 u16PacketLength, uint8 *pu8LinkRxBuffer, eAHI_Status *peAHIStatus)
 {
-    uint32 u32DioReadInput;
+    /*uint32 u32DioReadInput;
     *peAHIStatus = E_AHI_PARSE_ERROR;
 
     DBG_vPrintf(TRUE, "AHI: %s", __FUNCTION__);
 
     if (0 == u16PacketLength)
     {
-        /* Read the input state */
+        // Read the input state
         u32DioReadInput = u32AHI_DioReadInput();
 
-        /* Need to figure out how to send this data back as the success needs to be sent first
-         * if I send the read input data back now, the status message will return after this
-         */
+        // Need to figure out how to send this data back as the success needs to be sent first
+        // if I send the read input data back now, the status message will return after this
+        //
         *peAHIStatus = E_AHI_SUCCESS;
-    }
+    }*/
 }
 
 /****************************************************************************
