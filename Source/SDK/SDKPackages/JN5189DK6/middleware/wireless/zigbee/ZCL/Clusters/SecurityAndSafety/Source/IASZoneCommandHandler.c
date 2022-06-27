@@ -588,10 +588,12 @@ PRIVATE teZCL_Status eCLD_IASZoneHandleZoneEnrollRequest(
 	if (psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload->u16ManufacturerCode == 0x1002) //KONKE
 	{
 	psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.e8EnrollResponseCode = E_CLD_IASZONE_ENROLL_RESP_SUCCESS;
-	}
-	if (psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload->u16ManufacturerCode == 0x120B) //HEIMAN
+	}else if (psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.psZoneEnrollRequestPayload->u16ManufacturerCode == 0x120B) //HEIMAN
    	{
        	psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0x52;
+   	}else{
+   		psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0x00;
+   		psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.e8EnrollResponseCode = E_CLD_IASZONE_ENROLL_RESP_SUCCESS;
    	}
        //psCommon->sCallBackMessage.uMessage.sZoneEnrollRequestCallbackPayload.sZoneEnrollResponsePayload.u8ZoneID = 0x0;
     /* call callback */
