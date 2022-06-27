@@ -154,19 +154,25 @@ PUBLIC void vDisplayAddressMapTable(void)
     ZPS_tsNwkNib * thisNib;
     thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
 
-    uint8 i = 0;
+    uint16 i = 0;
 
     DBG_vPrintf(TRACE_ZBP_UTILS,"\r\nAddress Map Size: %d", thisNib->sTblSize.u16AddrMap);
 
     for( i=0;i<thisNib->sTblSize.u16AddrMap;i++)
     {
-        DBG_vPrintf(TRACE_ZBP_UTILS,"\nShort Addr: %04x, Ext Addr: %016llx,", thisNib->sTbl.pu16AddrMapNwk[i], ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.pu16AddrLookup[i]));
+    	if (thisNib->sTbl.pu16AddrMapNwk[i]!=0xfffe)
+    	{
+    		DBG_vPrintf(TRACE_ZBP_UTILS,"\n i: %d, Short Addr: %04x, Ext Addr: %016llx, test :%d",i, thisNib->sTbl.pu16AddrMapNwk[i], ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.pu16AddrLookup[i]),thisNib->sTbl.psNtDisc->u8LinkQuality);
+    	}
     }
 	
 	DBG_vPrintf(TRACE_ZBP_UTILS,"\r\n MAC table Size: %d", thisNib->sTblSize.u16MacAddTableSize);
 	for( i=0;i<thisNib->sTblSize.u16MacAddTableSize;i++)
     {
-        DBG_vPrintf(TRACE_ZBP_UTILS,"\nLocation: %04x, Ext Addr: %016llx,", i, thisNib->sTbl.pu64AddrExtAddrMap[i]);
+		if (thisNib->sTbl.pu16AddrMapNwk[i]!=0xfffe)
+		{
+			DBG_vPrintf(TRACE_ZBP_UTILS,"\nLocation: %04x, short Addr:%01x, Ext Addr: %016llx,", i, thisNib->sTbl.pu16AddrMapNwk[i], thisNib->sTbl.pu64AddrExtAddrMap[i]);
+		}
     }
 }
 
@@ -186,30 +192,33 @@ PUBLIC void vDisplayAddressMapTable(void)
 PUBLIC void vDisplayNT( void )
 {
     ZPS_tsNwkNib * thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
-    uint8 i;
+    uint16 i;
 
     DBG_vPrintf(TRACE_ZBP_UTILS, "\r\nNT Size: %d\n", thisNib->sTblSize.u16NtActv);
 
     for( i = 0 ; i < thisNib->sTblSize.u16NtActv ; i++ )
     {
-        DBG_vPrintf(TRACE_ZBP_UTILS, "SAddr: 0x%04x - 0x%04x ExtAddr: 0x%016llx - LQI: %i - Failed TX's: %i - Auth: %i - %i %i %i %i %i %i - Active: %i - %i %i %i\n",
-                    thisNib->sTbl.psNtActv[i].u16NwkAddr,
-                    thisNib->sTbl.psNtActv[i].u16Lookup,
-                    ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.psNtActv[i].u16Lookup),
-                    thisNib->sTbl.psNtActv[i].u8LinkQuality,
-                    thisNib->sTbl.psNtActv[i].u8TxFailed,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1Authenticated,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1DeviceType,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1ExpectAnnc,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1LinkStatusDone,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1PowerSource,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1RxOnWhenIdle,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1SecurityMode,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1Used,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u2Relationship,
-                    thisNib->sTbl.psNtActv[i].u8Age,
-                    thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u3OutgoingCost
-                    );
+    	if (thisNib->sTbl.psNtActv[i].u16NwkAddr!=0xFFFE)
+    	{
+			DBG_vPrintf(TRACE_ZBP_UTILS, "SAddr: 0x%04x - 0x%04x ExtAddr: 0x%016llx - LQI: %i - Failed TX's: %i - Auth: %i - %i %i %i %i %i %i - Active: %i - %i %i %i\n",
+						thisNib->sTbl.psNtActv[i].u16NwkAddr,
+						thisNib->sTbl.psNtActv[i].u16Lookup,
+						ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.psNtActv[i].u16Lookup),
+						thisNib->sTbl.psNtActv[i].u8LinkQuality,
+						thisNib->sTbl.psNtActv[i].u8TxFailed,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1Authenticated,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1DeviceType,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1ExpectAnnc,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1LinkStatusDone,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1PowerSource,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1RxOnWhenIdle,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1SecurityMode,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1Used,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u2Relationship,
+						thisNib->sTbl.psNtActv[i].u8Age,
+						thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u3OutgoingCost
+						);
+    	}
     }
 }
 
@@ -347,7 +356,7 @@ PUBLIC void vRemoveCoordParents(void)
 PUBLIC void vDisplayDiscNT(void)
 {
     ZPS_tsNwkNib * thisNib;
-    uint8 i;
+    uint16 i;
 
     thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
 
@@ -435,10 +444,13 @@ PUBLIC void vDisplayRoutingTable(void)
 
     for( i=0;i<thisNib->sTblSize.u16Rt;i++)
     {
-        DBG_vPrintf(TRACE_ZBP_UTILS,"Status: %d, Short Address: %02x, Next Hop: %02x\n",
-                thisNib->sTbl.psRt[i].uAncAttrs.bfBitfields.u3Status,
-                thisNib->sTbl.psRt[i].u16NwkDstAddr,
-                thisNib->sTbl.psRt[i].u16NwkNxtHopAddr);
+    	if (thisNib->sTbl.psRt[i].u16NwkDstAddr != 0xfffe)
+    	{
+			DBG_vPrintf(TRACE_ZBP_UTILS,"Status: %d, Short Address: %02x, Next Hop: %02x\n",
+					thisNib->sTbl.psRt[i].uAncAttrs.bfBitfields.u3Status,
+					thisNib->sTbl.psRt[i].u16NwkDstAddr,
+					thisNib->sTbl.psRt[i].u16NwkNxtHopAddr);
+    	}
     }
 
 }
@@ -488,14 +500,17 @@ PUBLIC void vDisplayRouteRecordTable(void)
     thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
 
     uint8 i, j = 0;
-
+    DBG_vPrintf(TRACE_ZBP_UTILS,"\n thisNib->sTblSize.u16Rct: %d",thisNib->sTblSize.u16Rct);
     for( i=0;i<thisNib->sTblSize.u16Rct;i++)
     {
-        DBG_vPrintf(TRACE_ZBP_UTILS,"\nRelay Count: %i NwkdstAddr: 0x%04x", thisNib->sTbl.psRct[i].u8RelayCount, thisNib->sTbl.psRct[i].u16NwkDstAddr);
-        for ( j = 0 ; j < thisNib->u8MaxSourceRoute  ; j++)
-        {
-             DBG_vPrintf(TRACE_ZBP_UTILS,"\nPath[%i]: %i", j, thisNib->sTbl.psRct[i].au16Path[j]);
-        }
+    	if (thisNib->sTbl.psRct[i].u16NwkDstAddr!=0xfffe)
+    	{
+			DBG_vPrintf(TRACE_ZBP_UTILS,"\nRelay Count: %i NwkdstAddr: 0x%04x", thisNib->sTbl.psRct[i].u8RelayCount, thisNib->sTbl.psRct[i].u16NwkDstAddr);
+			for ( j = 0 ; j < thisNib->u8MaxSourceRoute  ; j++)
+			{
+				 DBG_vPrintf(TRACE_ZBP_UTILS,"\nPath[%i]: %i", j, thisNib->sTbl.psRct[i].au16Path[j]);
+			}
+    	}
     }
 }
 
@@ -543,8 +558,8 @@ PUBLIC void vClearRouteRecordTable(void)
  ****************************************************************************/
 void vDisplayNWKKey(void)
 {
-    uint8 i = 0;
-    uint8 j = 0;
+    uint16 i = 0;
+    uint16 j = 0;
 
     ZPS_tsNwkNib * thisNib;
 
@@ -554,11 +569,27 @@ void vDisplayNWKKey(void)
     for(j=0;j<thisNib->sTblSize.u8SecMatSet;j++)
     {
 
-        DBG_vPrintf(TRACE_ZBP_UTILS, "APP: Key");
-        for(i = 0;i<16;i++)
-        {
-             DBG_vPrintf(TRACE_ZBP_UTILS, "%x", thisNib->sTbl.psSecMatSet[j].au8Key[i]);
-        } 
+        DBG_vPrintf(TRACE_ZBP_UTILS, "APP: Key : ");
+       // for(i = 0;i<16;i++)
+        //{
+             DBG_vPrintf(TRACE_ZBP_UTILS, "%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x", thisNib->sTbl.psSecMatSet[j].au8Key[0],
+            		 	 	 	 	 	 	 	 	 	 	 	 	 	 	 thisNib->sTbl.psSecMatSet[j].au8Key[1],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[2],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[3],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[4],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[5],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[6],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[7],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[8],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[9],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[10],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[11],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[12],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[13],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[14],
+																			 thisNib->sTbl.psSecMatSet[j].au8Key[15]
+																												  );
+       // }
 
          DBG_vPrintf(TRACE_ZBP_UTILS, "\r\n");
      }
