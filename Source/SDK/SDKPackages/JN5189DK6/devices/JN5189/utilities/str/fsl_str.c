@@ -887,7 +887,7 @@ int StrFormatScanf(const char *line_ptr, char *format, va_list args_ptr)
     /* How many characters are read from the input streams. */
     uint32_t n_decode = 0;
 
-    int32_t val;
+    int64_t val;
 
     const char *s;
     /* Identifier for the input string. */
@@ -912,8 +912,10 @@ int StrFormatScanf(const char *line_ptr, char *format, va_list args_ptr)
         }
         else if ((*c != '%') || ((*c == '%') && (*(c + 1) == '%')))
         {
+            if ((*c == '%') && (*(c + 1) == '%'))
+                c++;
+
             /* Ordinary characters. */
-            c++;
             if (*p == *c)
             {
                 n_decode++;

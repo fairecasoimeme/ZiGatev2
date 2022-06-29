@@ -16,7 +16,6 @@
 !!GlobalInfo
 product: Pins v6.0
 processor: JN5189
-package_id: JN5189THN
 mcu_data: ksdk2_0
 processor_version: 0.0.0
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********

@@ -19,6 +19,14 @@
 #define FSL_COMPONENT_ID "platform.drivers.power_no_lib"
 #endif
 
+#ifndef FORCE_LDO_MEM_0V9_DBG
+/* Only to be activated for backward compatibility on old
+ * parts where the ATE did not set the LDO MEM 0V9 support
+ * information yet
+ * */
+#define FORCE_LDO_MEM_0V9_DBG 0
+#endif
+
 #define POWER_LIB_VERSION 6042018
 
 /* Do not disable the DC bus when going to power modes */
@@ -82,8 +90,10 @@
 #define VOLTAGE_PMUBOOST_DOWN 0x3 /* 0.75V */
 
 #define VOLTAGE_MEM_DOWN_0_9V 0x9       /* 0.9V  */
+#define VOLTAGE_MEM_DOWN_0_96V 0xA      /* 0.96V  */
 #define VOLTAGE_MEM_DOWN_1_0V 0xE       /* 1V    */
 #define VOLTAGE_MEMBOOST_DOWN_0_85V 0x7 /* 0.85V */
+#define VOLTAGE_MEMBOOST_DOWN_0_9V  0x9 /* 0.9V */
 #define VOLTAGE_MEMBOOST_DOWN_0_96V 0xA /* 0.96V */
 
 #define VOLTAGE_PMU_DEEP_SLEEP 0xA       /* 0.96V */
@@ -108,7 +118,7 @@
     ((active_trim_val != POWER_LDO_TRIM_UNDEFINED) ? (MIN(0x1E, MAX(((int8_t)__voltage + active_trim_val), 0xA))) : \
                                                      (__voltage))
 #define POWER_APPLY_PWD_TRIM(__voltage)                                                                         \
-    ((active_trim_val != POWER_LDO_TRIM_UNDEFINED) ? (MIN(0x9, MAX(((int8_t)__voltage + pwd_trim_val), 0x1))) : \
+    ((pwd_trim_val != POWER_LDO_TRIM_UNDEFINED) ? (MIN(0x9, MAX(((int8_t)__voltage + pwd_trim_val), 0x1))) : \
                                                      (__voltage))
 
 #define POWER_APPLY_TRIM(__voltage) \
@@ -119,7 +129,7 @@
 /*******************************************************************************
  * Types
  ******************************************************************************/
-static const LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_reset = {
+static LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_reset = {
     .LDOPMU             = 0x18, // 1.1V
     .LDOPMUBOOST        = 0x13, // 1.05V
     .LDOMEM             = 0x18, // 1.1V
@@ -135,7 +145,7 @@ static const LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_reset = {
     .LDOPMUBOOST_ENABLE = 1,    // Force Boost activation on LDOPMU
 };
 
-static const LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_min = {
+static LPC_LOWPOWER_LDOVOLTAGE_T lowpower_ldovoltage_min = {
     .LDOPMU             = 0xE, // 1V
     .LDOPMUBOOST        = 0xA, // 0.96V
     .LDOMEM             = 0xE, // 1V
@@ -387,6 +397,9 @@ void POWER_DisplayActiveVoltage(void)
 
 void POWER_ApplyActiveVoltage(const LPC_LOWPOWER_LDOVOLTAGE_T *ldo_voltage)
 {
+#if 0
+    /* When slow CPU clock is used (2MHz for instance)
+     * every cycle matters, so  optimize execution by removing the copy */
     LPC_LOWPOWER_LDOVOLTAGE_T ldo_voltage_l;
 
     memcpy(&ldo_voltage_l, ldo_voltage, sizeof(LPC_LOWPOWER_LDOVOLTAGE_T));
@@ -397,8 +410,10 @@ void POWER_ApplyActiveVoltage(const LPC_LOWPOWER_LDOVOLTAGE_T *ldo_voltage)
 
     ldo_voltage_l.LDOMEM      = POWER_APPLY_TRIM(ldo_voltage->LDOMEM);
     ldo_voltage_l.LDOMEMBOOST = POWER_APPLY_TRIM(ldo_voltage->LDOMEMBOOST);
-
     Chip_LOWPOWER_SetSystemVoltages(&ldo_voltage_l);
+#else
+    Chip_LOWPOWER_SetSystemVoltages((LPC_LOWPOWER_LDOVOLTAGE_T *) ldo_voltage);
+#endif
 }
 
 void POWER_ApplyLdoActiveVoltage(pm_ldo_volt_t ldoVolt)
@@ -407,13 +422,34 @@ void POWER_ApplyLdoActiveVoltage(pm_ldo_volt_t ldoVolt)
     {
         case PM_LDO_VOLT_1_0V:
             POWER_ApplyActiveVoltage(&lowpower_ldovoltage_min);
+
+            /* expect to have 1.0v on an other bank from 1.1V */
+            assert( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == 0 );
             break;
 
         case PM_LDO_VOLT_1_1V_DEFAULT:
         default:
             POWER_ApplyActiveVoltage(&lowpower_ldovoltage_reset);
+            break;
     }
 }
+
+void POWER_ApplyLdoActiveVoltage_1V1(void)
+{
+    /* expecting to be on 1.0V on the voltage bank 0*/
+    assert( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == 0);
+
+    PMC->CTRL |= PMC_CTRL_SELLDOVOLTAGE_MASK;
+}
+
+void POWER_ApplyLdoActiveVoltage_1V0(void)
+{
+    /* expecting to be on 1.1V on the voltage bank 1*/
+    assert( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == PMC_CTRL_SELLDOVOLTAGE_MASK);
+
+    PMC->CTRL &= ~PMC_CTRL_SELLDOVOLTAGE_MASK;
+}
+
 
 /*!
  * brief Initialize the sdk power drivers
@@ -431,6 +467,7 @@ void POWER_Init(void)
     /* Enable the clock for the analog interrupt control module - required for the BOD
      * and set up BOD core and mem*/
     POWER_BodSetUp();
+    /* Need to let 27us elapse before activating BOD detector  */
 #endif
     if (warm_start == false)
     {
@@ -439,15 +476,21 @@ void POWER_Init(void)
         warm_start = true;
     }
 
+    /* Voltage should be at 1.1v at this stage (bank 1) */
+    assert( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == PMC_CTRL_SELLDOVOLTAGE_MASK);
+
 #ifdef DISPLAY_ACTIVE_VOLTAGE
     POWER_DisplayActiveVoltage();
 #endif
 
+#if 0
+    /* In order to avoid the 27us wait time, parallelize with caller activities */
+#ifdef FOR_BOD_DEBUG
     /* This time, need to wait for LDO to be set up (27us) */
     CLOCK_uDelay(27);
-#ifdef FOR_BOD_DEBUG
     /* enable interrupt and SW reset for the BODCORE */
     POWER_BodActivate();
+#endif
 #endif
 }
 
@@ -455,8 +498,31 @@ void POWER_SetTrimDefaultActiveVoltage(void)
 {
     POWER_UpdateTrimmingVoltageValue();
 
+    /* Apply some trimming on LDOPMU and LDOMEM to avoid extra consumption */
+    lowpower_ldovoltage_reset.LDOPMU      = POWER_APPLY_TRIM(lowpower_ldovoltage_reset.LDOPMU);
+    lowpower_ldovoltage_reset.LDOPMUBOOST = POWER_APPLY_TRIM(lowpower_ldovoltage_reset.LDOPMUBOOST);
+
+    lowpower_ldovoltage_reset.LDOMEM      = POWER_APPLY_TRIM(lowpower_ldovoltage_reset.LDOMEM);
+    lowpower_ldovoltage_reset.LDOMEMBOOST = POWER_APPLY_TRIM(lowpower_ldovoltage_reset.LDOMEMBOOST);
+
+    /* Apply some trimming on LDOPMU and LDOMEM to avoid extra consumption */
+    lowpower_ldovoltage_min.LDOPMU      = POWER_APPLY_TRIM(lowpower_ldovoltage_min.LDOPMU);
+    lowpower_ldovoltage_min.LDOPMUBOOST = POWER_APPLY_TRIM(lowpower_ldovoltage_min.LDOPMUBOOST);
+
+    lowpower_ldovoltage_min.LDOMEM      = POWER_APPLY_TRIM(lowpower_ldovoltage_min.LDOMEM);
+    lowpower_ldovoltage_min.LDOMEMBOOST = POWER_APPLY_TRIM(lowpower_ldovoltage_min.LDOMEMBOOST);
+
     /* Always startup at 1.1V to cope with higher current load when enabling clocks */
     POWER_ApplyLdoActiveVoltage(PM_LDO_VOLT_1_1V_DEFAULT);
+    if ( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == 0)
+    {
+        /* wrong bank, call the function twice to select bank 1 as from POR reset
+             This can happen in case of different reset than POR */
+        POWER_ApplyLdoActiveVoltage(PM_LDO_VOLT_1_1V_DEFAULT);
+    }
+
+    /* configuration of SELLDOVOLTAGE for 1.1v */
+    assert( (PMC->CTRL & PMC_CTRL_SELLDOVOLTAGE_MASK) == PMC_CTRL_SELLDOVOLTAGE_MASK);
 
 #ifdef DISPLAY_ACTIVE_VOLTAGE
     POWER_DisplayActiveVoltage();
@@ -591,7 +657,8 @@ bool POWER_EnterDeepSleepMode(pm_power_config_t *pm_power_config)
     return false;
 }
 
-bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
+
+void POWER_GetPowerDownConfig(pm_power_config_t *pm_power_config, void* pm_config)
 {
     int radio_retention;
     int autostart_32mhz_xtal;
@@ -601,8 +668,10 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
     int wakeup_src1;
     uint8_t voltage_mem_down;
     uint8_t voltage_membootst_down;
-    LPC_LOWPOWER_T lp_config;
-    memset(&lp_config, 0, sizeof(lp_config));
+
+    LPC_LOWPOWER_T* lp_config = (LPC_LOWPOWER_T*)pm_config;
+
+    memset(lp_config, 0, sizeof(LPC_LOWPOWER_T));
 
     sram_cfg             = pm_power_config->pm_config & PM_CFG_SRAM_ALL_RETENTION;
     radio_retention      = pm_power_config->pm_config & PM_CFG_RADIO_RET;
@@ -619,49 +688,58 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
     PRINTF("  pm_config        : 0x%x\n", pm_power_config->pm_config);
 #endif
 
-    lp_config.CFG = LOWPOWER_CFG_MODE_POWERDOWN;
+    lp_config->CFG = LOWPOWER_CFG_MODE_POWERDOWN;
 
     /* PDRUNCFG : on ES2, flag discard to keep the same configuration than active */
-    lp_config.CFG |= LOWPOWER_CFG_PDRUNCFG_DISCARD_MASK;
+    lp_config->CFG |= LOWPOWER_CFG_PDRUNCFG_DISCARD_MASK;
 
     /* PDSLEEPCFG (note: LDOMEM will be enabled by lowpower API if one memory bank in retention*/
-    lp_config.PMUPWDN |= LOWPOWER_PMUPWDN_DCDC | LOWPOWER_PMUPWDN_BIAS | LOWPOWER_PMUPWDN_BODVBAT;
+    lp_config->PMUPWDN |= LOWPOWER_PMUPWDN_DCDC | LOWPOWER_PMUPWDN_BIAS | LOWPOWER_PMUPWDN_BODVBAT;
 
     /* Disable All banks except those given in sram_cfg */
-    lp_config.DIGPWDN |= ((LOWPOWER_DIGPWDN_SRAM_ALL_MASK) & ~(sram_cfg << LOWPOWER_DIGPWDN_SRAM0_INDEX));
+    lp_config->DIGPWDN |= ((LOWPOWER_DIGPWDN_SRAM_ALL_MASK) & ~(sram_cfg << LOWPOWER_DIGPWDN_SRAM0_INDEX));
 
     // TODO : if COMM0 is disabled, need to switch off the clocks also for safe wake up
-    lp_config.DIGPWDN |= LOWPOWER_DIGPWDN_COMM0; // PDSLEEP DISABLE COM0
+    lp_config->DIGPWDN |= LOWPOWER_DIGPWDN_COMM0; // PDSLEEP DISABLE COM0
 
-    lp_config.DIGPWDN |=
+    lp_config->DIGPWDN |=
         LOWPOWER_DIGPWDN_MCU_RET; // PDSLEEP DISABLE retention  : on ES1, CPU retention, on ES2 Zigbee retention
 
-    // lp_config.DIGPWDN |= LOWPOWER_DIGPWDN_NTAG_FD;         // DPDWKSRC DISABLE NTAG  - not used in lowpower API in
+    // lp_config->DIGPWDN |= LOWPOWER_DIGPWDN_NTAG_FD;         // DPDWKSRC DISABLE NTAG  - not used in lowpower API in
     // power down
 
-    lp_config.SLEEPPOSTPONE = 0;
-    lp_config.GPIOLATCH     = 0;
+    lp_config->SLEEPPOSTPONE = 0;
+    lp_config->GPIOLATCH     = 0;
 
-#if gPWR_LDOMEM_0_9V_PD
-    voltage_mem_down       = VOLTAGE_MEM_DOWN_0_9V;
-    voltage_membootst_down = VOLTAGE_MEMBOOST_DOWN_0_85V;
-#else
     /* A bit in the flash is now set (bit 31 at address 0x9FCD4).
      * If this bit is set, RAM retention in sleep should use voltage of 0.9v.
      * If it is not set, RAM retention in sleep should use voltage of 1.0v. */
-    uint32_t *ate_setting = (uint32_t *)0x9FCD4;
-
-    if ((*ate_setting & 0x80000000) == 0x80000000)
+    if ( (*POWER_ULPGB_TRIM_FLASH_ADDR & 0x80000000) || FORCE_LDO_MEM_0V9_DBG)
     {
-        voltage_mem_down       = VOLTAGE_MEM_DOWN_0_9V;
-        voltage_membootst_down = VOLTAGE_MEMBOOST_DOWN_0_85V;
+        /* exception if pwd_trim_val is 2 or above : POWER_APPLY_TRIM will cap the value to
+             VOLTAGE_MEM_DOWN_0_9V  (9) and the LDO output voltage will remain to 0.85v.
+              This is not enough if we consider device aging, so let s increase the
+              LDO voltage setting to 0.96v. In fact, 0.91v will be provided by the LDO */
+        if ( (pwd_trim_val != POWER_LDO_TRIM_UNDEFINED) && ( pwd_trim_val > 1)  )
+        {
+            voltage_mem_down       = VOLTAGE_MEM_DOWN_0_96V;
+            voltage_membootst_down = VOLTAGE_MEMBOOST_DOWN_0_9V;
+        }
+        else
+        {
+            /* Apply normal trimming,  note that trimming on voltage_mem_down will be capped
+                to 0x9 if pwd_trim_value == 1 , so it will be not trimmed correctly
+                but we don t expect any issue as it will still provide 0.875v real and boost will be equal
+                to 0.85v so no extra power consumption */
+            voltage_mem_down       = POWER_APPLY_TRIM(VOLTAGE_MEM_DOWN_0_9V);
+            voltage_membootst_down = POWER_APPLY_TRIM(VOLTAGE_MEMBOOST_DOWN_0_85V);
+        }
     }
     else
     {
-        voltage_mem_down       = VOLTAGE_MEM_DOWN_1_0V;
-        voltage_membootst_down = VOLTAGE_MEMBOOST_DOWN_0_96V;
+        voltage_mem_down       = POWER_APPLY_TRIM(VOLTAGE_MEM_DOWN_1_0V);
+        voltage_membootst_down = POWER_APPLY_TRIM(VOLTAGE_MEMBOOST_DOWN_0_96V);
     }
-#endif
 
     if (keep_ao_voltage)
     {
@@ -670,44 +748,51 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
         Chip_LOWPOWER_GetSystemVoltages(&ldo_voltage);
 
         /* keep the same voltage than in active for the Always ON powerdomain */
-        lp_config.VOLTAGE = VOLTAGE(POWER_APPLY_TRIM(ldo_voltage.LDOPMU), POWER_APPLY_TRIM(ldo_voltage.LDOPMUBOOST),
-                                    POWER_APPLY_TRIM(voltage_mem_down), POWER_APPLY_TRIM(voltage_membootst_down), 0,
-                                    VOLTAGE_LDO_PMU_BOOST, 0);
+        lp_config->VOLTAGE = VOLTAGE(POWER_APPLY_TRIM(ldo_voltage.LDOPMU),
+                                     POWER_APPLY_TRIM(ldo_voltage.LDOPMUBOOST),
+                                     voltage_mem_down,
+                                     voltage_membootst_down,
+                                     0,
+                                     VOLTAGE_LDO_PMU_BOOST,
+                                     0);
     }
     else
     {
-        lp_config.VOLTAGE = VOLTAGE(POWER_APPLY_TRIM(VOLTAGE_PMU_DOWN), POWER_APPLY_TRIM(VOLTAGE_PMUBOOST_DOWN),
-                                    POWER_APPLY_TRIM(voltage_mem_down), POWER_APPLY_TRIM(voltage_membootst_down), 0,
-                                    VOLTAGE_LDO_PMU_BOOST, 0);
+        lp_config->VOLTAGE = VOLTAGE(POWER_APPLY_TRIM(VOLTAGE_PMU_DOWN),
+                                     POWER_APPLY_TRIM(VOLTAGE_PMUBOOST_DOWN),
+                                     voltage_mem_down,
+                                     voltage_membootst_down, 0,
+                                     VOLTAGE_LDO_PMU_BOOST,
+                                     0);
     }
 
-    lp_config.WAKEUPSRCINT0 = wakeup_src0;
-    lp_config.WAKEUPSRCINT1 = wakeup_src1;
+    lp_config->WAKEUPSRCINT0 = wakeup_src0;
+    lp_config->WAKEUPSRCINT1 = wakeup_src1;
 
     /* Variation from reference */
     if (radio_retention)
     {
         /* Enable Zigbee retention */
-        lp_config.DIGPWDN &= ~LOWPOWER_DIGPWDN_MCU_RET;
+        lp_config->DIGPWDN &= ~LOWPOWER_DIGPWDN_MCU_RET;
     }
 
     /* Configure IO wakeup source */
-    if (lp_config.WAKEUPSRCINT1 & LOWPOWER_WAKEUPSRCINT1_IO_IRQ)
+    if (lp_config->WAKEUPSRCINT1 & LOWPOWER_WAKEUPSRCINT1_IO_IRQ)
     {
-        lp_config.WAKEUPIOSRC = pm_power_config->pm_wakeup_io;
+        lp_config->WAKEUPIOSRC = pm_power_config->pm_wakeup_io;
     }
 
-    if (lp_config.WAKEUPSRCINT0 & LOWPOWER_WAKEUPSRCINT0_SYSTEM_IRQ)
+    if (lp_config->WAKEUPSRCINT0 & LOWPOWER_WAKEUPSRCINT0_SYSTEM_IRQ)
     {
         /* Need to enable the BIAS for VBAT BOD */
-        lp_config.PMUPWDN &= ~(LOWPOWER_PMUPWDN_BIAS | LOWPOWER_PMUPWDN_BODVBAT);
+        lp_config->PMUPWDN &= ~(LOWPOWER_PMUPWDN_BIAS | LOWPOWER_PMUPWDN_BODVBAT);
     }
 
-    if (lp_config.WAKEUPSRCINT0 &
+    if (lp_config->WAKEUPSRCINT0 &
         (LOWPOWER_WAKEUPSRCINT0_USART0_IRQ | LOWPOWER_WAKEUPSRCINT0_I2C0_IRQ | LOWPOWER_WAKEUPSRCINT0_SPI0_IRQ))
     {
         /* Keep Flexcom0 in power down mode */
-        lp_config.DIGPWDN &= ~LOWPOWER_DIGPWDN_COMM0;
+        lp_config->DIGPWDN &= ~LOWPOWER_DIGPWDN_COMM0;
     }
 
     /* On ES2 , Analog comparator is already enabled in PDRUNCFG + RFT1877 : No need to keep the bias */
@@ -722,7 +807,7 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
          * so Enable BODMEM only if bandgap is already enabled for BODVBAT (see code above)
          */
 #ifndef POWER_FORCE_BODMEM_IN_PD
-        if ((lp_config.PMUPWDN & LOWPOWER_PMUPWDN_BIAS) == 0)
+        if ((lp_config->PMUPWDN & LOWPOWER_PMUPWDN_BIAS) == 0)
 #endif
         {
 #ifdef FOR_BOD_DEBUG
@@ -761,22 +846,22 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
 #endif
     if (wakeup_src0 & LOWPOWER_WAKEUPSRCINT0_NFCTAG_IRQ)
     {
-        lp_config.WAKEUPSRCINT1 |= LOWPOWER_WAKEUPSRCINT1_IO_IRQ;
-        lp_config.WAKEUPIOSRC |= LOWPOWER_WAKEUPIOSRC_NTAG_FD;
+        lp_config->WAKEUPSRCINT1 |= LOWPOWER_WAKEUPSRCINT1_IO_IRQ;
+        lp_config->WAKEUPIOSRC |= LOWPOWER_WAKEUPIOSRC_NTAG_FD;
     }
 
     /* On Power down, NTAG field detect is enabled by IO so don t need to set the LOWPOWER_DIGPWDN_NTAG_FD */
-    // lp_config.DIGPWDN &= ~LOWPOWER_DIGPWDN_NTAG_FD;      // used for deep down only
+    // lp_config->DIGPWDN &= ~LOWPOWER_DIGPWDN_NTAG_FD;      // used for deep down only
 
     if (autostart_32mhz_xtal)
     {
-        lp_config.CFG |= LOWPOWER_CFG_XTAL32MSTARTENA_MASK;
+        lp_config->CFG |= LOWPOWER_CFG_XTAL32MSTARTENA_MASK;
     }
 
     /* get IO clamping state already set by the application and give it to lowpower API
      * Lowpower API overrides the IO configuration with GPIOLATCH setting
      */
-    lp_config.GPIOLATCH = POWER_GetIoClampConfig();
+    lp_config->GPIOLATCH = POWER_GetIoClampConfig();
 
     /* [RFT1911] Disable the DC bus to prevent extra consumption */
 #ifndef POWER_DCBUS_NOT_DISABLED
@@ -790,9 +875,16 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
 #ifdef DUMP_CONFIG
     LF_DumpConfig(&lp_config);
 #endif
+}
+
+static void (*power_hook_fn)();
+
+void POWER_GoToPowerDown( void* pm_config )
+{
+    LPC_LOWPOWER_T* lp_config = (LPC_LOWPOWER_T*)pm_config;
 
     /* If flexcom is maintained, do not disable the console and the clocks - let the application do it if needed */
-    if (lp_config.DIGPWDN & LOWPOWER_DIGPWDN_COMM0)
+    if (lp_config->DIGPWDN & LOWPOWER_DIGPWDN_COMM0)
     {
         /* remove console if not done */
         DbgConsole_Deinit();
@@ -800,14 +892,35 @@ bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
         /* Disable clocks to FLEXCOM power domain. This power domain is not reseted on wakeup by HW */
         POWER_FlexcomClocksDisable();
     }
-    /* Apply default LDO voltage */
-    POWER_ApplyLdoActiveVoltage(PM_LDO_VOLT_1_1V_DEFAULT);
 
-    Chip_LOWPOWER_SetLowPowerMode(&lp_config);
+    if ( (void*)power_hook_fn != NULL )
+    {
+         /* Call hook function */
+        (*power_hook_fn)();
+    }
 
-    /* If we go here, the power mode has been aborted - this can happen only if WFI is executed in lowpower API*/
-    return false;
+
+    Chip_LOWPOWER_SetLowPowerMode( lp_config );
 }
+
+
+void POWER_RegisterPowerDownEntryHookFunction( void (*pm_hook_function)() )
+{
+    power_hook_fn = pm_hook_function;
+}
+
+bool POWER_EnterPowerDownMode(pm_power_config_t *pm_power_config)
+{
+   LPC_LOWPOWER_T lp_config;
+
+   /* get lp_config */
+   POWER_GetPowerDownConfig(pm_power_config, (void*)&lp_config);
+
+   POWER_GoToPowerDown(&lp_config);
+
+   return false;
+}
+
 
 bool POWER_EnterDeepDownMode(pm_power_config_t *pm_power_config)
 {

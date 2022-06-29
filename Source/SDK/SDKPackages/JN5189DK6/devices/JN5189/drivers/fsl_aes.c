@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016, Freescale Semiconductor, Inc.
- * Copyright 2016-2017 NXP
+ * Copyright 2016-2017, 2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -99,7 +99,7 @@ static inline uint32_t aes_get_word_from_unaligned(const uint8_t *srcAddr)
     memcpy(&ret, srcAddr, sizeof(uint32_t));
     return ret;
 #else
-    return *((const uint32_t *)srcAddr);
+    return *((const uint32_t *)(uint32_t)srcAddr);
 #endif
 }
 
@@ -133,7 +133,7 @@ static inline void aes_set_unaligned_from_word(uint32_t srcWord, uint8_t *dstAdd
     memcpy(dstAddr, &ret, sizeof(uint32_t));
     return;
 #else
-    *((uint32_t *)dstAddr) = srcWord;
+    *((uint32_t *)(uint32_t)dstAddr) = srcWord;
 #endif
 }
 
@@ -190,12 +190,12 @@ static status_t aes_load_key(AES_Type *base, const uint8_t *key, size_t keySize)
             break;
     }
 
-    if (!keyWords)
+    if (0 == keyWords)
     {
         /* invalidate a possibly valid key. user attempted to set a key but gives incorrect size. */
         base->CMD = AES_CMD_WIPE(1);
         /* wait for Idle */
-        while (!(base->STAT & AES_STAT_IDLE_MASK))
+        while (0U == (base->STAT & AES_STAT_IDLE_MASK))
         {
         }
         base->CMD = AES_CMD_WIPE(0u);
@@ -230,33 +230,48 @@ static void aes_one_block(AES_Type *base, uint8_t *output, const uint8_t *input)
     int index;
     uint32_t aesStat;
 
+    /* If defined FLS_FEATURE_AES_IRQ_DISABLE, disable IRQs during computing AES block, */
+    /* please note that this can affect IRQs latency */
+#if defined(FLS_FEATURE_AES_IRQ_DISABLE) && (FLS_FEATURE_AES_IRQ_DISABLE > 0)
+    uint32_t currPriMask;
+    /* disable global interrupt */
+    currPriMask = DisableGlobalIRQ();
+#endif /* FLS_FEATURE_AES_IRQ_DISABLE */
+
     /* If the IN_READY bit in STAT register is 1, write the input text in the INTEXT [3:0]
        registers. */
-    index = 0;
-    while (index < 4)
+    aesStat = base->STAT;
+
+    /* Wait until input text can be written. */
+    while (0U == (aesStat & AES_STAT_IN_READY_MASK))
     {
         aesStat = base->STAT;
-
-        if (aesStat & AES_STAT_IN_READY_MASK)
-        {
-            base->INTEXT[index] = aes_get_word_from_unaligned(input);
-            input += sizeof(uint32_t);
-            index++;
-        }
     }
 
-    index = 0;
-    while (index < 4)
+    /* Write input data into INTEXT regs */
+    for (index = 0; index < 4; index++)
+    {
+        base->INTEXT[index] = aes_get_word_from_unaligned(input);
+        input += sizeof(uint32_t);
+    }
+
+    /* Wait until output text is ready to be read */
+    while (0U == (aesStat & AES_STAT_OUT_READY_MASK))
     {
         aesStat = base->STAT;
-
-        if (aesStat & AES_STAT_OUT_READY_MASK)
-        {
-            aes_set_unaligned_from_word(base->OUTTEXT[index], output);
-            output += sizeof(uint32_t);
-            index++;
-        }
     }
+
+    /* Read output data from OUTTEXT regs */
+    for (index = 0; index < 4; index++)
+    {
+        aes_set_unaligned_from_word(base->OUTTEXT[index], output);
+        output += sizeof(uint32_t);
+    }
+
+#if defined(FLS_FEATURE_AES_IRQ_DISABLE) && (FLS_FEATURE_AES_IRQ_DISABLE > 0)
+    /* global interrupt enable */
+    EnableGlobalIRQ(currPriMask);
+#endif /* FLS_FEATURE_AES_IRQ_DISABLE */
 }
 
 /*!
@@ -274,7 +289,7 @@ static void aes_set_forward(AES_Type *base)
         base->CMD = AES_CMD_SWITCH_MODE(1u);
 
         /* wait for Idle */
-        while (!(base->STAT & AES_STAT_IDLE_MASK))
+        while (0U == (base->STAT & AES_STAT_IDLE_MASK))
         {
         }
 
@@ -291,13 +306,13 @@ static void aes_set_forward(AES_Type *base)
  */
 static void aes_set_reverse(AES_Type *base)
 {
-    if (!(base->STAT & AES_STAT_REVERSE_MASK))
+    if (0U == (base->STAT & AES_STAT_REVERSE_MASK))
     {
         /* currently in forward, switch to reverse */
         base->CMD = AES_CMD_SWITCH_MODE(1u);
 
         /* wait for Idle */
-        while (!(base->STAT & AES_STAT_IDLE_MASK))
+        while (0U == (base->STAT & AES_STAT_IDLE_MASK))
         {
         }
 
@@ -375,7 +390,7 @@ status_t AES_EncryptEcb(AES_Type *base, const uint8_t *plaintext, uint8_t *ciphe
     status_t status;
 
     /* ECB mode, size must be 16-byte multiple */
-    if (size % 16u)
+    if (0U != (size % 16u))
     {
         return kStatus_InvalidArgument;
     }
@@ -393,7 +408,7 @@ status_t AES_EncryptEcb(AES_Type *base, const uint8_t *plaintext, uint8_t *ciphe
     /* make sure AES is set to forward mode */
     aes_set_forward(base);
 
-    while (size)
+    while (size != 0U)
     {
         aes_one_block(base, ciphertext, plaintext);
         ciphertext += 16;
@@ -420,7 +435,7 @@ status_t AES_DecryptEcb(AES_Type *base, const uint8_t *ciphertext, uint8_t *plai
     status_t status;
 
     /* ECB mode, size must be 16-byte multiple */
-    if (size % 16u)
+    if (0U != (size % 16u))
     {
         return kStatus_InvalidArgument;
     }
@@ -438,7 +453,7 @@ status_t AES_DecryptEcb(AES_Type *base, const uint8_t *ciphertext, uint8_t *plai
     /* make sure AES is set to reverse mode */
     aes_set_reverse(base);
 
-    while (size)
+    while (size != 0U)
     {
         aes_one_block(base, plaintext, ciphertext);
         ciphertext += 16;
@@ -475,7 +490,7 @@ static status_t aes_block_mode(AES_Type *base,
         case kAES_CfgDecryptCfb:
         case kAES_CfgEncryptCbc:
         case kAES_CfgDecryptCbc:
-            if (size % 16u)
+            if (0U != (size % 16u))
             {
                 status = kStatus_InvalidArgument;
             }
@@ -535,13 +550,13 @@ static status_t aes_block_mode(AES_Type *base,
     }
 
     /* OFB can have non-block multiple size. CBC and CFB128 have size zero at this moment. */
-    if (size)
+    if (0U != (size % 16u))
     {
         uint8_t blkTemp[16] = {0};
 
-        aes_memcpy(blkTemp, input, size);
+        (void)aes_memcpy(blkTemp, input, size);
         aes_one_block(base, blkTemp, blkTemp);
-        aes_memcpy(output, blkTemp, size);
+        (void)aes_memcpy(output, blkTemp, size);
     }
 
     return status;
@@ -719,7 +734,7 @@ status_t AES_CryptCtr(AES_Type *base,
     }
 
     /* full 16-byte blocks */
-    while (size)
+    while (size != 0U)
     {
         aes_one_block(base, output, input);
         size -= 16u;
@@ -728,7 +743,7 @@ status_t AES_CryptCtr(AES_Type *base,
     }
 
     /* last block */
-    if (counterlast)
+    if (counterlast != NULL)
     {
         lastEncryptedCounter = counterlast;
     }
@@ -749,7 +764,7 @@ status_t AES_CryptCtr(AES_Type *base,
     aes_set_unaligned_from_word(swap_bytes(base->HOLDING[3]), &counter[12]);
     aes_gcm_dec32(&counter[0]); /* TODO HW problem? (first time it increments HOLDING3 twice) */
 
-    if (szLeft)
+    if (szLeft != NULL)
     {
         *szLeft = 16U - lastSize;
     }
@@ -778,7 +793,7 @@ static void aes_gcm_one_block_input_only(AES_Type *base, const uint8_t *input)
     {
         aesStat = base->STAT;
 
-        if (aesStat & AES_STAT_IN_READY_MASK)
+        if (0U != (aesStat & AES_STAT_IN_READY_MASK))
         {
             base->INTEXT[index] = aes_get_word_from_unaligned(input);
             input += sizeof(uint32_t);
@@ -786,7 +801,7 @@ static void aes_gcm_one_block_input_only(AES_Type *base, const uint8_t *input)
         }
     }
 
-    while (0 == (base->STAT & AES_STAT_IDLE_MASK))
+    while (0U == (base->STAT & AES_STAT_IDLE_MASK))
     {
     }
 }
@@ -803,7 +818,7 @@ static void aes_command(AES_Type *base, uint32_t cmdMask)
 {
     base->CMD = cmdMask;
     /* wait for Idle */
-    while (!(base->STAT & AES_STAT_IDLE_MASK))
+    while (0U == (base->STAT & AES_STAT_IDLE_MASK))
     {
     }
     base->CMD = 0;
@@ -853,13 +868,14 @@ static status_t aes_gcm_check_input_args(AES_Type *base,
                                          size_t aadSize,
                                          size_t tagSize)
 {
-    if (!base)
+    if (base == NULL)
     {
         return kStatus_InvalidArgument;
     }
 
     /* tag can be NULL to skip tag processing */
-    if ((ivSize && (!iv)) || (aadSize && (!aad)) || (inputSize && ((!src) || (!dst))))
+    if (((ivSize != 0U) && (NULL == iv)) || ((aadSize != 0U) && (NULL == aad)) ||
+        ((inputSize != 0U) && ((NULL == src) || (NULL == dst))))
     {
         return kStatus_InvalidArgument;
     }
@@ -871,7 +887,7 @@ static status_t aes_gcm_check_input_args(AES_Type *base,
     }
 
     /* no IV AAD DATA makes no sense */
-    if (0 == (inputSize + ivSize + aadSize))
+    if (0U == (inputSize + ivSize + aadSize))
     {
         return kStatus_InvalidArgument;
     }
@@ -1038,14 +1054,14 @@ static status_t aes_gcm_process(AES_Type *base,
             iv += 16;
             ivSize -= 16u;
         }
-        if (ivSize)
+        if (ivSize != 0U)
         {
-            aes_memcpy(ivBlkZero, iv, ivSize);
+            (void)aes_memcpy(ivBlkZero, iv, ivSize);
             aes_gcm_one_block_input_only(base, ivBlkZero);
         }
 
-        aes_memcpy(ivBlkZero, blkZero, 16);
-        aes_set_unaligned_from_word(swap_bytes(8 * saveIvSize), &ivBlkZero[12]);
+        (void)aes_memcpy(ivBlkZero, blkZero, 16);
+        aes_set_unaligned_from_word(swap_bytes(8U * saveIvSize), &ivBlkZero[12]);
         aes_gcm_one_block_input_only(base, ivBlkZero);
 
         aes_get_gf128(base, blkJ0);
@@ -1061,12 +1077,12 @@ static status_t aes_gcm_process(AES_Type *base,
     }
     else
     {
-        aes_memcpy(blkJ0, iv, 12);
+        (void)aes_memcpy(blkJ0, iv, 12);
         blkJ0[15] = 0x02U; /* add one to Counter for the first encryption with plaintext - see GCM specification */
     }
 
     /* process all AAD as GF128 of INTEXT, pad to full 16-bytes block with zeroes */
-    if (aadSize)
+    if (aadSize != 0U)
     {
         *(volatile uint8_t *)((uint32_t)base) = (uint8_t)kAES_CfgSwapIntextHashIn;
         while (aadSize >= 16u)
@@ -1075,10 +1091,10 @@ static status_t aes_gcm_process(AES_Type *base,
             aad += 16;
             aadSize -= 16u;
         }
-        if (aadSize)
+        if (aadSize != 0U)
         {
             uint8_t aadBlkZero[16] = {0};
-            aes_memcpy(aadBlkZero, aad, aadSize);
+            (void)aes_memcpy(aadBlkZero, aad, aadSize);
             aes_gcm_one_block_input_only(base, aadBlkZero);
         }
     }
@@ -1103,7 +1119,7 @@ static status_t aes_gcm_process(AES_Type *base,
     /* set counter increment by one */
     base->CTR_INCR = 0x1U;
 
-    if (inputSize)
+    if (inputSize != 0U)
     {
         /* full 16-byte blocks */
         while (inputSize >= 16u)
@@ -1114,7 +1130,7 @@ static status_t aes_gcm_process(AES_Type *base,
             dst += 16;
         }
         /* last incomplete block. output shall be padded. */
-        if (inputSize)
+        if (inputSize != 0U)
         {
             if (encryptMode == kAES_ModeEncrypt)
             {
@@ -1123,19 +1139,19 @@ static status_t aes_gcm_process(AES_Type *base,
                 /* I need to pad ciphertext, so I turn off the hash, and after I have ciphertext, I pad it with zeroes
                  * and hash manually */
                 *(volatile uint8_t *)((uint32_t)base) = (uint8_t)kAES_CfgSwap;
-                aes_memcpy(lastBlock, src, inputSize);
+                (void)aes_memcpy(lastBlock, src, inputSize);
                 aes_one_block(base, lastBlock, lastBlock);
-                aes_memcpy(dst, lastBlock, inputSize);
+                (void)aes_memcpy(dst, lastBlock, inputSize);
                 /* pad the last output block with zeroes and add it to GF128 hash */
-                aes_memcpy(outputBlkZero, lastBlock, inputSize);
+                (void)aes_memcpy(outputBlkZero, lastBlock, inputSize);
                 *(volatile uint8_t *)((uint32_t)base) = (uint8_t)kAES_CfgSwapIntextHashIn;
                 aes_gcm_one_block_input_only(base, outputBlkZero);
             }
             else
             {
-                aes_memcpy(lastBlock, src, inputSize);
+                (void)aes_memcpy(lastBlock, src, inputSize);
                 aes_one_block(base, lastBlock, lastBlock);
-                aes_memcpy(dst, lastBlock, inputSize);
+                (void)aes_memcpy(dst, lastBlock, inputSize);
             }
         }
     }
@@ -1146,22 +1162,22 @@ static status_t aes_gcm_process(AES_Type *base,
     aes_gcm_dec32(blkJ0);
     aes_gcm_one_block_input_only(base, blkJ0);
     *(volatile uint8_t *)((uint32_t)base) = (uint8_t)kAES_CfgSwapIntextHashIn;
-    if (saveSize)
+    if (saveSize != 0U)
     {
         aes_set_unaligned_from_word(swap_bytes(saveSize * 8u), &blkZero[12]);
     }
-    if (saveAadSize)
+    if (saveAadSize != 0U)
     {
         aes_set_unaligned_from_word(swap_bytes(saveAadSize * 8u), &blkZero[4]);
     }
     aes_gcm_one_block_input_only(base, blkZero); /* len(A) || len(C) */
     aes_gcm_get_tag(base, blkTag);
 
-    if (tag && tagSize)
+    if ((tag != NULL) && (tagSize != 0U))
     {
         if (encryptMode == kAES_ModeEncrypt)
         {
-            aes_memcpy(tag, blkTag, tagSize);
+            (void)aes_memcpy(tag, blkTag, tagSize);
         }
         else
         {
@@ -1171,12 +1187,12 @@ static status_t aes_gcm_process(AES_Type *base,
 
             while (i < tagSize)
             {
-                chXor = tag[i] ^ blkTag[i];
+                chXor = ((uint32_t)tag[i] ^ (uint32_t)blkTag[i]);
                 equal |= chXor;
                 i++;
             }
 
-            if (equal != 0)
+            if (equal != 0U)
             {
                 status = kStatus_Fail;
             }
@@ -1255,9 +1271,9 @@ status_t AES_DecryptTagGcm(AES_Type *base,
     status_t status;
 
     tag_ptr = NULL;
-    if (tag)
+    if (tag != NULL)
     {
-        aes_memcpy(temp_tag, tag, tagSize);
+        (void)aes_memcpy(temp_tag, tag, tagSize);
         tag_ptr = &temp_tag[0];
     }
 

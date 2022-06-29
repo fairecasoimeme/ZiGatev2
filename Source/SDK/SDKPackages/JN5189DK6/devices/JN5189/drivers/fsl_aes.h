@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016, Freescale Semiconductor, Inc.
- * Copyright 2016-2017 NXP
+ * Copyright 2016-2017, 2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -23,15 +23,19 @@
 
 /*! @name Driver version */
 /*@{*/
-/*! @brief Defines LPC AES driver version 2.0.1.
+/*! @brief Defines LPC AES driver version 2.0.3.
  *
  * Change log:
- * - Version 2.0.0
- *   - initial version
+ * - Version 2.0.3
+ *   - Edit aes_one_block() function to be interrupt safe.
+ * - Version 2.0.2
+ *   - Fix MISRA-2012 issues
  * - Version 2.0.1
  *   - GCM constant time tag comparison
+ * - Version 2.0.0
+ *   - initial version
  */
-#define FSL_AES_DRIVER_VERSION (MAKE_VERSION(2, 0, 1))
+#define FSL_AES_DRIVER_VERSION (MAKE_VERSION(2, 0, 3))
 /*@}*/
 
 /*******************************************************************************

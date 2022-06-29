@@ -44,8 +44,10 @@ extern "C" {
 // by the linker when "Enable Code Read Protect" selected.
 // See crp.h header for more information
 //*****************************************************************************
+#if (defined(__MCUXPRESSO))
 #include <NXP/crp.h>
 __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
+#endif
 
 #include "fsl_device_registers.h"
 #include "rom_api.h"
@@ -66,9 +68,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 //*****************************************************************************
 // Declaration of external SystemInit function
 //*****************************************************************************
-#if defined (__USE_CMSIS)
 extern WEAK void SystemInit(void);
-#endif // (__USE_CMSIS)
 
 //*****************************************************************************
 // Declaration of external WarmMain function
@@ -157,7 +157,10 @@ WEAK void PVTVF1_AMBER_IRQHandler(void);
 WEAK void PVTVF1_RED_IRQHandler(void);
 WEAK void BLE_WAKE_UP_TIMER_IRQHandler(void);
 WEAK void SHA_IRQHandler(void);
-
+#if defined(SUPPORT_FOR_15_4) && SUPPORT_FOR_15_4
+WEAK void vMMAC_IntHandlerBbc(void);
+WEAK void vMMAC_IntHandlerPhy(void);
+#endif
 //*****************************************************************************
 // Forward declaration of the driver IRQ handlers. These are aliased
 // to the IntDefaultHandler, which is a 'forever' loop. When the driver
@@ -400,8 +403,10 @@ void ResetISR(void) {
         "BX     R0\t\n");
 }
 
-__attribute__ ((section(".after_vectors"))) void ResetISR2(void)
+__attribute__ ((used, section(".after_vectors"))) void ResetISR2(void)
 {
+    /* Force clock to switch to FRO32M to speed up initialization */
+	SYSCON -> MAINCLKSEL = 3;
     if ( WarmMain )
     {
         unsigned int warm_start;
@@ -777,13 +782,39 @@ WEAK void BLE_LL_ALL_IRQHandler(void)
 {   BLE_LL_ALL_DriverIRQHandler();
 }
 
+#if defined(SUPPORT_FOR_15_4) && SUPPORT_FOR_15_4
 WEAK void ZIGBEE_MAC_IRQHandler(void)
-{   ZIGBEE_MAC_DriverIRQHandler();
+{
+    if (vMMAC_IntHandlerBbc)
+    {
+        vMMAC_IntHandlerBbc();
+    }
+    else if (ZIGBEE_MAC_DriverIRQHandler)
+    {
+        ZIGBEE_MAC_DriverIRQHandler();
+    }
+    else
+    {
+        IntDefaultHandler();
+    }
 }
 
 WEAK void ZIGBEE_MODEM_IRQHandler(void)
-{   ZIGBEE_MODEM_DriverIRQHandler();
+{
+    if (vMMAC_IntHandlerPhy)
+    {
+        vMMAC_IntHandlerPhy();
+    }
+    else if (ZIGBEE_MODEM_DriverIRQHandler)
+    {
+        ZIGBEE_MODEM_DriverIRQHandler();
+    }
+    else
+    {
+        IntDefaultHandler();
+    }
 }
+#endif
 
 WEAK void RFP_TMU_IRQHandler(void)
 {   RFP_TMU_DriverIRQHandler();

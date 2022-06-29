@@ -514,8 +514,14 @@ int DbgConsole_SendDataReliable(uint8_t *ch, size_t size)
 #endif /* DEBUG_CONSOLE_TX_RELIABLE_ENABLE */
 
 #else
+#if defined(FSL_RTOS_FREE_RTOS) && defined(CONSOLE_MUX_USART0)
+    taskENTER_CRITICAL();
+#endif
     status          = (status_t)SerialManager_WriteBlocking(
         ((serial_write_handle_t)&s_debugConsoleState.serialWriteHandleBuffer[0]), ch, size);
+#if defined(FSL_RTOS_FREE_RTOS) && defined(CONSOLE_MUX_USART0)
+    taskEXIT_CRITICAL();
+#endif
     return (((status_t)kStatus_Success == status) ? (int)size : -1);
 #endif /* DEBUG_CONSOLE_TRANSFER_NON_BLOCKING */
 }

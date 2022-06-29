@@ -117,8 +117,24 @@ void DisableDeepSleepIRQ(IRQn_Type interrupt)
 void *SDK_Malloc(size_t size, size_t alignbytes)
 {
     mem_align_cb_t *p_cb = NULL;
-    uint32_t alignedsize = SDK_SIZEALIGN(size, alignbytes) + alignbytes + sizeof(mem_align_cb_t);
-    void *p_align_addr, *p_addr = malloc(alignedsize);
+    uint32_t alignedsize;
+    void *p_align_addr, *p_addr;
+
+    /* Check overflow. */
+    alignedsize = SDK_SIZEALIGN(size, alignbytes);
+    if (alignedsize < size)
+    {
+        return NULL;
+    }
+
+    if (alignedsize > SIZE_MAX - alignbytes - sizeof(mem_align_cb_t))
+    {
+        return NULL;
+    }
+
+    alignedsize += alignbytes + sizeof(mem_align_cb_t);
+
+    p_addr = malloc(alignedsize);
 
     if (!p_addr)
     {

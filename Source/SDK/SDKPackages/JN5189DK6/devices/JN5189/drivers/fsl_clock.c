@@ -67,7 +67,7 @@ uint32_t CLOCK_GetSpifiOscFreq(void);
 uint32_t CLOCK_GetWdtOscFreq(void);
 uint32_t CLOCK_GetPWMClockFreq(void);
 
-static uint8_t CLOCK_u8OscCapConvert(uint32_t OscCap, uint8_t u8CapBankDiscontinuity);
+static uint8_t CLOCK_u8OscCapConvert(int32_t OscCap, uint8_t u8CapBankDiscontinuity);
 
 /*******************************************************************************
  * types
@@ -915,6 +915,7 @@ void CLOCK_DisableAPBBridge(void)
  */
 void CLOCK_uDelay(uint32_t delayUs)
 {
+#if 0
     uint32_t freqMhz, timeout;
     uint32_t trcena, cyccntena;
 
@@ -942,6 +943,17 @@ void CLOCK_uDelay(uint32_t delayUs)
     {
         CoreDebug->DEMCR &= ~CoreDebug_DEMCR_TRCENA_Msk;
     }
+#else
+    uint32_t freqMHz = CLOCK_GetCoreSysClkFreq()/1000000;
+    uint32_t n = (freqMHz * delayUs);
+    /* 192 is the number of cycles to read freqMHz and compute n.
+     * If the required delay is smaller, exit right away.
+     * */
+    if ( n > 192)
+    {
+    	DelayLoopN(n/4);
+    }
+#endif
 }
 
 void CLOCK_XtalBasicTrim(void)
@@ -950,8 +962,10 @@ void CLOCK_XtalBasicTrim(void)
     /* Basic trim with default good values */
     uint32_t u32RegVal;
 
+#ifdef FSL_CLOCK_SET_LDO_CALLED_INTERNALLY
     /* Enable and set LDO, if not already done */
     CLOCK_SetXtal32M_LDO();
+#endif
 
     /* Read, modify, write ASYNC_SYSCON->XTAL32MCTRL register */
     u32RegVal = ASYNC_SYSCON->XTAL32MCTRL;
@@ -1001,14 +1015,20 @@ void CLOCK_XtalBasicTrim(void)
 void CLOCK_Xtal32M_Trim(int32_t XO_32M_OSC_CAP_Delta_x1000, const ClockCapacitanceCompensation_t *capa_charac)
 {
     uint32_t u32XOTrimValue;
-    uint8_t u8IECXinCapCal6pF, u8IECXinCapCal8pF, u8IECXoutCapCal6pF, u8IECXoutCapCal8pF, u8XOSlave;
-    int32_t iaXin_x4, ibXin, iaXout_x4, ibXout;
-    int32_t iXOCapInpF_x100, iXOCapOutpF_x100;
-    uint32_t u32XOCapInCtrl, u32XOCapOutCtrl;
+    uint8_t  u8IECXinCapCal6pF, u8IECXinCapCal8pF, u8IECXoutCapCal6pF, u8IECXoutCapCal8pF, u8XOSlave;
+    int32_t  iaXin_x4, ibXin, iaXout_x4, ibXout;
+    int32_t  iXOCapInpF_x100, iXOCapOutpF_x100;
+    int32_t  s32XOCapInCtrl, s32XOCapOutCtrl;
     uint32_t u32RegVal;
 
+    /* The IEC lod must remain in a valid range between 4pF and 10pF*/
+    assert (capa_charac != NULL && capa_charac->clk_XtalIecLoadpF_x100 >= 400 &&  capa_charac->clk_XtalIecLoadpF_x100 <= 1000);
+
+
+#ifdef FSL_CLOCK_SET_LDO_CALLED_INTERNALLY
     /* Enable and set LDO, if not already done */
     CLOCK_SetXtal32M_LDO();
+#endif
 
     /* Get Cal values from Flash */
     u32XOTrimValue = GET_32MXO_TRIM();
@@ -1049,11 +1069,11 @@ void CLOCK_Xtal32M_Trim(int32_t XO_32M_OSC_CAP_Delta_x1000, const ClockCapacitan
     iXOCapOutpF_x100 = iXOCapOutpF_x100 + XO_32M_OSC_CAP_Delta_x1000 / 5;
 
     /* In & out XO_OSC_CAP_Code_CTRL calculation, with rounding */
-    u32XOCapInCtrl  = (uint32_t)(((iXOCapInpF_x100 * iaXin_x4 + ibXin * 400) + 200) / 400);
-    u32XOCapOutCtrl = (uint32_t)(((iXOCapOutpF_x100 * iaXout_x4 + ibXout * 400) + 200) / 400);
+    s32XOCapInCtrl  = (int32_t)(((iXOCapInpF_x100 * iaXin_x4 + ibXin * 400) + 200) / 400);
+    s32XOCapOutCtrl = (int32_t)(((iXOCapOutpF_x100 * iaXout_x4 + ibXout * 400) + 200) / 400);
 
-    uint8_t u8XOCapInCtrl  = CLOCK_u8OscCapConvert(u32XOCapInCtrl, 13);
-    uint8_t u8XOCapOutCtrl = CLOCK_u8OscCapConvert(u32XOCapOutCtrl, 13);
+    uint8_t u8XOCapInCtrl  = CLOCK_u8OscCapConvert(s32XOCapInCtrl, 13);
+    uint8_t u8XOCapOutCtrl = CLOCK_u8OscCapConvert(s32XOCapOutCtrl, 13);
 
     /* Read register and clear fields to be written */
     u32RegVal = ASYNC_SYSCON->XTAL32MCTRL;
@@ -1082,8 +1102,11 @@ void CLOCK_Xtal32k_Trim(int32_t XO_32k_OSC_CAP_Delta_x1000, const ClockCapacitan
     uint8_t u8IECXinCapCal6pF, u8IECXinCapCal8pF, u8IECXoutCapCal6pF, u8IECXoutCapCal8pF;
     int32_t iaXin_x4, ibXin, iaXout_x4, ibXout;
     int32_t iXOCapInpF_x100, iXOCapOutpF_x100;
-    uint32_t u32XOCapInCtrl, u32XOCapOutCtrl;
+    int32_t s32XOCapInCtrl, s32XOCapOutCtrl;
     uint32_t u32RegVal;
+
+    /* The IEC lod must remain in a valid range between 4pF and 10pF*/
+    assert (capa_charac != NULL && capa_charac->clk_XtalIecLoadpF_x100 >= 400 &&  capa_charac->clk_XtalIecLoadpF_x100 <= 1000);
 
     /* Get Cal values from Flash */
     u32XOTrimValue = GET_32KXO_TRIM();
@@ -1119,11 +1142,11 @@ void CLOCK_Xtal32k_Trim(int32_t XO_32k_OSC_CAP_Delta_x1000, const ClockCapacitan
     iXOCapOutpF_x100 = iXOCapOutpF_x100 + XO_32k_OSC_CAP_Delta_x1000 / 5;
 
     /* In & out XO_OSC_CAP_Code_CTRL calculation, with rounding */
-    u32XOCapInCtrl  = (uint32_t)(((iXOCapInpF_x100 * iaXin_x4 + ibXin * 400) + 200) / 400);
-    u32XOCapOutCtrl = (uint32_t)(((iXOCapOutpF_x100 * iaXout_x4 + ibXout * 400) + 200) / 400);
+    s32XOCapInCtrl  = (int32_t)(((iXOCapInpF_x100 * iaXin_x4 + ibXin * 400) + 200) / 400);
+    s32XOCapOutCtrl = (int32_t)(((iXOCapOutpF_x100 * iaXout_x4 + ibXout * 400) + 200) / 400);
 
-    uint8_t u8XOCapInCtrl  = CLOCK_u8OscCapConvert(u32XOCapInCtrl, 23);
-    uint8_t u8XOCapOutCtrl = CLOCK_u8OscCapConvert(u32XOCapOutCtrl, 23);
+    uint8_t u8XOCapInCtrl  = CLOCK_u8OscCapConvert(s32XOCapInCtrl, 23);
+    uint8_t u8XOCapOutCtrl = CLOCK_u8OscCapConvert(s32XOCapOutCtrl, 23);
 
     /* Read register and clear fields to be written */
     u32RegVal = SYSCON->XTAL32KCAP;
@@ -1162,8 +1185,11 @@ void CLOCK_SetXtal32M_LDO(void)
 
         ASYNC_SYSCON->XTAL32MLDOCTRL = temp;
 
+        /* No need to wait if CLOCK_SetXtal32M_LDO is called externally */
+#ifdef FSL_CLOCK_SET_LDO_CALLED_INTERNALLY
         /* Delay for LDO to be up */
         CLOCK_uDelay(20);
+#endif
     }
 }
 
@@ -1178,9 +1204,12 @@ void CLOCK_Xtal32M_WaitUntilStable(uint32_t u32AdditionalWait_us)
     CLOCK_uDelay(u32AdditionalWait_us);
 }
 
-static uint8_t CLOCK_u8OscCapConvert(uint32_t OscCap_val, uint8_t u8CapBankDiscontinuity)
+static uint8_t CLOCK_u8OscCapConvert(int32_t OscCap_val, uint8_t u8CapBankDiscontinuity)
 {
     /* Compensate for discontinuity in the capacitor banks */
+    if (OscCap_val < 0)
+        OscCap_val = 0;
+
     if (OscCap_val < 64)
     {
         if (OscCap_val >= u8CapBankDiscontinuity)
@@ -1205,4 +1234,19 @@ static uint8_t CLOCK_u8OscCapConvert(uint32_t OscCap_val, uint8_t u8CapBankDisco
     }
 
     return (uint8_t)OscCap_val;
+}
+
+
+void DelayUsecMHz(uint32_t usec, uint32_t cpu_freq_MHz)
+{
+    int loop = (usec * cpu_freq_MHz)/4;
+    DelayLoopN(loop);
+}
+
+void DelayLoopN(uint32_t loop)
+{
+    while (loop-- != 0)
+    {
+        __NOP();
+    }
 }

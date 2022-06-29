@@ -20,6 +20,9 @@
  * Definitions
  ******************************************************************************/
 
+/*! Size of the structure that caller of POWER_GetPowerDownConfig() function should allocate */
+#define POWER_LOWPOWER_STRUCTURE_SIZE     (15*4)
+
 /*! @brief BODVBAT configuration flag */
 #define POWER_BOD_ENABLE           ( 1 << 0 )
 #define POWER_BOD_DISABLE          ( 0 << 0 )
@@ -326,6 +329,25 @@ static inline void POWER_EnterSleep(void)
 bool POWER_EnterPowerMode(pm_power_mode_t pm_power_mode, pm_power_config_t* pm_power_config);
 
 /*!
+ * @brief Get powerdown structure
+ *   Caller shall allocate structure with size POWER_LOWPOWER_STRUCTURE_SIZE
+ *
+ */
+void POWER_GetPowerDownConfig(pm_power_config_t *pm_power_config, void* pm_config);
+
+/*!
+ * @brief Faster way to go to lowpower using previous called POWER_GetPowerDownConfig()
+ *
+ * @return false if chip could not go to sleep. Configuration structure is incorrect
+ */
+void POWER_GoToPowerDown(void* pm_config);
+
+/*!
+ * @brief Register Hook function to be called at the end of POWER_GoToPowerDown()
+ */
+void POWER_RegisterPowerDownEntryHookFunction( void (*pm_hook_function)() );
+
+/*!
  * @brief determine cause of reset
  *
  * @return reset_cause
@@ -375,6 +397,14 @@ bool POWER_BodVbatConfig(pm_bod_cfg_t * bod_cfg_p);
  * @return none
  */
 void POWER_ApplyLdoActiveVoltage(pm_ldo_volt_t ldoVolt);
+
+/*!
+ * @brief Call Optimized API for setting core voltage
+ *
+ * @return none
+ */
+void POWER_ApplyLdoActiveVoltage_1V1(void);
+void POWER_ApplyLdoActiveVoltage_1V0(void);
 
 /*!
  * @brief brief Set the DCDC output to 1.3v

@@ -13,6 +13,7 @@
 #include "fsl_wtimer.h"
 #include "fsl_clock.h"
 #include "fsl_device_registers.h"
+
 /* Component ID definition, used by tools. */
 #ifndef FSL_COMPONENT_ID
 #define FSL_COMPONENT_ID "platform.drivers.wtimer"
@@ -170,6 +171,63 @@ void WTIMER_EnableInterrupts(WTIMER_timer_id_t timer_id)
     SYSCON->WKT_INTENSET = timer_param_l->wkt_intenclr_timeout_mask;
 }
 
+static void WTIMER_StartTimerFunction(WTIMER_timer_id_t timer_id, uint64_t count, bool fast)
+{
+    const timer_param_t *timer_param_l = &timer_param[timer_id];
+
+    PRINTF("-->> vAHI_WakeTimerStart[%d] : STAT=%x count=%d WKT_INTSTAT=%x count=%d\n", timer_id, SYSCON->WKT_STAT,
+           count, SYSCON->WKT_INTSTAT, count);
+    /* enable the clock */
+    SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_clk_ena_mask;
+
+    /* Check if the timer is enabled */
+    if ( (!fast) || (SYSCON->WKT_CTRL & timer_param_l->wkt_ctrl_ena_mask))
+    {
+        /* clear timeout flag if set */
+        SYSCON->WKT_STAT = timer_param_l->wkt_stat_timeout_mask;
+
+        /* stop timer if running */
+        SYSCON->WKT_CTRL &= ~(timer_param_l->wkt_ctrl_ena_mask);
+
+        /* make sure the timer is really stopped */
+        while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == timer_param_l->wkt_stat_running_mask)
+        {
+            __asm volatile("nop");
+        }
+    }
+
+    uint32_t lsb_count = (count & 0xffffffff);
+
+    *(timer_param_l->wkt_load_lsb_reg) = lsb_count  & timer_param_l->wkt_val_lsb_mask;
+    if (timer_id == WTIMER_TIMER0_ID)
+    {
+        uint32_t msb_count = (uint32_t)((uint64_t)count>>32);
+        *(timer_param_l->wkt_load_msb_reg) = msb_count & timer_param_l->wkt_val_msb_mask;
+    }
+
+    if (fast)
+    {
+        /* enable the timer */
+        SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_ena_mask;
+    }
+    else
+    {
+        /* handle as a critical  section because if an interrupt that triggers immediately after the timer enable can cause
+           a lock in the while below if the interrupt calls WTIMER_StopTimer */
+        DisableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
+        /* enable the timer */
+        SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_ena_mask;
+
+        while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == 0)
+        {
+            __asm volatile("nop");
+        }
+        EnableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
+    }
+
+    PRINTF("<<-- vAHI_WakeTimerStart[%d] : STAT=%x WKT_INTSTAT=%x\n", timer_id, SYSCON->WKT_STAT, SYSCON->WKT_INTSTAT);
+}
+
 /*!
  * brief Starts the Timer counter.
  * The function performs:
@@ -184,51 +242,9 @@ void WTIMER_EnableInterrupts(WTIMER_timer_id_t timer_id)
  */
 void WTIMER_StartTimerLarge(WTIMER_timer_id_t timer_id, uint64_t count)
 {
-    const timer_param_t *timer_param_l = &timer_param[timer_id];
-
-    PRINTF("-->> vAHI_WakeTimerStart[%d] : STAT=%x count=%d WKT_INTSTAT=%x count=%d\n", timer_id, SYSCON->WKT_STAT,
-           count, SYSCON->WKT_INTSTAT, count);
-
-    /* enable the clock */
-    SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_clk_ena_mask;
-
-    /* clear timeout flag if set */
-    SYSCON->WKT_STAT = timer_param_l->wkt_stat_timeout_mask;
-
-    /* stop timer if running */
-    SYSCON->WKT_CTRL &= ~(timer_param_l->wkt_ctrl_ena_mask);
-
-    /* make sure the timer is really stopped */
-    while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == timer_param_l->wkt_stat_running_mask)
-    {
-        __asm volatile("nop");
-    }
-
-    uint32_t lsb_count = (count & 0xffffffff);
-
-    *(timer_param_l->wkt_load_lsb_reg) = lsb_count  & timer_param_l->wkt_val_lsb_mask;
-    if (timer_id == WTIMER_TIMER0_ID)
-    {
-        uint32_t msb_count = (uint32_t)((uint64_t)count>>32);
-        *(timer_param_l->wkt_load_msb_reg) = msb_count & timer_param_l->wkt_val_msb_mask;
-    }
-
-    /* handle as a critical  section because if an interrupt that triggers immediately after the timer enable can cause
-       a lock in the while below if the interrupt calls WTIMER_StopTimer */
-    DisableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
-
-    /* enable the timer */
-    SYSCON->WKT_CTRL |= timer_param_l->wkt_ctrl_ena_mask;
-
-    while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == 0)
-    {
-        __asm volatile("nop");
-    }
-
-    EnableIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
-
-    PRINTF("<<-- vAHI_WakeTimerStart[%d] : STAT=%x WKT_INTSTAT=%x\n", timer_id, SYSCON->WKT_STAT, SYSCON->WKT_INTSTAT);
+    WTIMER_StartTimerFunction(timer_id, count, false);
 }
+
 
 
 /*!
@@ -243,7 +259,23 @@ void WTIMER_StartTimerLarge(WTIMER_timer_id_t timer_id, uint64_t count)
  */
 void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
 {
-    WTIMER_StartTimerLarge(timer_id, (uint64_t)count);
+    WTIMER_StartTimerFunction(timer_id, (uint64_t)count, false);
+}
+
+/*!
+ * brief Starts the Timer counter without waiting for the WKT_STAT register to be loaded.
+ *
+ * The function performs:
+ * -stop the timer if running, clear the status and interrupt flag if set (WTIMER_ClearStatusFlags())
+ * -set the counter value
+ * -start the timer
+ *
+ * param timer_id   Wtimer Id
+ * param count      number of 32KHz clock periods before expiration
+ */
+void WTIMER_StartTimerUnsafe(WTIMER_timer_id_t timer_id, uint32_t count)
+{
+    WTIMER_StartTimerFunction(timer_id, (uint64_t)count, true);
 }
 
 /*!
@@ -257,13 +289,25 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count)
 uint32_t WTIMER_ReadTimerSafe(WTIMER_timer_id_t timer_id)
 {
     const timer_param_t *timer_param_l    = &timer_param[timer_id];
-    volatile uint32_t u32CurrentCount_ini = *timer_param_l->wkt_val_lsb_reg;
-    volatile uint32_t u32CurrentCount     = *timer_param_l->wkt_val_lsb_reg;
+    volatile uint32_t u32CurrentValue = *timer_param_l->wkt_val_lsb_reg;
+    volatile uint32_t u32NextValue   = *timer_param_l->wkt_val_lsb_reg;
+    uint8_t equalFound = 0;
 
-    while (u32CurrentCount == u32CurrentCount_ini)
-        u32CurrentCount = *timer_param_l->wkt_val_lsb_reg;
-
-    return u32CurrentCount;
+    while (u32NextValue == u32CurrentValue)
+    {
+        u32NextValue = *timer_param_l->wkt_val_lsb_reg;
+    }
+    /* Now wait a stable value */
+    while (equalFound < 5)
+    {
+        u32NextValue = *timer_param_l->wkt_val_lsb_reg;
+        if (u32NextValue == u32CurrentValue)
+        {
+            equalFound++;
+        }
+        u32CurrentValue = u32NextValue;
+    }
+    return u32CurrentValue;
 }
 
 /*!
@@ -278,8 +322,22 @@ uint32_t WTIMER_ReadTimerSafe(WTIMER_timer_id_t timer_id)
 uint32_t WTIMER_ReadTimer(WTIMER_timer_id_t timer_id)
 {
     const timer_param_t *timer_param_l = &timer_param[timer_id];
-    volatile uint32_t u32CurrentCount  = *timer_param_l->wkt_val_lsb_reg;
+    volatile uint32_t u32CurrentCount;
+    uint32_t u32PrevCount = 0;
+    int loopcnt = 0;
+    do {
+    	 u32CurrentCount = *timer_param_l->wkt_val_lsb_reg;
+    	 /* the counter is counting down, previous value might be greater than current value by 1
+    	  * in which case it is 'expected'. Otherwise restart stabilization count.
+    	  * */
+    	 if ((u32PrevCount - u32CurrentCount) > 1)
+    	 {
+    		 loopcnt = 0;
+    		 u32PrevCount = u32CurrentCount;
+    	 }
+    	 loopcnt++;
 
+    } while (loopcnt < 5);
     return u32CurrentCount;
 }
 
@@ -296,8 +354,39 @@ void WTIMER_ClearStatusFlags(WTIMER_timer_id_t timer_id)
     /* clear expiration flag */
     SYSCON->WKT_STAT = timer_param_l->wkt_stat_timeout_mask;
 
+
     /* clear interrupt if pending */
     NVIC_ClearPendingIRQ((IRQn_Type)timer_param_l->wkt_irq_id);
+}
+
+
+static void WTIMER_StopTimerFunction(WTIMER_timer_id_t timer_id, bool fast)
+{
+    const timer_param_t *timer_param_l = &timer_param[timer_id];
+
+    /* Stop timer */
+    SYSCON->WKT_CTRL &= ~(timer_param_l->wkt_ctrl_ena_mask);
+
+    if (!fast)
+    {
+        /* make sure the timer is really stopped */
+        while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == timer_param_l->wkt_stat_running_mask)
+        {
+            __asm volatile("nop");
+        }
+    }
+
+    WTIMER_ClearStatusFlags(timer_id);
+}
+
+/*!
+ * brief Stops the Timer counter without waiting for the WKT_STAT register to be loaded
+ *
+ * param timer_id   Wtimer Id
+ */
+void WTIMER_StopTimerUnsafe(WTIMER_timer_id_t timer_id)
+{
+    WTIMER_StopTimerFunction(timer_id, true);
 }
 
 /*!
@@ -307,18 +396,7 @@ void WTIMER_ClearStatusFlags(WTIMER_timer_id_t timer_id)
  */
 void WTIMER_StopTimer(WTIMER_timer_id_t timer_id)
 {
-    const timer_param_t *timer_param_l = &timer_param[timer_id];
-
-    /* Stop timer */
-    SYSCON->WKT_CTRL &= ~(timer_param_l->wkt_ctrl_ena_mask);
-
-    /* make sure the timer is really stopped */
-    while ((SYSCON->WKT_STAT & (timer_param_l->wkt_stat_running_mask)) == timer_param_l->wkt_stat_running_mask)
-    {
-        __asm volatile("nop");
-    }
-
-    WTIMER_ClearStatusFlags(timer_id);
+    WTIMER_StopTimerFunction(timer_id, false);
 }
 
 /*!

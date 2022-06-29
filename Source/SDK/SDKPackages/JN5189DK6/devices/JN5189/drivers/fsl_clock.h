@@ -595,6 +595,21 @@ void CLOCK_SetXtal32M_LDO(void);
  */
 void CLOCK_Xtal32M_WaitUntilStable(uint32_t u32AdditionalWait_us);
 
+/**
+ * @brief  Waits until number of microseconds elapses.
+ * @param   usec:     number of microseconds to wait
+ * @param   cpu_freq: CPU clock frequency in MHz. Varies when frequency scaling is used.
+ * @return  none
+ * @note    Operates as a tight loop. CLOCK_uDelay is not suitable at slow frequencies.
+ */
+void DelayUsecMHz(uint32_t usec, uint32_t cpu_freq);
+
+/**
+ * @brief  Waits until number of loops.
+ * @param   number of loops calculated with assumption that each loop is 4 cycles
+ */
+void DelayLoopN(uint32_t loop);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */

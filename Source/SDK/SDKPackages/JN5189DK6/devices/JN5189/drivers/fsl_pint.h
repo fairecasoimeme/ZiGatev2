@@ -559,6 +559,19 @@ void PINT_Deinit(PINT_Type *base);
 void PINT_EnableCallbackByIndex(PINT_Type *base, pint_pin_int_t pintIdx);
 
 /*!
+ * @brief	enable callback by pin index.
+
+ * This function  enables callback by pin index instead of enabling all pins.
+ *
+ * @param base Base address of the peripheral.
+ * @param pinIdx pin index.
+ * @param priority interrupt priority
+ *
+ * @retval None.
+ */
+void PINT_EnableCallbackByIndexAndPriority(PINT_Type *base, pint_pin_int_t pintIdx, uint32_t priority);
+
+/*!
  * @brief disable callback by pin index.
 
  * This function disables callback by pin index instead of disabling all pins.

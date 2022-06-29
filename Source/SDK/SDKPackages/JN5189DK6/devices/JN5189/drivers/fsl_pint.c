@@ -462,6 +462,25 @@ void PINT_EnableCallbackByIndex(PINT_Type *base, pint_pin_int_t pintIdx)
     NVIC_ClearPendingIRQ(s_pintIRQ[pintIdx]);
     PINT_PinInterruptClrStatus(base, (pint_pin_int_t)pintIdx);
     (void)EnableIRQ(s_pintIRQ[pintIdx]);
+
+}
+
+/*!
+ * brief	enable callback by pin index.
+
+ * This function  enables callback by pin index instead of enabling all pins.
+ * + set the interrupt priority by the given priority value
+ * param base Base address of the peripheral.
+ * param pinIdx pin index.
+ * param priority
+ *
+ * retval None.
+ */
+void PINT_EnableCallbackByIndexAndPriority(PINT_Type *base, pint_pin_int_t pintIdx, uint32_t priority)
+{
+    PINT_EnableCallbackByIndex(base, pintIdx);
+    NVIC_SetPriority(s_pintIRQ[pintIdx], priority);
+
 }
 
 /*!

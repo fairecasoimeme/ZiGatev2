@@ -141,6 +141,19 @@ void WTIMER_ClearStatusFlags(WTIMER_timer_id_t timer_id);
 void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count);
 
 /*!
+ * brief Starts the Timer counter without waiting for the WKT_STAT register to be loaded.
+ *
+ * The function performs:
+ * -stop the timer if running, clear the status and interrupt flag if set (WTIMER_ClearStatusFlags())
+ * -set the counter value
+ * -start the timer
+ *
+ * param timer_id   Wtimer Id
+ * param count      number of 32KHz clock periods before expiration
+ */
+void WTIMER_StartTimerUnsafe(WTIMER_timer_id_t timer_id, uint32_t count);
+
+/*!
  * brief Starts the Timer counter.
  * The function performs:
  * -stop the timer if running, clear the status and interrupt flag if set (WTIMER_ClearStatusFlags())
@@ -161,7 +174,12 @@ void WTIMER_StartTimer(WTIMER_timer_id_t timer_id, uint32_t count);
  */
 void WTIMER_StopTimer(WTIMER_timer_id_t timer_id);
 
-
+/*!
+ * brief Stops the Timer counter without waiting for the WKT_STAT register to be loaded
+ *
+ * param timer_id   Wtimer Id
+ */
+void WTIMER_StopTimerUnsafe(WTIMER_timer_id_t timer_id);
 
 /*!
  * @brief Read the LSB counter of the wake timer
