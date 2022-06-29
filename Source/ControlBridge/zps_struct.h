@@ -386,7 +386,14 @@ struct pdum_tsAPdu_tag {
 };
 
 
+/*** CUSTOM Struct ***********************************************/
 
+typedef struct {
+	uint16 u16ShortAddr;
+	uint64 u64IEEEAddr;
+	uint8 u8LinkQuality;
+	uint8 u8Type;
 
+} ZPS_NwkDevice;
 
 #endif /* ZPS_STRUCT_H_ */
