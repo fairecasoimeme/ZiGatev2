@@ -1,5 +1,7 @@
 # ZiGatev2
 
+⚠️ **For more security, please [clone your actual ZiGate+](https://zigate.fr/documentation/cloner-la-zigate-pizigate/) before update** 
+
 ## Changelog
 
 ### Version 3.A0
