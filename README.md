@@ -2,6 +2,25 @@
 
 ## Changelog
 
+### Version 3.A0
+
+* Increase PDM capacity
+* Add more complete devices List
+   - Add new structure (to enhance devices list)
+* Add new API
+   - Add Binding Table API (0x0052 command)
+   - Add Routing Table API (0x0053 command)
+   - Add Get Network key API (0x0054 command)
+* Force route and lqi request to be more responsive
+* Fix datatype for reportable change
+* Fix zone enroll bug
+* Fix Extended debug
+* Backtrack with previous functions (v3.22) (about API and automatic repair - no longer useful)
+* Update new SDK 2.6.10
+	- Improve PDM mechanism, stability and fix PDM errors
+	- Improve OTA mechanism and support
+	- Improve Zigbee compliant
+
 ### Version 3.22
 
 * Add child table size function. Command 0x0052
