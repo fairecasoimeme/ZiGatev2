@@ -51,7 +51,7 @@ void BOARD_InitClocks(void)
     CLOCK_EnableClock(kCLOCK_Xtal32M);
 
     /* 32KHz clock */
-    #if (gClkUseUseFro32K == 1)
+    #if (gClkUseFro32K == 1)
     CLOCK_EnableClock(kCLOCK_Fro32k);      // isnt' strictly required but put for clarity
     #else
     CLOCK_EnableClock(kCLOCK_Xtal32k);

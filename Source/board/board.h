@@ -150,13 +150,13 @@ extern int32_t CLOCK_ai32MXtalIecLoadPfVsTemp_x1000[HW_32M_LOAD_VS_TEMP_SIZE];
            are just for example */
 
 /* Temperature related to element 0 of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_MIN (-20)
+#define HW_32k_LOAD_VS_TEMP_MIN (-40)
 
 /* Temperature related to final element of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_MAX (100)
+#define HW_32k_LOAD_VS_TEMP_MAX (130)
 
 /* Temperature step between elements of CLOCK_ai32kXtalIecLoadPfVsTemp_x1000 */
-#define HW_32k_LOAD_VS_TEMP_STEP (20)
+#define HW_32k_LOAD_VS_TEMP_STEP (5)
 
 #define HW_32k_LOAD_VS_TEMP_SIZE ((HW_32k_LOAD_VS_TEMP_MAX - HW_32k_LOAD_VS_TEMP_MIN) / HW_32k_LOAD_VS_TEMP_STEP + 1U)
 
