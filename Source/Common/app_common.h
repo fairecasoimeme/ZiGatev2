@@ -73,10 +73,21 @@
     ( ( uint64 ) ( BUFFER )[ i + 6 ]  << 8) |\
     ( ( uint64 ) ( BUFFER )[ i + 7 ] & 0xFF))\
 
+#define ZNC_RTN_U48( BUFFER, i ) ( ( ( uint64 ) ( BUFFER )[ i ] << 40) |\
+    ( ( uint64 ) ( BUFFER )[ i + 1 ]  << 32) |\
+    ( ( uint64 ) ( BUFFER )[ i + 2 ]  << 24) |\
+    ( ( uint64 ) ( BUFFER )[ i + 3 ]  << 16) |\
+    ( ( uint64 ) ( BUFFER )[ i + 4 ]  << 8) |\
+    ( ( uint64 ) ( BUFFER )[ i + 5 ] & 0xFF))\
+
 #define ZNC_RTN_U32( BUFFER, i ) ( ( ( uint32 ) ( BUFFER )[ i ] << 24) |\
     ( ( uint32 ) ( BUFFER )[ i + 1 ]  << 16) |\
     ( ( uint32 ) ( BUFFER )[ i + 2 ]  << 8) |\
     ( ( uint32 ) ( BUFFER )[ i + 3 ] & 0xFF))\
+
+#define ZNC_RTN_U24( BUFFER, i ) ( ( ( uint32 ) ( BUFFER )[ i ] << 16) |\
+    ( ( uint32 ) ( BUFFER )[ i + 1 ]  << 8) |\
+    ( ( uint32 ) ( BUFFER )[ i + 2 ] & 0xFF))\
 
 #define ZNC_RTN_U16( BUFFER, i ) ( ( ( uint16 ) (BUFFER)[ i ] << 8) |\
     ( ( uint16 ) (BUFFER)[ i + 1 ] & 0xFF))\
@@ -95,12 +106,24 @@
     ( *(uint8*) ( ( BUFFER ) + 7) = (uint8) ( ( ( ( uint64 ) ( U64VALUE ) ) & 0xFF ) ) ),\
     ( ( LEN ) += sizeof( uint64 ) ) )
 
+#define ZNC_BUF_U48_UPD( BUFFER, U48VALUE, LEN )     ( ( *( uint8* )( BUFFER )   =  ( uint8 ) ( ( ( ( uint64 ) ( U48VALUE ) ) >> 40 ) & 0xFF ) ),\
+    ( *(uint8*) ( ( BUFFER ) + 1) = (uint8) ( ( ( ( uint64 ) ( U48VALUE ) ) >> 32) & 0xFF ) ),\
+    ( *(uint8*) ( ( BUFFER ) + 2) = (uint8) ( ( ( ( uint64 ) ( U48VALUE ) ) >> 24) & 0xFF ) ),\
+	( *(uint8*) ( ( BUFFER ) + 3) = (uint8) ( ( ( ( uint64 ) ( U48VALUE ) ) >> 16 ) & 0xFF ) ),\
+    ( *(uint8*) ( ( BUFFER ) + 4) = (uint8) ( ( ( ( uint64 ) ( U48VALUE ) ) >> 8 ) & 0xFF ) ),\
+    ( *(uint8*) ( ( BUFFER ) + 5) = (uint8) ( ( ( ( uint64 ) ( U48VALUE ) ) & 0xFF ) ) ) ,\
+    ( ( LEN ) += sizeof ( uint32 ) + sizeof  (uint16 ) ) )
+
 #define ZNC_BUF_U32_UPD( BUFFER, U32VALUE, LEN )     ( ( *( uint8* )( BUFFER )   =  ( uint8 ) ( ( ( ( uint32 ) ( U32VALUE ) ) >> 24 ) & 0xFF ) ),\
     ( *( uint8* )( ( BUFFER ) + 1) =  ( uint8 ) ( ( ( ( uint32 ) ( U32VALUE ) ) >> 16 ) & 0xFF ) ),\
     ( *( uint8* )( ( BUFFER ) + 2) =  ( uint8 ) ( ( ( ( uint32 ) ( U32VALUE ) ) >> 8 ) & 0xFF ) ),\
     ( *( uint8* )( ( BUFFER ) + 3) =  ( uint8 ) ( ( ( ( uint32 ) ( U32VALUE ) ) & 0xFF ) ) ) ,\
     ( ( LEN ) += sizeof ( uint32 ) ) )
 
+#define ZNC_BUF_U24_UPD( BUFFER, U24VALUE, LEN )     ( ( *( uint8* )( BUFFER )   =  ( uint8 )  ( ( ( ( uint32)( U24VALUE ) ) >> 16 ) & 0xFF ) ),\
+	( *( uint8* )( ( BUFFER ) + 1) =  ( uint8 ) ( ( ( ( uint32 ) ( U24VALUE ) ) >> 8 ) & 0xFF ) ),\
+    ( *( uint8* )( ( BUFFER ) + 2) =  ( uint8 ) ( ( ( ( uint32 ) ( U24VALUE ) ) ) & 0xFF ) ) ,\
+    ( ( LEN ) += sizeof( uint16 ) + sizeof( uint8 ) ) )
 
 #define ZNC_BUF_U16_UPD( BUFFER, U16VALUE, LEN )     ( ( *( uint8* )( BUFFER )   =  ( uint8 )  ( ( ( ( uint16)( U16VALUE ) ) >> 8 ) & 0xFF ) ),\
     ( *( uint8* ) ( ( BUFFER ) + 1 )  =  ( uint8 )  ( ( ( ( uint16 )( U16VALUE ) ) ) & 0xFF ) ) ,\
@@ -111,8 +134,15 @@
 #define ZNC_RTN_U16_OFFSET(BUFFER, i, OFFSET )   ( ZNC_RTN_U16 (BUFFER, i) );\
 ( ( OFFSET ) += sizeof (uint16) )
 
+#define ZNC_RTN_U24_OFFSET(BUFFER, i, OFFSET )   ( ZNC_RTN_U24 (BUFFER, i) );\
+( ( OFFSET ) += sizeof (uint16) + sizeof (uint8) )
+
 #define ZNC_RTN_U32_OFFSET(BUFFER, i, OFFSET )   (  ZNC_RTN_U32 (BUFFER, i) );\
 ( ( OFFSET ) += sizeof (uint32) )
+
+#define ZNC_RTN_U48_OFFSET(BUFFER, i, OFFSET )   (  ZNC_RTN_U48 (BUFFER, i) );\
+( ( OFFSET ) += sizeof (uint32) + sizeof (uint16))
+
 
 #define ZNC_RTN_U64_OFFSET(BUFFER, i, OFFSET )  (  ZNC_RTN_U64 (BUFFER, i) );\
 ( ( OFFSET ) += sizeof (uint64) )

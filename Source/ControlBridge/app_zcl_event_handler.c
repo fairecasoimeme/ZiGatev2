@@ -76,6 +76,7 @@
 #include "SerialLink.h"
 
 #include "zps_struct.h"
+#include "app_Znc_cmds.h"
 
 #ifdef STACK_MEASURE
 #include "StackMeasure.h"
@@ -130,7 +131,8 @@ void vAPP_ZCL_DeviceSpecific_Init ( void );
 /****************************************************************************/
 /***        Exported Variables                                            ***/
 /****************************************************************************/
-
+extern ZPS_NwkDevice tmpNtActv[200];
+extern uint8	u8SizeTmpNtActv;
 /****************************************************************************/
 /***        Local Variables                                               ***/
 /****************************************************************************/
@@ -229,12 +231,6 @@ void APP_vHandleZclEvents ( ZPS_tsAfEvent*    psStackEvent )
      * the event on to ZCL
      */
     vLog_Printf ( TRACE_ZCL,LOG_DEBUG, "ZCL_Task got event %d\r\n",psStackEvent->eType );
-
-
-
-
-
-
 
     if ( ZTIMER_eGetState( u8TickTimer ) ==  E_ZTIMER_STATE_EXPIRED )
     {
@@ -453,11 +449,6 @@ PRIVATE void APP_ZCL_cbEndpointCallback ( tsZCL_CallBackEvent*    psEvent )
     uint8     				u8LinkQuality;
     u8LinkQuality=psEvent->pZPSevent->uEvent.sApsDataIndEvent.u8LinkQuality;
 
-
-    //ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [0],         psEvent->pZPSevent->uEvent.sApsZgpDataIndEvent.u8Rssi,             u16Length );
-   // ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsInterPanDataIndEvent.u8LinkQuality, u16Length );
-    //ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length], psEvent->pZPSevent->uEvent.sApsDataIndEvent.u8LinkQuality,         u16Length );
-    //vSL_WriteMessage ( 0x9999, u16Length,au8LinkTxBuffer,u8LinkQuality);
     u16Length =  0;
 
     if (sZllState.u8RawMode == RAW_MODE_ON){
@@ -738,13 +729,73 @@ PRIVATE void APP_ZCL_cbEndpointCallback ( tsZCL_CallBackEvent*    psEvent )
             ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],
                               psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.u16AttributeEnum,
                               u16Length );
+
+            ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],
+                                          psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.u16MinimumReportingInterval,
+                                          u16Length );
+
             ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],
                               psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.u16MaximumReportingInterval,
                               u16Length );
 
-            ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],
-                              psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.u16MinimumReportingInterval,
-                              u16Length );
+
+            // FRED reportable change.
+            if( psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.eAttributeDataType >= E_ZCL_UINT8 &&
+            		psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.eAttributeDataType <= E_ZCL_INT64 )
+			{
+				switch ( psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.eAttributeDataType )
+				{
+				case E_ZCL_UINT8:
+				case E_ZCL_INT8:
+					 ZNC_BUF_U8_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint8ReportableChange,
+									  u16Length );
+					break;
+				case E_ZCL_UINT16:
+				case E_ZCL_INT16:
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint16ReportableChange,
+									  u16Length );
+					break;
+				case E_ZCL_UINT24:
+				case E_ZCL_INT24:
+					ZNC_BUF_U24_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint24ReportableChange,
+									  u16Length );
+					break;
+				case E_ZCL_UINT32:
+				case E_ZCL_INT32:
+					ZNC_BUF_U32_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint32ReportableChange,
+									  u16Length );
+
+					break;
+				case E_ZCL_UINT40:
+				case E_ZCL_INT40:
+				case E_ZCL_UINT48:
+				case E_ZCL_INT48:
+					ZNC_BUF_U48_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint48ReportableChange,
+									  u16Length );
+					break;
+				case E_ZCL_UINT56:
+				case E_ZCL_INT56:
+				case E_ZCL_UINT64:
+				case E_ZCL_INT64:
+					ZNC_BUF_U64_UPD ( &au8LinkTxBuffer [u16Length],
+									  psEvent->uMessage.sAttributeReportingConfigurationResponse.sAttributeReportingConfigurationRecord.uAttributeReportableChange.zuint64ReportableChange,
+									  u16Length );
+					break;
+				default:
+					break;
+				}
+			}
+			else
+			{
+				/* WARNING : We should not be sent anything from the higher layer as there should be no reportable change field
+				 * If we do get something for this record it's an error and the rest of the records will be all wrong.
+				 *  */
+			}
 
             vSL_WriteMessage ( E_SL_MSG_READ_REPORT_CONFIG_RESPONSE,
                                u16Length,
