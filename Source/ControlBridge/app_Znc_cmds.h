@@ -65,6 +65,16 @@ PUBLIC void vSendStatus ( uint8          u8Status,
                           const char*    pcMessage );
 
 PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte );
+
+PUBLIC uint8 APP_GetIndexDevice(uint64 IEEEAddr);
+PUBLIC bool APP_ExistDevice(uint64 IEEEAddr);
+PUBLIC ZPS_teStatus APP_eZdpMgmtLqiRequest ( uint16    u16Addr,
+                                              uint8     u8StartIndex,
+                                              uint8     *pu8Seq);
+
+PUBLIC ZPS_teStatus APP_eZdpMgmtRtgRequest ( uint16    u16Addr,
+                                              uint8     u8StartIndex,
+                                              uint8     *pu8Seq);
 /****************************************************************************/
 /***        External Variables                                            ***/
 /****************************************************************************/

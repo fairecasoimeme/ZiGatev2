@@ -122,6 +122,8 @@ PRIVATE bool_t    bAddrMode;
 #endif
 extern tsLedState    s_sLedState;
 extern uint8         u8JoinedDevice;
+extern ZPS_NwkDevice tmpNtActv[200];
+extern uint8	u8SizeTmpNtActv;
 
 /****************************************************************************/
 /***        Exported Public Functions                                     ***/
@@ -581,9 +583,6 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
     uint8                    u8LinkQuality;
 
     u8LinkQuality=psStackEvent->uEvent.sApsDataIndEvent.u8LinkQuality;
-
-
-
     vLog_Printf ( TRACE_APP,LOG_DEBUG, "Got stack event %d\n", psStackEvent->eType);
 
     switch (psStackEvent->eType)
@@ -908,7 +907,32 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
                                            u8LinkQuality );
                     }
                     break;
+                    case ZPS_ZDP_MGMT_RTG_RSP_CLUSTER_ID:
+                    {
+                    	uint8    u8Values;
+                    	if( sApsZdpEvent.uZdpData.sRtgRsp.u8Status == ZPS_E_SUCCESS )
+                    	{
+                    		 for ( u8Values = 0; u8Values < sApsZdpEvent.uZdpData.sRtgRsp.u8RoutingTableEntries; u8Values++ )
+                    		 {
+                    			 if  (sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr!=0x0000)
+								 {
+									 if (APP_ExistDevice(ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr)))
+									 {
+										uint8 tmp = APP_GetIndexDevice(ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr));
+										tmpNtActv[tmp].u16ShortAddr=sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr;
+										tmpNtActv[tmp].u8Type =1;
 
+									 }else{
+										tmpNtActv[u8SizeTmpNtActv].u64IEEEAddr = ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr);
+										tmpNtActv[u8SizeTmpNtActv].u16ShortAddr = sApsZdpEvent.uZdpData.sRtgRsp.asRoutingTableList[u8Values].u16NwkNxtHopAddr;
+										tmpNtActv[u8SizeTmpNtActv].u8Type = 1;
+										u8SizeTmpNtActv++;
+									 }
+								 }
+                    		 }
+                    	}
+                    }
+                    break;
                     case ZPS_ZDP_MGMT_LQI_RSP_CLUSTER_ID:
                     {
                         uint8    u8Values;
@@ -921,6 +945,32 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
                         {
                             for ( u8Values = 0; u8Values < sApsZdpEvent.uZdpData.sMgmtLqiRsp.u8NeighborTableListCount; u8Values++ )
                             {
+                            	if  (sApsZdpEvent.uLists.asNtList[u8Values].u16NwkAddr!=0x0000)
+                            	{
+									if (APP_ExistDevice(sApsZdpEvent.uLists.asNtList[u8Values].u64ExtendedAddress))
+									{
+										uint8 tmp = APP_GetIndexDevice(sApsZdpEvent.uLists.asNtList[u8Values].u64ExtendedAddress);
+										tmpNtActv[tmp].u16ShortAddr=sApsZdpEvent.uLists.asNtList[u8Values].u16NwkAddr;
+										tmpNtActv[tmp].u8LinkQuality=sApsZdpEvent.uLists.asNtList[u8Values].u8LinkQuality;
+										if (sApsZdpEvent.uLists.asNtList[u8Values].uAncAttrs.u2DeviceType == 1)
+										{
+											tmpNtActv[tmp].u8Type = sApsZdpEvent.uLists.asNtList[u8Values].uAncAttrs.u2DeviceType;
+										}else{
+											tmpNtActv[tmp].u8Type = 0;
+										}
+									}else{
+										tmpNtActv[u8SizeTmpNtActv].u64IEEEAddr = sApsZdpEvent.uLists.asNtList[u8Values].u64ExtendedAddress;
+										tmpNtActv[u8SizeTmpNtActv].u16ShortAddr = sApsZdpEvent.uLists.asNtList[u8Values].u16NwkAddr;
+										tmpNtActv[u8SizeTmpNtActv].u8LinkQuality = sApsZdpEvent.uLists.asNtList[u8Values].u8LinkQuality;
+										if (sApsZdpEvent.uLists.asNtList[u8Values].uAncAttrs.u2DeviceType == 1)
+										{
+											tmpNtActv[u8SizeTmpNtActv].u8Type = sApsZdpEvent.uLists.asNtList[u8Values].uAncAttrs.u2DeviceType;
+										}else{
+											tmpNtActv[u8SizeTmpNtActv].u8Type = 0;
+										}
+										u8SizeTmpNtActv++;
+									}
+                            	}
                                 ZNC_BUF_U16_UPD  ( &au8LinkTxBuffer [u16Length] , sApsZdpEvent.uLists.asNtList[u8Values].u16NwkAddr,            u16Length );
                                 ZNC_BUF_U64_UPD  ( &au8LinkTxBuffer [u16Length] , sApsZdpEvent.uLists.asNtList[u8Values].u64ExtPanId,           u16Length );
                                 ZNC_BUF_U64_UPD  ( &au8LinkTxBuffer [u16Length] , sApsZdpEvent.uLists.asNtList[u8Values].u64ExtendedAddress,    u16Length );
@@ -1567,6 +1617,7 @@ PUBLIC void Znc_vSendDataIndicationToHost ( ZPS_tsAfEvent*    psStackEvent,
     uint8     u8Size    =  PDUM_u16APduInstanceGetPayloadSize( psStackEvent->uEvent.sApsDataIndEvent.hAPduInst);
     uint8     u8LinkQuality;
     u8LinkQuality=psStackEvent->uEvent.sApsDataIndEvent.u8LinkQuality;
+
     ZNC_BUF_U8_UPD  ( &pau8LinkTxBuffer[u16Length] ,
                       psStackEvent->uEvent.sApsDataIndEvent.eStatus,
                       u16Length );

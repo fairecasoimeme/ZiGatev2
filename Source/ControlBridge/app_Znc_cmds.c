@@ -104,11 +104,16 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x00050322
+#define VERSION    0x000503A0
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
 /****************************************************************************/
+
+ZPS_NwkDevice tmpNtActv[200];
+uint8	u8SizeTmpNtActv=0;
+
+
 
 /****************************************************************************/
 /***    Local Function Prototypes                     ***/
@@ -191,7 +196,7 @@ PRIVATE ZPS_teStatus APP_eZdpComplexDescReq ( uint16    u16Addr,
 
 PRIVATE bool APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50]);
 
-PRIVATE void APP_MigratePDM( void );
+//PRIVATE void APP_MigratePDM( void );
 
 #ifdef FULL_FUNC_DEVICE
 
@@ -202,9 +207,7 @@ PRIVATE void APP_vControlNodeScanStart ( void );
 PRIVATE void APP_vControlNodeStartNetwork ( void );
 
 
-PRIVATE ZPS_teStatus APP_eZdpMgmtLqiRequest ( uint16    u16Addr,
-                                              uint8     u8StartIndex,
-                                              uint8     *pu8Seq);
+
 
 PRIVATE teZCL_Status APP_eZclDiscoverAttributes ( bool             bIsExtReq,
                                                   uint8            u8SourceEndPointId,
@@ -266,6 +269,8 @@ PRIVATE void APP_vUpdateReportableChange( tuZCL_AttributeReportable *puAttribute
                                           teZCL_ZCLAttributeType    eAttributeDataType,
                                           uint8                     *pu8Buffer,
                                           uint8                     *pu8Offset );
+
+
 /****************************************************************************/
 /***    Exported Variables                        ***/
 /****************************************************************************/
@@ -284,6 +289,9 @@ uint64             u64CallbackMacAddress =  0;
 bool_t             bProcessMessages      =  TRUE;
 bool_t             bBlackListEnable      =  FALSE;
 ZPS_TclkDescriptorEntry    asTclkStruct[ZNC_MAX_TCLK_DEVICES];
+uint8 u8SizeTmpNtActv;
+
+
 
 
 PUBLIC uint32 u32Channel;
@@ -294,6 +302,8 @@ extern bool_t                         bSetTclkFlashFeature ;
 extern uint8_t                        bLedActivate;
 extern bool_t						  bPowerCEFCC;
 extern bool_t 						  bCtrlFlow;
+
+
 extern PUBLIC bool_t zps_bGetFlashCredential ( uint64            u64IeeeAddr ,
                                                AESSW_Block_u*    puKey,
                                                uint16            *pu16Index,
@@ -321,6 +331,8 @@ PUBLIC  teZCL_Status  APP_eSendWriteAttributesRequest ( uint8            u8Sourc
                                                         uint16           u16SizePayload,
                                                         uint8            u8CommandId,
                                                         uint8            *pu8SeqApsNum);
+
+
 
 /****************************************************************************/
 /***    Implementation                          */
@@ -580,7 +592,8 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                                    u8Length,
                                    au8values,
                                    0 );
-                uint8 i = 0;
+                uint16 i = 0;
+                uint16 j = 0;
 
                 ZPS_tsNwkNib * thisNib;
 
@@ -591,29 +604,70 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 uint8                  au8LinkTxBuffer[1024];
 
 
-
                 for( i = 0; i < thisNib->sTblSize.u16NtActv; i++)
-                {
-                    if (thisNib->sTbl.psNtActv[i].u16NwkAddr < 0xfffe )
-                    {
-                        ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], i,     u16Length );
-                        ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].u16NwkAddr,                                   u16Length );
-                        ZNC_BUF_U64_UPD ( &au8LinkTxBuffer [ u16Length ], ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.psNtActv[i].u16Lookup),    u16Length );
-                        ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1PowerSource,     u16Length );
-                        ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].u8LinkQuality,     u16Length );
+				{
+					if (thisNib->sTbl.psNtActv[i].u16NwkAddr < 0xfffe )
+					{
+						if (!APP_ExistDevice(ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.psNtActv[i].u16Lookup)))
+						{
+							ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], j,     u16Length );
+							ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].u16NwkAddr,                                   u16Length );
+							ZNC_BUF_U64_UPD ( &au8LinkTxBuffer [ u16Length ], ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.psNtActv[i].u16Lookup),    u16Length );
+							ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].uAncAttrs.bfBitfields.u1PowerSource,     u16Length );
+							ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.psNtActv[i].u8LinkQuality,     u16Length );
+							j++;
+						}
 
-                    }
+					}
+				}
+
+
+                for( i=0;i<u8SizeTmpNtActv;i++)
+                {
+                	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], j,     u16Length );
+					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[i].u16ShortAddr,                  u16Length );
+					ZNC_BUF_U64_UPD ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[i].u64IEEEAddr,    u16Length );
+					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[i].u8Type,     u16Length );
+					ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[i].u8LinkQuality,     u16Length );
+					j++;
                 }
+
+                for( i=0;i<thisNib->sTblSize.u16AddrMap;i++)
+				{
+					if (thisNib->sTbl.pu16AddrMapNwk[i] < 0xfffe)
+					{
+						if (!APP_ExistDevice(ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.pu16AddrLookup[i])))
+						{
+							ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], j,     u16Length );
+							ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ], thisNib->sTbl.pu16AddrMapNwk[i],                                   u16Length );
+							ZNC_BUF_U64_UPD ( &au8LinkTxBuffer [ u16Length ], ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.pu16AddrLookup[i]),    u16Length );
+							if (APP_ExistDevice(thisNib->sTbl.pu16AddrMapNwk[i] ))
+							{
+								uint8 tmp= APP_GetIndexDevice(ZPS_u64NwkNibGetMappedIeeeAddr(ZPS_pvAplZdoGetNwkHandle(),thisNib->sTbl.pu16AddrLookup[i]));
+								ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[tmp].u8Type,     u16Length );
+								ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[tmp].u8LinkQuality,     u16Length );
+							}else{
+								ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], 2,     u16Length );
+								ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], 0,     u16Length );
+							}
+							j++;
+						}
+					}
+				}
+
+
 
                 vSL_WriteMessage ( E_SL_MSG_GET_DISPLAY_ADDRESS_MAP_TABLE_LIST,
                                                    u16Length,
                                                    au8LinkTxBuffer,
                                                    0);
 
+
+
+
                 return;
             }
             break;
-
             case (E_SL_MSG_SET_DEVICETYPE):
             {
 
@@ -656,9 +710,43 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 u8Status = APP_eZdpLeaveReq ( uAddress, u8RemoveChildren, bRejoin );
             }
             break;
-            case E_SL_MSG_PDM_CHILD_SIZE:
+            case E_SL_MSG_PDM_GET_BINDING_TABLE:
 			{
-				uint16  u16DataBytesRead;
+
+				uint32   j = 0;
+				uint64 u64Addr;
+				uint16 u16Length =  0;
+				uint8  au8LinkRxBuffer[10];
+
+				ZPS_tsAplAib * tsAplAib  = ZPS_psAplAibGetAib();
+				ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].u32SizeOfBindingTable,      u16Length );
+
+				for( j = 0 ; j < tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].u32SizeOfBindingTable ; j++ )
+				{
+					ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DstAddrMode,      u16Length );
+					if (tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DstAddrMode == ZPS_E_ADDR_MODE_GROUP)
+					{
+						// Group
+						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved,      u16Length );
+						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8SourceEndpoint,      u16Length );
+						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint,      u16Length );
+						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16ClusterId,      u16Length );
+					}
+					else
+					{
+						u64Addr = ZPS_u64NwkNibGetMappedIeeeAddr( ZPS_pvAplZdoGetNwkHandle(), tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved);
+						ZNC_BUF_U64_UPD   ( &au8LinkRxBuffer [u16Length ], u64Addr,      u16Length );
+						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8SourceEndpoint,      u16Length );
+						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint,      u16Length );
+						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16ClusterId,      u16Length );					}
+				}
+
+				vSL_WriteMessage ( E_SL_MSG_PDM_GET_BINDING_TABLE_LIST,
+																		   u16Length,
+																		   au8LinkRxBuffer,
+																	   0 );
+
+				/*uint16  u16DataBytesRead;
 				uint8 counter=0;
 				uint8 j=0;
 				uint8 au8LinkRxBuffer[250];
@@ -676,235 +764,86 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 					}
 				}
 				ZNC_BUF_U8_UPD  ( &au8LinkRxBuffer [ u16Length ], counter,     u16Length );
-				vSL_WriteMessage ( E_SL_MSG_PDM_CHILD_SIZE_RESPONSE,
+				vSL_WriteMessage ( E_SL_MSG_PDM_GET_BINDING_TABLE_list,
 																		   u16Length,
 																		   au8LinkRxBuffer,
 																	   0 );
+				*/
+				//vDisplayDiscNT();
+				//vDisplayNWKKey();
+				//vDisplayRoutingTable();
+				//vDisplayNT();
+				//vDisplayDiscNT();
+				//vDisplayTableSizes();
+				//vDisplayRoutingTable();
+				//vDisplayRouteRecordTable();
 			}
 			break;
-
-            case E_SL_MSG_REMOVE_PDM_INTERNAL_ADDRESS_MAP_TABLE:
-			{
-
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
-				PDM_vDeleteDataRecord(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE);
-				//vDisplayNWKKey();
-				//vDisplayAddressMapTable();
-				//vDisplayAPSTable();
-				//vDisplayNWKTransmitTable();
-				//APP_MigratePDM();
-
-				/*uint16 addr;
-				addr = ZNC_RTN_U16 (au8LinkRxBuffer, 0 ) ;
-				vDisplayRoutingTable();
-				bInRoutingTable(addr);*/
-
-				/*ZPS_tuAddress    uAddress;
-				uint8 i;
-				uint16                 u16Length =  0;
-
-				uAddress.u16Addr     =  ZNC_RTN_U16 (au8LinkRxBuffer, 0 ) ;
-
-				void *pvNwk = ZPS_pvAplZdoGetNwkHandle();
-
-				ZPS_tsNwkNib * thisNib;
-				thisNib = ZPS_psNwkNibGetHandle(pvNwk);
-
-				for( i = 0 ; i < thisNib->sTblSize.u16NtActv ; i++ )
-				{
-					if (thisNib->sTbl.psNtActv[i].u16NwkAddr == uAddress.u16Addr)
-					{
-						break;
-					}
-
-				}
-
-				ZNC_BUF_U16_UPD ( &au8LinkRxBuffer [ u16Length ], uAddress.u16Addr,                                   u16Length );
-
-
-				if (i < (thisNib->sTblSize.u16NtActv-1))
-				{
-					//device found
-					//ZPS_bAplZdoTrustCenterRemoveDevice(uAddress.u64Addr);
-					ZPS_vNtSetUsedStatus(pvNwk, &thisNib->sTbl.psNtActv[i], FALSE);
-					ZPS_vNwkSaveNt(pvNwk);
-					ZNC_BUF_U8_UPD  ( &au8LinkRxBuffer [ u16Length ], 0,     u16Length );
-
-				}else{
-					//not found
-					ZNC_BUF_U8_UPD  ( &au8LinkRxBuffer [ u16Length ], 1,     u16Length );
-				}
-
-				vSL_WriteMessage ( E_SL_MSG_REMOVE_DEVICE_NT_RESPONSE,
-																			   u16Length,
-																			   au8LinkRxBuffer,
-															   0 );*/
-
-				/*uint16            u16DataBytesRead;
-				uint8 i=0;
-				uint8 j=0;
-				uint8 au8LinkRxBuffer[250];
+            case E_SL_MSG_PDM_GET_ROUTING_TABLE:
+            {
+            	ZPS_tsNwkNib * thisNib;
+				thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
 				uint16 u16Length =  0;
-
-				ZPS_tsAplApsKeyDescriptorEntry tmpZPS_tsAplApsKeyDescriptorEntry[203];*/
-
-				/*uint16	tmpAPSKeys[50];
-			    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_APS_KEYS, &tmpZPS_tsAplApsKeyDescriptorEntry,
-				                              53*sizeof(tmpZPS_tsAplApsKeyDescriptorEntry), &u16DataBytesRead );
-
-			    u16Length =  0;
-				for (j=45;j<50;j++)
+				uint8  au8LinkRxBuffer[1024];
+				uint16 i = 0;
+				for( i=0;i<thisNib->sTblSize.u16Rt;i++)
 				{
-					if (APP_APSKeysExist(tmpZPS_tsAplApsKeyDescriptorEntry[j].u16ExtAddrLkup, tmpAPSKeys))
+					if (thisNib->sTbl.psRt[i].u16NwkDstAddr != 0xfffe)
 					{
-						tmpZPS_tsAplApsKeyDescriptorEntry[j].u16ExtAddrLkup=0xFFFF;
-						tmpZPS_tsAplApsKeyDescriptorEntry[j].u32OutgoingFrameCounter=0;
-						tmpZPS_tsAplApsKeyDescriptorEntry[j].u8BitMapSecLevl=0;
-					}
-					tmpAPSKeys[j]=tmpZPS_tsAplApsKeyDescriptorEntry[j].u16ExtAddrLkup;
-				}
+						ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psRt[i].uAncAttrs.bfBitfields.u3Status,      u16Length );
+						ZNC_BUF_U16_UPD  ( &au8LinkRxBuffer[ u16Length ], thisNib->sTbl.psRt[i].u16NwkDstAddr,      u16Length );
+						if (thisNib->sTbl.psRt[i].u16NwkDstAddr == thisNib->sTbl.psRt[i].u16NwkNxtHopAddr)
+						{
+							ZNC_BUF_U16_UPD  ( &au8LinkRxBuffer[ u16Length ], 0x0000, u16Length );
+						}else{
+							ZNC_BUF_U16_UPD  ( &au8LinkRxBuffer[ u16Length ], thisNib->sTbl.psRt[i].u16NwkNxtHopAddr, u16Length );
+						}
 
-				PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
-				PDM_eSaveRecordData(PDM_ID_INTERNAL_APS_KEYS, &tmpZPS_tsAplApsKeyDescriptorEntry, sizeof( tmpZPS_tsAplApsKeyDescriptorEntry ));
-*/
-/*
-				PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_APS_KEYS, &tmpZPS_tsAplApsKeyDescriptorEntry,
-								                              sizeof(tmpZPS_tsAplApsKeyDescriptorEntry), &u16DataBytesRead );
-
-				u16Length =  0;
-				for (j=0;j<10;j++)
-				{
-
-					ZNC_BUF_U16_UPD ( &au8LinkRxBuffer [ u16Length ], tmpZPS_tsAplApsKeyDescriptorEntry[j].u16ExtAddrLkup,   u16Length );
-
-				}
-				vSL_WriteMessage ( E_SL_MSG_REMOVE_DEVICE_NT_RESPONSE,
-																				   u16Length,
-																				   au8LinkRxBuffer,
-																				   0 );
-
-
-				PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
-				PDM_eSaveRecordData(PDM_ID_INTERNAL_APS_KEYS,           &tmpZPS_tsAplApsKeyDescriptorEntry, 203);
-
-
-
-				u16Length =  0;
-				for (j=0;j<10;j++)
-				{
-
-					ZNC_BUF_U16_UPD ( &au8LinkRxBuffer [ u16Length ], tmpZPS_tsAplApsKeyDescriptorEntry[j].u16ExtAddrLkup,   u16Length );
-
-				}
-				vSL_WriteMessage ( E_SL_MSG_REMOVE_DEVICE_NT_RESPONSE,
-																				   u16Length,
-																				   au8LinkRxBuffer,
-																				   0 );
-
-*/
-
-
-
-				 /*ZPS_tsNwkActvNtEntry tmpNwkActvNtTable[20];
-
-				PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_CHILD_TABLE, &tmpNwkActvNtTable,
-											  20 * sizeof(ZPS_tsNwkActvNtEntry), &u16DataBytesRead );
-				for (j=0;j<20;j++)
-				{
-
-					u16Length=0;
-					//for (i=0;i<7;i++)
-					//{
-						ZNC_BUF_U16_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[j].u16NwkAddr,                                   u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[j].u8LinkQuality,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[j].u8Age,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[j].u8ZedTimeoutindex,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[j].u8MacID,                            u16Length );
-
-
-					//}
-					vSL_WriteMessage ( E_SL_MSG_REMOVE_DEVICE_NT_RESPONSE,
-																										   u16Length,
-																										   au8LinkRxBuffer,
-																										   0 );
-				}*/
-
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_AIB);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_BINDS);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_GROUPS);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_TC_TABLE);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_TC_LOCATIONS);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_NIB_PERSIST);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_CHILD_TABLE);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_SHORT_ADDRESS_MAP);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_NWK_ADDRESS_MAP);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE);
-				//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_SEC_MATERIAL_KEY);
-
-				/*uint8 tmpNwkActvNtTable[20*sizeof(ZPS_tsNwkActvNtEntry)];
-				for(i = 0; i < 20; i++)
-				{
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry)] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 1] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 2] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 3] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 4] = 0xff;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 5] = 0xff;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 6] = 0xff;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 7] = 0xfe;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 8] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 9] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 10] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 11] = 0xff;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 12] = 0x7f;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 13] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 14] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 15] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 16] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 17] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 18] = 0;
-					tmpNwkActvNtTable[i* sizeof(ZPS_tsNwkActvNtEntry) + 19] = 0;
-				}
-
-				uint8_t status;
-
-				status = PDM_eSaveRecordData(PDM_ID_INTERNAL_CHILD_TABLE,        &tmpNwkActvNtTable,                 sizeof( ZPS_tsNwkActvNtEntry ) * 20 );
-				u16Length =0;
-				ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], status,                            u16Length );
-
-				vSL_WriteMessage ( 0x2222,
-																														   0,
-																														   au8LinkRxBuffer,
-																														   0 );*/
-				// Read data
-
-				/*uint8 tmpNwkActvNtTable[20*sizeof(ZPS_tsNwkActvNtEntry)];
-				PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_CHILD_TABLE, &tmpNwkActvNtTable,
-				                              20 * sizeof(ZPS_tsNwkActvNtEntry), &u16DataBytesRead );
-				for (j=0;j<23;j++)
-				{
-					u16Length=0;
-					for (i=0;i<10;i++)
-					{
-						ZNC_BUF_U16_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[(j*10)+i].u16NwkAddr,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[(j*10)+i].u8LinkQuality,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[(j*10)+i].u8Age,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[(j*10)+i].u8ZedTimeoutindex,                            u16Length );
-						ZNC_BUF_U8_UPD ( &au8LinkRxBuffer [ u16Length ], tmpNwkActvNtTable[(j*10)+i].u8MacID,                            u16Length );
 
 					}
-					vSL_WriteMessage ( E_SL_MSG_REMOVE_DEVICE_NT_RESPONSE,
-																										   u16Length,
-																										   au8LinkRxBuffer,
-																										   0 );
-				}*/
+				}
+				vSL_WriteMessage ( E_SL_MSG_PDM_GET_ROUTING_TABLE_LIST,
+																						   u16Length,
+																						   au8LinkRxBuffer,
+																					   0 );
 
-
-
-			}
+            }
             break;
+            case E_SL_MSG_PDM_GET_NETWORK_KEY:
+            {
+            	uint16 i = 0;
+				ZPS_tsNwkNib * thisNib;
+				uint16 u16Length =  0;
+				uint8  au8LinkRxBuffer[20];
 
+				void * thisNet = ZPS_pvAplZdoGetNwkHandle();
+				thisNib = ZPS_psNwkNibGetHandle(thisNet);
+
+				for(i=0;i<(thisNib->sTblSize.u8SecMatSet-1);i++)
+				{
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[0],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[1],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[2],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[3],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[4],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[5],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[6],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[7],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[8],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[9],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[10],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[11],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[12],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[13],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[14],      u16Length );
+					 ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], thisNib->sTbl.psSecMatSet[i].au8Key[15],      u16Length );
+				 }
+				 vSL_WriteMessage ( E_SL_MSG_PDM_GET_NETWORK_KEY_LIST,
+																										   u16Length,
+																										   au8LinkRxBuffer,
+																									   0 );
+            }
+            break;
             case (E_SL_MSG_BIND_GROUP):
             {
                 uint16    u16Clusterid;
@@ -960,7 +899,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             case (E_SL_MSG_SET_CE_FCC):
             {
                 bPowerCEFCC     =   au8LinkRxBuffer [ 0 ];
-                vAppApiSetHighPowerMode(bPowerCEFCC, TRUE);
+               // vAppApiSetHighPowerMode(bPowerCEFCC, TRUE);
             }
             break;
 				case (E_SL_MSG_SET_FLOW_CONTROL):
@@ -1144,23 +1083,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 ZPS_tsAfProfileDataReq    sAfProfileDataReq;
                 uint8                     u8DataLength;
 
-                if ((au8LinkRxBuffer[0]== E_ZCL_AM_SHORT) || (au8LinkRxBuffer[0]== E_ZCL_AM_SHORT_NO_ACK))
-				{
-
-					sAfProfileDataReq.uDstAddr.u16Addr    =  ZNC_RTN_U16 ( au8LinkRxBuffer, 1 );
-					sAfProfileDataReq.u16ClusterId        =  ZNC_RTN_U16 ( au8LinkRxBuffer, 5 );
-					sAfProfileDataReq.u16ProfileId        =  ZNC_RTN_U16 ( au8LinkRxBuffer, 7 );
-					sAfProfileDataReq.eDstAddrMode        =  au8LinkRxBuffer[0];
-					sAfProfileDataReq.u8SrcEp             =  au8LinkRxBuffer[3];
-					sAfProfileDataReq.u8DstEp             =  au8LinkRxBuffer[4];
-					sAfProfileDataReq.eSecurityMode       =  au8LinkRxBuffer[9];
-					sAfProfileDataReq.u8Radius            =  au8LinkRxBuffer[10];
-					u8DataLength                          =  au8LinkRxBuffer[11];
-					 u8Status      =  APP_eApsProfileDataRequest ( &sAfProfileDataReq,
-																					  &au8LinkRxBuffer[12],
-																					  u8DataLength,
-																					  &u8SeqNum );
-				}else if ((au8LinkRxBuffer[0]== E_ZCL_AM_IEEE) || (au8LinkRxBuffer[0]== E_ZCL_AM_IEEE_NO_ACK))
+				if ((au8LinkRxBuffer[0]== E_ZCL_AM_IEEE) || (au8LinkRxBuffer[0]== E_ZCL_AM_IEEE_NO_ACK))
 				{
 					sAfProfileDataReq.uDstAddr.u64Addr    =  ZNC_RTN_U64 ( au8LinkRxBuffer, 1 );
 					sAfProfileDataReq.u16ClusterId        =  ZNC_RTN_U16 ( au8LinkRxBuffer, 11 );
@@ -1173,6 +1096,21 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 					u8DataLength                          =  au8LinkRxBuffer[17];
 					 u8Status      =  APP_eApsProfileDataRequest ( &sAfProfileDataReq,
 																					  &au8LinkRxBuffer[18],
+																					  u8DataLength,
+																					  &u8SeqNum );
+				}else{
+
+					sAfProfileDataReq.uDstAddr.u16Addr    =  ZNC_RTN_U16 ( au8LinkRxBuffer, 1 );
+					sAfProfileDataReq.u16ClusterId        =  ZNC_RTN_U16 ( au8LinkRxBuffer, 5 );
+					sAfProfileDataReq.u16ProfileId        =  ZNC_RTN_U16 ( au8LinkRxBuffer, 7 );
+					sAfProfileDataReq.eDstAddrMode        =  au8LinkRxBuffer[0];
+					sAfProfileDataReq.u8SrcEp             =  au8LinkRxBuffer[3];
+					sAfProfileDataReq.u8DstEp             =  au8LinkRxBuffer[4];
+					sAfProfileDataReq.eSecurityMode       =  au8LinkRxBuffer[9];
+					sAfProfileDataReq.u8Radius            =  au8LinkRxBuffer[10];
+					u8DataLength                          =  au8LinkRxBuffer[11];
+					u8Status      =  APP_eApsProfileDataRequest( &sAfProfileDataReq,
+																					  &au8LinkRxBuffer[12],
 																					  u8DataLength,
 																					  &u8SeqNum );
 				}
@@ -1651,7 +1589,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             case (E_SL_MSG_GET_GROUP_MEMBERSHIP):
             {
 
-            	/*if (0x0000 == u16TargetAddress)
+            	if (0x0000 == u16TargetAddress)
             	{
             		uint8           i;
             		uint16                 u16Length =  0;
@@ -1667,7 +1605,12 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
             		for ( i = 0; i < groupCount; i++ )
 					{
-            			ZNC_BUF_U16_UPD   ( &au8LinkTxBuffer [u16Length],     psAplAib->psAplApsmeGroupTable->psAplApsmeGroupTableId[i].u16Groupid,    u16Length );
+            			if (psAplAib->psAplApsmeGroupTable->psAplApsmeGroupTableId[i].au8Endpoint[0]>0)
+            			{
+            				ZNC_BUF_U16_UPD   ( &au8LinkTxBuffer [u16Length],     psAplAib->psAplApsmeGroupTable->psAplApsmeGroupTableId[i].u16Groupid,    u16Length );
+            			}else{
+            				ZNC_BUF_U16_UPD   ( &au8LinkTxBuffer [u16Length],    0xFFFF,    u16Length );
+            			}
 					}
             		ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [u16Length], 0x0000,    u16Length );
 
@@ -1675,7 +1618,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 									   u16Length,
 									   au8LinkTxBuffer,
 									   0 );
-            	}else{*/
+            	}else{
 					tsCLD_Groups_GetGroupMembershipRequestPayload    sRequest;
 					uint16                                           au16GroupList [ 10 ];
 					uint8                                            i = 0 ;
@@ -1695,7 +1638,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 																					 &u8SeqNum,
 																					 &sRequest );
 					u8RequestSent = 1;
-            	//}
+            	}
             }
             break;
 
@@ -3039,6 +2982,32 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
     }
 
+}
+
+PUBLIC bool APP_ExistDevice(uint64 IEEEAddr)
+{
+	int i=0;
+	for (i=0;i<200;i++)
+	{
+		if (IEEEAddr == tmpNtActv[i].u64IEEEAddr)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+PUBLIC uint8 APP_GetIndexDevice(uint64 IEEEAddr)
+{
+	int i=0;
+	for (i=0;i<200;i++)
+	{
+		if (IEEEAddr == tmpNtActv[i].u64IEEEAddr)
+		{
+			return i;
+		}
+	}
+	return 0;
 }
 
 /****************************************************************************
@@ -4505,11 +4474,52 @@ PUBLIC  teZCL_Status  APP_eSendWriteAttributesRequest ( uint8               u8So
 
 /****************************************************************************
  **
+ ** NAME:       APP_eZdpMgmtRtgRequest
+ **
+ **
+ ****************************************************************************/
+PUBLIC ZPS_teStatus APP_eZdpMgmtRtgRequest( uint16    u16Addr,
+                                             uint8     u8StartIndex,
+                                             uint8*    pu8Seq )
+{
+    PDUM_thAPduInstance    hAPduInst;
+    ZPS_teStatus           eStatus = ZPS_APL_APS_E_INVALID_PARAMETER;
+
+    hAPduInst =  PDUM_hAPduAllocateAPduInstance ( apduZDP );
+
+    if ( PDUM_INVALID_HANDLE != hAPduInst )
+    {
+        ZPS_tsAplZdpMgmtRtgReq    sMgmtRtgReq;
+        ZPS_tuAddress             uDstAddr;
+
+        uDstAddr.u16Addr         =  u16Addr;
+        sMgmtRtgReq.u8StartIndex =  u8StartIndex;
+
+        vLog_Printf(1,LOG_DEBUG,"Management Rtg Request\n");
+
+        eStatus = ZPS_eAplZdpMgmtRtgRequest(hAPduInst,
+        									uDstAddr,
+											FALSE,
+											pu8Seq,
+											&sMgmtRtgReq);
+
+        if (eStatus)
+        {
+            PDUM_eAPduFreeAPduInstance(hAPduInst);
+        }
+    }
+
+    return eStatus;
+}
+
+
+/****************************************************************************
+ **
  ** NAME:       APP_eZdpMgmtLqiRequest
  **
  **
  ****************************************************************************/
-PRIVATE ZPS_teStatus APP_eZdpMgmtLqiRequest( uint16    u16Addr,
+PUBLIC ZPS_teStatus APP_eZdpMgmtLqiRequest( uint16    u16Addr,
                                              uint8     u8StartIndex,
                                              uint8*    pu8Seq )
 {
@@ -4707,6 +4717,24 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
         {
         	switch (psProfileDataReq->eDstAddrMode)
 			{
+        	case ZPS_E_ADDR_MODE_BOUND:
+				eStatus =  ZPS_eAplAfBoundAckDataReq(hAPduInst,
+													psProfileDataReq->u16ClusterId,
+													psProfileDataReq->u8SrcEp,
+													psProfileDataReq->eSecurityMode,
+													psProfileDataReq->u8Radius,
+													pu8Seq);
+				break;
+        	case ZPS_E_ADDR_MODE_GROUP:
+				eStatus = ZPS_eAplAfGroupDataReq(hAPduInst,
+													psProfileDataReq->u16ClusterId,
+													psProfileDataReq->u8SrcEp,
+													psProfileDataReq->uDstAddr.u16Addr,
+													psProfileDataReq->eSecurityMode,
+													psProfileDataReq->u8Radius,
+													pu8Seq);
+
+			break;
 			case ZPS_E_ADDR_MODE_SHORT:
 				eStatus =  ZPS_eAplAfUnicastAckDataReq(hAPduInst,
 													psProfileDataReq->u16ClusterId,
@@ -4716,7 +4744,7 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
 													psProfileDataReq->eSecurityMode,
 													psProfileDataReq->u8Radius,
 													pu8Seq);
-			break;
+				break;
 			case ZPS_E_ADDR_MODE_IEEE:
 				eStatus =  ZPS_eAplAfUnicastIeeeAckDataReq(hAPduInst,
 													psProfileDataReq->u16ClusterId,
@@ -4726,7 +4754,25 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
 													psProfileDataReq->eSecurityMode,
 													psProfileDataReq->u8Radius,
 													pu8Seq);
-			break;
+				break;
+			case ZPS_E_ADDR_MODE_BROADCAST:
+				eStatus =  ZPS_eAplAfBroadcastDataReq(hAPduInst,
+													psProfileDataReq->u16ClusterId,
+													psProfileDataReq->u8SrcEp,
+													psProfileDataReq->u8DstEp,
+													ZPS_E_APL_AF_BROADCAST_ALL,
+													psProfileDataReq->eSecurityMode,
+													psProfileDataReq->u8Radius,
+													pu8Seq);
+				break;
+			case ZPS_E_ADDR_MODE_BOUND_NO_ACK:
+				eStatus = ZPS_eAplAfBoundDataReq(hAPduInst,
+													psProfileDataReq->u16ClusterId,
+													psProfileDataReq->u8SrcEp,
+													psProfileDataReq->eSecurityMode,
+													psProfileDataReq->u8Radius,
+													pu8Seq);
+				break;
 			case ZPS_E_ADDR_MODE_SHORT_NO_ACK:
 				eStatus =  ZPS_eAplAfUnicastDataReq(hAPduInst,
 													psProfileDataReq->u16ClusterId,
@@ -4736,7 +4782,7 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
 													psProfileDataReq->eSecurityMode,
 													psProfileDataReq->u8Radius,
 													pu8Seq);
-			break;
+				break;
 			case ZPS_E_ADDR_MODE_IEEE_NO_ACK:
 				eStatus =  ZPS_eAplAfUnicastIeeeDataReq(hAPduInst,
 													psProfileDataReq->u16ClusterId,
@@ -4746,7 +4792,7 @@ PRIVATE ZPS_teStatus APP_eApsProfileDataRequest ( ZPS_tsAfProfileDataReq*    psP
 													psProfileDataReq->eSecurityMode,
 													psProfileDataReq->u8Radius,
 													pu8Seq);
-			break;
+				break;
 			default:
 				eStatus =  ZPS_eAplAfApsdeDataReq( hAPduInst,
 												   psProfileDataReq,
@@ -4886,6 +4932,8 @@ PRIVATE void APP_vUpdateReportableChange( tuZCL_AttributeReportable *puAttribute
             break;
         case E_ZCL_UINT24:
         case E_ZCL_INT24:
+        	puAttributeReportable->zuint24ReportableChange =  ZNC_RTN_U24_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
+        	break;
         case E_ZCL_UINT32:
         case E_ZCL_INT32:
             puAttributeReportable->zuint32ReportableChange =  ZNC_RTN_U32_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
@@ -4894,6 +4942,8 @@ PRIVATE void APP_vUpdateReportableChange( tuZCL_AttributeReportable *puAttribute
         case E_ZCL_INT40:
         case E_ZCL_UINT48:
         case E_ZCL_INT48:
+        	puAttributeReportable->zuint48ReportableChange =  ZNC_RTN_U48_OFFSET ( pu8Buffer, *pu8Offset,  *pu8Offset);
+        	break;
         case E_ZCL_UINT56:
         case E_ZCL_INT56:
         case E_ZCL_UINT64:
@@ -4941,254 +4991,6 @@ PRIVATE bool APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50])
 	return false;
 }
 
-/****************************************************************************
- *
- * NAME: APP_MigratePDM
- *
- * DESCRIPTION:
- * Handles migrating devices in case of PDM size change between versions
- * If old structure size was larger than new one excess data is discarded
- *
- * 1. Check if PDM has version information
- *   - If not found then try guessing version based on PDM data sizes
- *   - In case on empty PDM add current firmware version info to PDM
- * 2. Check if Migration is needed
- * 3. Read data from EEPROM to memory
- * 4. Erase EEPROM
- * 5. Write data back to EEPROM
- *
- * RETURNS:
- * void
- *
- ****************************************************************************/
-PRIVATE void APP_MigratePDM( void )
-{
-
-    uint16 u16DataBytesRead;
-    bool found;
-    uint16 dataLength = 0;
-    uint8 version_i;
-
-    uint16 i;
-    uint8 i2;
-
-    typedef struct
-	{
-		uint8 u8BindingTableSize;
-		uint8 u8GroupTableSize;
-		uint8 u8TrustCenterDeviceTableSize;
-		uint8 u8MaxTcLkDevices;
-		uint8 u8ChildTableSize;
-		uint8 u8ActiveNeighbourTableSize;
-		uint8 u8AddressMapTable;
-		uint8 u8MacTableSize;
-	} VersionStructSizes;
-	// Keeps track of structure sizes of every version
-	// so user can change firmware version without losing paired devices
-	VersionStructSizes struct_sizes[1] = {
-		{5, 16, 200, ZNC_MAX_TCLK_DEVICES , 20, 30, 200, 230},
-	};
-    /***********************
-    *                      *
-    *  Load data from PDM  *
-    *                      *
-    ***********************/
-    uint8 size;
-
-    /*******************************************
-    * Address: 0x0000 - ZllState               *
-    *  - Size should always be same            *
-    *******************************************/
-    tsZllState tmptsZllState;
-    PDM_eReadDataFromRecord ( PDM_ID_APP_ZLL_CMSSION, &tmptsZllState, sizeof ( tsZllState ), &u16DataBytesRead );
-
-    /*******************************************
-    * Address: 0xF000 - ZPS_tsAplAib           *
-    *  - Six first values are persisted to PDM *
-    *  - Size should always be same            *
-    *******************************************/
-    ZPS_tsAplAib tmpZPS_tsAplAib;
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_AIB, &tmpZPS_tsAplAib, sizeof ( tmpZPS_tsAplAib ), &u16DataBytesRead );
-
-    /*******************************************
-    * Address: 0xF001 - Bind table             *
-    *  - struct_sizes.u8BindingTableSize       *
-    *  Structure size is 8                     *
-    *******************************************/
-
-    // Read data
-    typedef struct
-    {
-    	uint64 u64Addr;
-    	//uint16 u16Cluster;
-    	uint8 srcEndpoint;
-    	uint8 dstEndpoint;
-    	uint8 dstMode;
-    	uint8 dstMode2;
-    }ZPS_tsAplPdmBindingTable;
-    size = struct_sizes[0].u8BindingTableSize;
-    ZPS_tsAplPdmBindingTable tmpBindingTable[size];
-    /*PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_BINDS, &tmpBindingTable,
-                              struct_sizes[0].u8BindingTableSize * 8, &u16DataBytesRead );*/
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_BINDS, &tmpBindingTable,
-                                  sizeof(tmpBindingTable), &u16DataBytesRead );
-
-
-
-    /*******************************************
-    * Address: 0xF002 - Group table            *
-    *  - struct_sizes.u8GroupTableSize         *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8GroupTableSize;
-    ZPS_tsAPdmGroupTableEntry tmpZPS_tsAPdmGroupTableEntry[size];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_GROUPS, &tmpZPS_tsAPdmGroupTableEntry,
-                              struct_sizes[0].u8GroupTableSize * sizeof(ZPS_tsAPdmGroupTableEntry), &u16DataBytesRead );
-
-    for(i=0;i<size;i++)
-    {
-    //	DBG_vPrintf(TRACE_APPSTART, "i:%d, grp : %02x - bitmap : %02x",i,tmpZPS_tsAPdmGroupTableEntry[i].u16Groupid,tmpZPS_tsAPdmGroupTableEntry.u16BitMap);
-    }
-    // Address: 0xF003 - APS Keys
-    //  - Size should always be same
-    size=203;
-    ZPS_tsAplApsKeyDescriptorEntry tmpZPS_tsAplApsKeyDescriptorEntry[size];
-    ZPS_tsAplApsKeyDescriptorEntry tmp[3];
-	PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_APS_KEYS, &tmpZPS_tsAplApsKeyDescriptorEntry,
-							sizeof(tmpZPS_tsAplApsKeyDescriptorEntry), &u16DataBytesRead );
-
-	/*for(i=50;i<53;i++)
-	{
-		tmp[i-50]=tmpZPS_tsAplApsKeyDescriptorEntry[i];
-	}*/
-
-	/*for(i=50;i<200;i++)
-	{
-		tmpZPS_tsAplApsKeyDescriptorEntry[i].u16ExtAddrLkup=0xFFFF;
-	}*/
-	/*tmpZPS_tsAplApsKeyDescriptorEntry[200]=tmp[0];
-	tmpZPS_tsAplApsKeyDescriptorEntry[201]=tmp[1];
-	tmpZPS_tsAplApsKeyDescriptorEntry[202]=tmp[2];*/
-
-    /*******************************************
-    * Address: 0xF004 - Trust Table            *
-    *  - s_asTrustCenterDeviceTable            *
-    *******************************************/
-    // Read data
-    size = struct_sizes[0].u8TrustCenterDeviceTableSize;
-    uint8 tmpzps_tsAplTCDeviceTable[size * 4];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_TC_TABLE, &tmpzps_tsAplTCDeviceTable,
-                              struct_sizes[0].u8TrustCenterDeviceTableSize * 4, &u16DataBytesRead );
-
-    /*******************************************
-    *  Address: 0xF005 - Trust table location  *
-    *   - ZPS_TclkDescriptorEntry              *
-    *   - struct_sizes.u8MaxTcLkDevices        *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8MaxTcLkDevices;
-    ZPS_TclkDescriptorEntry tmpZPS_TclkDescriptorEntry[size];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_TC_LOCATIONS, &tmpZPS_TclkDescriptorEntry,
-                              struct_sizes[0].u8MaxTcLkDevices * sizeof(ZPS_TclkDescriptorEntry), &u16DataBytesRead );
-
-
-    /*******************************************
-    * Address: 0xF100 - Network Nib Persist    *
-    *  - ZPS_tsNWkNibPersist                   *
-    *  - Size should always be same unless     *
-    *    NXP changes structure size            *
-    *******************************************/
-    ZPS_tsNWkNibPersist tmpZPS_tsNWkNibPersist;
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_NIB_PERSIST, &tmpZPS_tsNWkNibPersist,
-                              sizeof(tmpZPS_tsNWkNibPersist), &u16DataBytesRead );
-
-    /*******************************************
-    * Address: 0xF101 - Active Network Entry   *
-    *  - ZPS_tsNwkActvNtEntry                  *
-    *  - struct_sizes.u8ChildTableSize         *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8ChildTableSize;
-    uint8 tmpNwkActvNtTable[size*sizeof(ZPS_tsNwkActvNtEntry)];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_CHILD_TABLE, &tmpNwkActvNtTable,
-                              struct_sizes[0].u8ChildTableSize * sizeof(ZPS_tsNwkActvNtEntry), &u16DataBytesRead );
-
-
-    /*******************************************
-    * Address: 0xF102 - Short Address map      *
-    *  - sTbl.pu16AddrMapNwk                   *
-    *  - struct_sizes.u8AddressMapTable        *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8AddressMapTable;
-    uint16 tmppu16AddrMapNwk[size];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_SHORT_ADDRESS_MAP, &tmppu16AddrMapNwk,
-                              sizeof(uint16) * struct_sizes[0].u8AddressMapTable, &u16DataBytesRead );
-
-
-    /*******************************************
-    * Address: 0xF103 - IEEE Address map       *
-    *  - s_au64NwkAddrMapExt                   *
-    *  - struct_sizes.MacTableSize             *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8MacTableSize;
-    uint64 tmps_au64NwkAddrMapExt[size];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_NWK_ADDRESS_MAP, &tmps_au64NwkAddrMapExt,
-                              sizeof(uint64) * struct_sizes[0].u8MacTableSize, &u16DataBytesRead );
-
-
-    /*******************************************
-    * Address: 0xF104 - Address Map Table      *
-    *  - AddressMapTableSize                   *
-    *  - struct_sizes.u8AddressMapTable        *
-    *  - Seems always be FF                    *
-    *******************************************/
-
-    // Read data
-    size = struct_sizes[0].u8AddressMapTable;
-    uint16 tmps_AddressMapTable[struct_sizes[0].u8AddressMapTable];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_ADDRESS_MAP_TABLE, &tmps_AddressMapTable,
-                              sizeof(uint16) * struct_sizes[0].u8AddressMapTable, &u16DataBytesRead );
-
-
-    /*******************************************
-    * Address: 0xF105 - Security Material Sets *
-    *  - ZPS_tsNwkSecMaterialSet               *
-    *  SecurityMaterialSets changes this size, *
-    *  but has been 1 in all latest ZiGate     *
-    *  version so no need for variable         *
-    *******************************************/
-    ZPS_tsNwkSecMaterialSet tmpZPS_tsNwkSecMaterialSet[1];
-    PDM_eReadDataFromRecord ( PDM_ID_INTERNAL_SEC_MATERIAL_KEY, &tmpZPS_tsNwkSecMaterialSet,
-                              sizeof(tmpZPS_tsNwkSecMaterialSet), &u16DataBytesRead );
-
-    // ERASE EEPROM
-    PDM_vDeleteAllDataRecords();
-
-    // Restoring data to EEPROM
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_APS_KEYS,           &tmpZPS_tsAplApsKeyDescriptorEntry, 203 * sizeof(ZPS_tsAplApsKeyDescriptorEntry));
-
-    PDM_eSaveRecordData(PDM_ID_APP_ZLL_CMSSION,             &tmptsZllState,                     sizeof( tsZllState ));
-    //PDM_eSaveRecordData(PDM_ID_INTERNAL_AIB,                &tmpZPS_tsAplAib,                   sizeof ( tmpZPS_tsAplAib ));
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_BINDS,              &tmpBindingTable,                   8 * struct_sizes[0].u8BindingTableSize);
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_GROUPS,             &tmpZPS_tsAPdmGroupTableEntry,      sizeof( ZPS_tsAPdmGroupTableEntry ) * struct_sizes[0].u8GroupTableSize);
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_TC_TABLE,           &tmpzps_tsAplTCDeviceTable,         4 * struct_sizes[0].u8TrustCenterDeviceTableSize);
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_TC_LOCATIONS,       &tmpZPS_TclkDescriptorEntry,        sizeof( ZPS_TclkDescriptorEntry ) * struct_sizes[0].u8MaxTcLkDevices );
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_NIB_PERSIST,        &tmpZPS_tsNWkNibPersist,            sizeof( tmpZPS_tsNWkNibPersist ));
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_CHILD_TABLE,        &tmpNwkActvNtTable,                 sizeof( ZPS_tsNwkActvNtEntry ) * struct_sizes[0].u8ChildTableSize );
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_SHORT_ADDRESS_MAP,  &tmppu16AddrMapNwk,                 sizeof(uint16) * struct_sizes[0].u8AddressMapTable);
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_NWK_ADDRESS_MAP,    &tmps_au64NwkAddrMapExt,            sizeof(uint64) * struct_sizes[0].u8MacTableSize );
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE,  &tmps_AddressMapTable,              sizeof(uint16) * struct_sizes[0].u8AddressMapTable);
-    PDM_eSaveRecordData(PDM_ID_INTERNAL_SEC_MATERIAL_KEY,   &tmpZPS_tsNwkSecMaterialSet,        sizeof( tmpZPS_tsNwkSecMaterialSet ));
-
-
-}
 
 /***    END OF FILE                           ***/
 /****************************************************************************/
