@@ -86,9 +86,15 @@ CFLAGS  += -DAPP_NCI_ICODE
 endif
 
 # 32k clock configuration (1 = FRO, 0 = XTAL)
+CLK_32K = 1
+ifeq ($(CLK_32K), 1)
 CFLAGS += -DgClkUseFro32K=1
+CFLAGS += -DgPWR_UseAlgoTimeBaseDriftCompensate=1
 # 32k FRO automatic calibration (0 = disable, 1 = enable)
 CFLAGS += -DgClkRecalFro32K=0
+else
+CFLAGS += -DgClkUseFro32K=0
+endif
 
 # Use LowPower APIs (PWRM is used if not defined)
 CFLAGS += -DAPP_LOW_POWER_API
@@ -118,7 +124,7 @@ FRAMEWORK_SWITCH = 1
 #
 NETWORK_RECOVERY       ?= 0
 STACK_MEASURE          ?= 0
-APP_AHI_CONTROL        ?= 0
+APP_AHI_CONTROL        ?= 1
 
 ###############################################################################
 
@@ -126,6 +132,7 @@ CFLAGS  += -DUART_BAUD_RATE=$(BAUD)
 CFLAGS  += -D$(NODE)
 CFLAGS	+= -D$(CRC_NEW)
 CFLAGS += -DJENNIC_DEBUG_ENABLE
+
 ifeq ($(DEBUG), UART1)
 CFLAGS  += -DDBG_ENABLE
 $(info Building with debug UART1...)
@@ -150,6 +157,7 @@ CFLAGS	+= -DDEBUG_NWK_RECOVERY
 CFLAGS	+= -DDEBUG_ZB_CONTROLBRIDGE_TASK
 CFLAGS  += -DTRACE_APPSTART
 CFLAGS  += -DTRACE_APP
+CFLAGS  += -DDEBUG_ZBP_UTILS
 #CFLAGS  += -DDEBUG_BDB
 #CFLAGS  += -DDEBUG_PDM_EXTENDED
 #CFLAGS += -DDEBUG_SERIAL_LINK
@@ -182,6 +190,7 @@ $(info Building Node Coordinator Only...)
 APP_ZPSCFG = ControlBridge_Coord_GpProxy.zpscfg
 else
 $(info Building Node Full functionality ...)
+CFLAGS += -DFULL_FUNC_DEVICE
 APP_ZPSCFG = ControlBridge_Full_GpProxy.zpscfg
 endif
 endif
@@ -200,7 +209,7 @@ endif
 # Use if application directory contains multiple targets
 
 # Toolchain paths
-TOOLCHAIN_DIR_PATH  = C:/NXP/MCUXpressoIDE_11.2.0_4120/ide/tools
+TOOLCHAIN_DIR_PATH  = C:/NXP/MCUXpressoIDE_11.7.0_9198/ide/tools
 TOOLCHAIN_PATH      = $(TOOLCHAIN_DIR_PATH)/bin
 
 # SDK paths
@@ -386,17 +395,17 @@ APPDEPS := $(addprefix $(APP_OBJ_DIR)/,$(APPDEPS_TMP))
 
 LDLIBS := $(APPLIBS) $(LDLIBS)
 
-IMAGE_TOOL               = $(SDK2_BASE_DIR)/tools/imagetool/dk6_image_tool.py
+IMAGE_TOOL = py -3 $(SDK2_BASE_DIR)/tools/imagetool/dk6_image_tool.py
 IMAGE_TOOL_CONFIGURATION = -s 294912
 
 ###############################################################################
 # Dependency rules
 
-.PHONY: all clean
+.PHONY: all clean clean_zps_pdum
 # Path to directories containing application source 
-vpath % $(APP_SRC_DIR):$(APP_COMMON_SRC_DIR):$(ZCL_SRC):$(ZCL_SRC_DIRS):$(BDB_SRC_DIR):$(ZIGBEE_BASE_SRC):$(BOARD_DIR)
+vpath % $(APP_SRC_DIR):$(APP_COMMON_SRC_DIR):$(ZCL_SRC):$(ZCL_SRC_DIRS):$(BDB_SRC_DIR):$(BOARD_DIR):$(ZIGBEE_BASE_SRC)
 
-all: $(APP_OUT_DIR)/$(TARGET_FULL).axf
+all: clean_zps_pdum $(APP_OUT_DIR)/$(TARGET_FULL).axf
 
 -include $(APPDEPS)
 %.d:
@@ -433,14 +442,13 @@ $(APP_OBJ_DIR)/%.o: %.S
 
 $(APP_OUT_DIR)/$(TARGET_FULL).axf: $(APPOBJS) $(addsuffix.a,$(addprefix $(COMPONENTS_BASE_DIR)/Library/lib,$(APPLDLIBS))) 
 	$(info Linking $@ ...)
-	#$(TOOLCHAIN_PATH)/$(CC)  -Wl,--gc-sections $(LDFLAGS) -T "AppBuildNone_$(JENNIC_CHIP).ld" -T "$(JENNIC_CHIP)_rom.ld" -o $@ -Wl,--start-group $(APPOBJS) $(addprefix -l,$(LDLIBS)) -lm -Wl,--end-group -Wl,-Map,$(APP_OUT_DIR)/$(TARGET_FULL).map 
 	$(TOOLCHAIN_PATH)/$(CC)  -Wl,--gc-sections $(LDFLAGS) -T "AppBuildNone_$(JENNIC_CHIP).ld" -o $@ -Wl,--start-group $(APPOBJS) $(addprefix -l,$(LDLIBS)) -lm -Wl,--end-group -Wl,-Map,$(APP_OUT_DIR)/$(TARGET_FULL).map 
 	$(info Generating binary ...)
 	$(TOOLCHAIN_PATH)/$(SIZE) $@  
 	date +%c >> $(APP_BASE)/Doc/size.txt
 	$(TOOLCHAIN_PATH)/$(SIZE) $@ >> $(APP_BASE)/Doc/size.txt
 	-$(AWK_EXE) -f $(AWK_SRC)/JN51xx_MAP.awk $(APP_OUT_DIR)/$(TARGET_FULL).log $(APP_OUT_DIR)/$(TARGET_FULL).map > $(APP_OBJ_DIR)/temp.txt
-	$(IMAGE_TOOL) -b 7 $(IMAGE_TOOL_CONFIGURATION) $(APP_OUT_DIR)/$(TARGET_FULL).axf 
+	$(IMAGE_TOOL)  $(IMAGE_TOOL_CONFIGURATION) $(APP_OUT_DIR)/$(TARGET_FULL).axf 
 	rm -f $(APP_BLD_DIR)/data.bin
 	$(TOOLCHAIN_PATH)/$(OBJCOPY) -v -O binary $(APP_OUT_DIR)/$(TARGET_FULL).axf $(APP_OUT_DIR)/$(TARGET_FULL).bin
 	$(TOOLCHAIN_PATH)/$(OBJDUMP) -d $(APP_OUT_DIR)/$(TARGET_FULL).axf > $(APP_OUT_DIR)/$(TARGET_FULL).dis
@@ -457,6 +465,9 @@ clean:
 	rm -f $(APP_OUT_DIR)/$(TARGET_FULL).html
 	rm -f $(APP_OUT_DIR)/$(TARGET_FULL).log
 	rm -f $(APP_OUT_DIR)/$(TARGET_FULL).txt
+	rm -f $(APP_SRC_DIR)/pdum_gen.* $(APP_SRC_DIR)/zps_gen*.* $(APP_SRC_DIR)/pdum_apdu.*
+
+clean_zps_pdum:
 	rm -f $(APP_SRC_DIR)/pdum_gen.* $(APP_SRC_DIR)/zps_gen*.* $(APP_SRC_DIR)/pdum_apdu.*
 
 ###############################################################################
