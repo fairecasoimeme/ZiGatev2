@@ -203,7 +203,6 @@ PRIVATE void vInitialiseApp ( void );
 PRIVATE void APP_cbTimerZclTick (void*    pvParam);
 extern void vDebugExceptionHandlersInitialise(void);
 PUBLIC void APP_vRadioTempUpdate(bool_t bLoadCalibration);
-//PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,      PDM_eSystemEventCode    eSystemEventCode );
 
 /****************************************************************************/
 /***        Exported Variables                                            ***/
@@ -555,7 +554,7 @@ PRIVATE void vInitialiseApp ( void )
 
     PDM_eInitialise(1200, 63, NULL);
     PDUM_vInit();
-   // PDM_vRegisterSystemCallback(vPdmEventHandlerCallback);
+
 
     /* Update radio temperature (loading calibration) */
     APP_vRadioTempUpdate(TRUE);
@@ -657,8 +656,11 @@ void main_task (uint32_t parameter)
         /*myEventId = OSA_EventCreate(TRUE);*/
         initialized = TRUE;
 #if (ZIGBEE_USE_FRAMEWORK != 0)
-        RNG_Init();
         SecLib_Init();
+		if(gRngSuccess_d != RNG_Init())
+		{
+			DBG_vPrintf(TRUE,"Failed to init RNG\n");
+		}
         MEM_Init();
         TMR_Init();
 #endif
@@ -1153,8 +1155,8 @@ void vfExtendedStatusCallBack ( ZPS_teExtendedStatus    eExtendedStatus )
 		case ZPS_XS_E_NO_FREE_EXTENDED_ADDR:
 
 			//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
-			PDM_vDeleteDataRecord(PDM_ID_INTERNAL_ADDRESS_MAP_TABLE);
-			RESET_SystemReset();
+			//PDM_vDeleteDataRecord(PDM_ID_INTERNAL_APS_KEYS);
+			//RESET_SystemReset();
 			break;
 
 		default:
@@ -1246,7 +1248,13 @@ PRIVATE void APP_cbTimerZclTick (void*    pvParam)
 {
     static uint8 u8Tick100Ms = 9;
     static uint8 u8Tick1S = 0;
+    static uint8 u8Tick1S2 = 30;
+    static uint16 countDevices=0;
     static uint32 u32RadioTempUpdateMs = 0;
+    ZPS_tsNwkNib * thisNib;
+	uint8  u8SeqNum = 0;
+	void * thisNet = ZPS_pvAplZdoGetNwkHandle();
+	thisNib = ZPS_psNwkNibGetHandle(thisNet);
 
     tsZCL_CallBackEvent sCallBackEvent;
 
@@ -1263,8 +1271,9 @@ PRIVATE void APP_cbTimerZclTick (void*    pvParam)
     if(u8Tick100Ms > 9)
     {
     	u8Tick1S++;
+    	u8Tick1S2++;
     	sControlBridge.sTimeServerCluster.utctTime++;
-    	if (u8Tick1S ==60)
+    	if (u8Tick1S >=60)
     	{
     		u8Tick1S=0;
     		if ((sZllState.u8HeartBeat == 1) || (sZllState.u8RawMode == RAW_MODE_ON))
@@ -1281,7 +1290,35 @@ PRIVATE void APP_cbTimerZclTick (void*    pvParam)
 								   au8Datas,
 								   0);
 			}
+
+			if (thisNib->sTbl.pu16AddrMapNwk[countDevices] < 0xfffe)
+			{
+				APP_eZdpMgmtLqiRequest ( thisNib->sTbl.pu16AddrMapNwk[countDevices],
+																				  0,
+																				  &u8SeqNum );
+
+			}
+
     	}
+
+    	if (u8Tick1S2 >=70)
+		{
+			u8Tick1S2=0;
+
+			if (thisNib->sTbl.pu16AddrMapNwk[countDevices] < 0xfffe)
+			{
+
+				APP_eZdpMgmtRtgRequest ( thisNib->sTbl.pu16AddrMapNwk[countDevices],
+															  0,
+															  &u8SeqNum );
+
+			}
+			countDevices++;
+			if (countDevices>thisNib->sTblSize.u16AddrMap)
+			{
+				countDevices=0;
+			}
+		}
 #ifdef CLD_BAS_ATTR_APPLICATION_LEGRAND
     	sControlBridge.sBasicServerCluster.u32PrivateLegrand++;
 #endif
@@ -1321,6 +1358,17 @@ bool_t APP_bZCL_IsManufacturerCodeSupported(uint16 u16ManufacturerCode)
 	return TRUE;
 }
 
+WEAK uint32 u32Reverse(uint32 u32InWord)
+{
+    uint32 u32OutWord;
+
+    asm volatile ("REV %[reverse], %[input];"
+                  : [reverse] "=r" (u32OutWord)
+                  : [input]  "r"  (u32InWord)   );
+
+    return u32OutWord;
+}
+
 /*PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,
                                         PDM_eSystemEventCode    eSystemEventCode )
 {
@@ -1336,6 +1384,7 @@ bool_t APP_bZCL_IsManufacturerCodeSupported(uint16 u16ManufacturerCode)
 
 
 }*/
+
 
 /****************************************************************************/
 /***        END OF FILE                                                   ***/
