@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2021 NXP
 * All rights reserved.
 *
 * \file
@@ -38,8 +38,38 @@
 #endif
 
 #if FSL_FEATURE_SOC_USART_COUNT
-#include "fsl_usart.h"
+#ifndef gUartDMA_d
+#define gUartDMA_d (0u)
 #endif
+#ifndef gSerialMgrUseDmaHelper_d
+#define gSerialMgrUseDmaHelper_d (0u)
+#endif
+
+#if (defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)) && \
+    ((defined(gUartDMA_d) && (gUartDMA_d == 1)) || \
+     (defined(gUartHwFlowControl_d) && gUartHwFlowControl_d == 1))
+    #error "You cannot use either UART FC and/or both UART DMA when DMA Helper is enabled"
+#endif
+
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+#include "UART_Helper.h"
+#endif /* defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1) */
+
+#include "fsl_usart.h"
+#if gUartDMA_d
+#include "fsl_usart_dma.h"
+#include "fsl_dma.h"
+#include "TimersManager.h"
+#endif
+#endif
+
+/****************************************************************************/
+/***        Type Definitions                                              ***/
+/****************************************************************************/
+
+/****************************************************************************/
+/***        Local Variables                                               ***/
+/****************************************************************************/
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -66,9 +96,13 @@ static void LPSCI_Common_ISR(uint32_t instance);
 
 #if FSL_FEATURE_SOC_USART_COUNT
 static USART_Type  *mUsartBase[]    = USART_BASE_PTRS;
-static IRQn_Type    mUsartIrqs[]    = USART_IRQS;
 static uartState_t *pUsartStates[FSL_FEATURE_SOC_USART_COUNT];
+#if gUartDMA_d
+static const IRQn_Type s_dmaIRQNumber[] = DMA_IRQS;
+#else
+static IRQn_Type    mUsartIrqs[]    = USART_IRQS;
 static void USART_ISR(void);
+#endif
 #endif
 
 /*! *********************************************************************************
@@ -793,6 +827,137 @@ void USART_PinInitialize(uint32_t instance)
 }
 
 #if FSL_FEATURE_SOC_USART_COUNT
+#if gUartDMA_d
+#define USART_TX_DMA_CHANNEL 1
+#define USART_RX_DMA_CHANNEL 0
+
+#ifndef USART_DMA_TIMEOUT
+#define USART_DMA_TIMEOUT (1U)
+#endif
+
+/*! @brief Static table of descriptors */
+#if defined(__ICCARM__)
+#pragma data_alignment              = 16
+dma_descriptor_t g_descriptorPtr[1] = {0};
+#elif defined(__CC_ARM) || defined(__ARMCC_VERSION)
+__attribute__((aligned(16))) dma_descriptor_t g_descriptorPtr[1] = {0};
+#elif defined(__GNUC__)
+__attribute__((aligned(16))) dma_descriptor_t g_descriptorPtr[1] = {0};
+#endif
+
+typedef struct uartDma_handle {
+        usart_dma_handle_t uartDmaHandle;
+        dma_handle_t uartTxDmaHandle;
+        dma_handle_t uartRxDmaHandle;
+}uartDma_handle_t;
+
+static uartDma_handle_t mUsartDmaHndle[FSL_FEATURE_SOC_USART_COUNT];
+static tmrTimerID_t mUARTTimerID[FSL_FEATURE_SOC_USART_COUNT] = {gTmrInvalidTimerID_c};
+static void USART_StartRingBufferDMA(uint32_t instance)
+{
+    dma_transfer_config_t transferConfig;
+    uartState_t *pState =  pUsartStates[instance];
+    serialRingState_t  * rx_ring = &pState->rx_ring;
+
+    USART_Type *base = mUsartBase[instance];
+    DMA_PrepareTransfer(&transferConfig, (void *)&base->FIFORD, rx_ring->buffer, 1, rx_ring->max, kDMA_PeripheralToMemory,
+                        &g_descriptorPtr[0]);
+    DMA_SubmitTransfer(&mUsartDmaHndle[instance].uartRxDmaHandle, &transferConfig);
+    transferConfig.xfercfg.intA = true;
+    transferConfig.xfercfg.intB = false;
+    DMA_CreateDescriptor(&g_descriptorPtr[0], &transferConfig.xfercfg, (void *)&base->FIFORD, rx_ring->buffer,
+                         &g_descriptorPtr[0]);
+     DMA_StartTransfer(&mUsartDmaHndle[instance].uartRxDmaHandle);
+}
+/* Get how many characters stored in ring buffer. */
+static uint32_t USART_GetRingBufferLengthDMA(uint32_t instance)
+{
+    uartState_t *pState =  pUsartStates[instance];
+    serialRingState_t  * rx_ring = &pState->rx_ring; 
+    uint32_t regPrimask     = 0U;
+    uint32_t RemainingBytes = 0U;
+    uint32_t receivedBytes  = 0U;
+
+    /* Disable IRQ, protect ring buffer. */
+    regPrimask     = DisableGlobalIRQ();
+    RemainingBytes = DMA_GetRemainingBytes(DMA0, USART_RX_DMA_CHANNEL + 2*instance);
+
+    /* When all transfers are completed, XFERCOUNT value changes from 0 to 0x3FF. The last value
+     * 0x3FF does not mean there are 1024 transfers left to complete.It means all data transfer
+     * has completed.
+     */
+    if (RemainingBytes == 1024)
+    {
+        RemainingBytes = 0U;
+    }
+
+    receivedBytes = rx_ring->max - RemainingBytes;
+
+    /* If the received bytes is less than index value, it means the ring buffer has reached it boundary. */
+    if (receivedBytes < rx_ring->in)
+    {
+        receivedBytes += rx_ring->max;
+    }
+
+    receivedBytes -= rx_ring->in;
+    rx_ring->in += receivedBytes;
+    if (rx_ring->in >= rx_ring->max)
+    {
+      rx_ring->in -= rx_ring->max;
+    }
+    rx_ring->space_left -= receivedBytes;
+
+    /* Enable IRQ if previously enabled. */
+    EnableGlobalIRQ(regPrimask);
+
+    return receivedBytes;
+}
+static void UART_DataRxTimeout
+(
+    uint32_t instance
+)
+{
+    uartState_t *pState =  pUsartStates[instance];
+    uint32_t rxcount = 0;
+
+    rxcount = USART_GetRingBufferLengthDMA(instance);
+    if (rxcount != 0) 
+    {
+        if (NULL != pState->rxCb)
+        {
+            pState->rxCb(pState);
+        }
+    }
+    TMR_StartSingleShotTimer(mUARTTimerID[instance], USART_DMA_TIMEOUT, (pfTmrCallBack_t)UART_DataRxTimeout, (void *)(instance));
+
+}
+static void USART_UserCallback(USART_Type *base, usart_dma_handle_t *handle, status_t status, void *userData)
+{
+    userData = userData;
+    uint32_t instance = ~0UL;
+    uartState_t *pState = NULL;
+
+    do {
+            /* Get instance */
+            for (instance = 0; instance < FSL_FEATURE_SOC_USART_COUNT; instance++)
+            {
+                if (base == mUsartBase[instance])
+                    break;
+            }
+            if (instance >= FSL_FEATURE_SOC_USART_COUNT)
+                break;
+            pState = pUsartStates[instance];
+            if (kStatus_USART_TxIdle == status)
+            {
+                pState->txSize = 0;
+                if (NULL != pState->txCb)
+                {
+                    pState->txCb(pState);
+                }
+            }
+        }while(0);
+}
+#endif
 #define IS_USART_HW_FLOW_CONTROL_SET(base)  (base->CFG & USART_CFG_CTSEN(1))
 #endif
 
@@ -824,14 +989,53 @@ uint32_t USART_Initialize(uint32_t instance, uartState_t *pState)
 #if gUartHwFlowControl_d
         config.enableHardwareFlowControl = true;
 #endif
+#if gUartDMA_d
+        static uint8_t dmaInited = 0;
+        if (dmaInited == 0)
+        {
+            /* Configure DMA. */
+            DMA_Init(DMA0);
+            dmaInited =  1U;
+        }
+        DMA_EnableChannel(DMA0, USART_TX_DMA_CHANNEL + 2*instance);
+        DMA_EnableChannel(DMA0, USART_RX_DMA_CHANNEL + 2*instance);
+
+        DMA_CreateHandle(&mUsartDmaHndle[instance].uartTxDmaHandle, DMA0, USART_TX_DMA_CHANNEL + 2*instance);
+        DMA_CreateHandle(&mUsartDmaHndle[instance].uartRxDmaHandle, DMA0, USART_RX_DMA_CHANNEL + 2*instance);
+
+        /* Create UART DMA handle. */
+        USART_TransferCreateHandleDMA(base, &mUsartDmaHndle[instance].uartDmaHandle, USART_UserCallback, NULL, &mUsartDmaHndle[instance].uartTxDmaHandle,
+                                     NULL);
         USART_Init(base, &config, BOARD_GetUsartClock(instance));
+        USART_EnableRxDMA(base, true);
         USART_PinInitialize(instance);
-        USART_EnableInterrupts(base, kUSART_RxLevelInterruptEnable);
+        mUARTTimerID[instance] = TMR_AllocateTimer();
+        NVIC_SetPriority(s_dmaIRQNumber[0], gUartIsrPrio_c >> (8 - __NVIC_PRIO_BITS));
+#else
+        USART_Init(base, &config, BOARD_GetUsartClock(instance));
+
+        USART_PinInitialize(instance);
+
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+        if (instance != gSerialMgrDmaHelperIf_c)
+        {
+#endif
+            USART_EnableInterrupts(base, kUSART_RxLevelInterruptEnable);
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+        }
+#endif
         OSA_InstallIntHandler(mUsartIrqs[instance], USART_ISR);
         NVIC_SetPriority(mUsartIrqs[instance], gUartIsrPrio_c >> (8 - __NVIC_PRIO_BITS));
         NVIC_EnableIRQ(mUsartIrqs[instance]);
+#endif
     }
 #endif
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+    if (instance == gSerialMgrDmaHelperIf_c)
+    {
+        vAHI_UartEnable(gSerialMgrDmaHelperIf_c);
+    }
+#endif /* gSerialMgrUseDmaHelper_d && (gSerialMgrUseDmaHelper_d == 1) */
     return status;
 }
 
@@ -857,6 +1061,11 @@ uint32_t USART_SendData(uint32_t instance, uint8_t *pData, uint32_t size)
 {
     uint32_t status = gUartSuccess_c;
 #if FSL_FEATURE_SOC_USART_COUNT
+#if gUartDMA_d 
+    usart_transfer_t sendXfer;
+#endif
+  
+    
     USART_Type *base;
 
     if (instance >= FSL_FEATURE_SOC_USART_COUNT || !size || !pData)
@@ -875,10 +1084,28 @@ uint32_t USART_SendData(uint32_t instance, uint8_t *pData, uint32_t size)
         }
         else
         {
-            while (!(kUSART_TxFifoEmptyFlag & USART_GetStatusFlags(base)))
+#if gUartDMA_d  
+            sendXfer.data        = pData;
+            sendXfer.dataSize    = size;
+            USART_TransferSendDMA(base, &mUsartDmaHndle[instance].uartDmaHandle, &sendXfer); 
+            OSA_InterruptEnable();
+#else
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+            if (instance == gSerialMgrDmaHelperIf_c)
             {
+                while (!(base->STAT & USART_INTSTAT_TXIDLE_MASK))
+                {
+                }
             }
-
+            else
+            {
+#endif
+                while (!(kUSART_TxFifoEmptyFlag & USART_GetStatusFlags(base)))
+                {
+                }
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+            }
+#endif
             pUsartStates[instance]->txSize = size - 1;
             pUsartStates[instance]->pTxData = pData + 1;
             USART_WriteByte(base, *pData);
@@ -886,6 +1113,7 @@ uint32_t USART_SendData(uint32_t instance, uint8_t *pData, uint32_t size)
 
             USART_ClearStatusFlags(base, kUSART_TxFifoEmptyFlag);
             USART_EnableInterrupts(base, kUSART_TxLevelInterruptEnable);
+#endif
         }
     }
 #endif
@@ -897,6 +1125,7 @@ uint32_t USART_ReceiveData(uint32_t instance, uint8_t *pData, uint32_t size)
 {
     uint32_t status = gUartSuccess_c;
 #if FSL_FEATURE_SOC_USART_COUNT
+
     if (instance >= FSL_FEATURE_SOC_USART_COUNT || !size || !pData)
     {
         status = gUartInvalidParameter_c;
@@ -904,15 +1133,22 @@ uint32_t USART_ReceiveData(uint32_t instance, uint8_t *pData, uint32_t size)
     else
     {
         OSA_InterruptDisable();
+
         if (pUsartStates[instance]->rxSize)
         {
             status = gUartBusy_c;
         }
         else
         {
+#if gUartDMA_d  
+
+#else
             pUsartStates[instance]->rxSize = size;
             pUsartStates[instance]->pRxData = pData;
+#endif
+
         }
+
         OSA_InterruptEnable();
     }
 #endif
@@ -923,17 +1159,22 @@ uint32_t USART_ReceiveData(uint32_t instance, uint8_t *pData, uint32_t size)
 uint32_t USART_InstallRxCalback(uint32_t instance, uartCallback_t cb, uint32_t cbParam)
 {
     uint32_t status = gUartSuccess_c;
+    do
+    {
 #if FSL_FEATURE_SOC_USART_COUNT
-    if (instance >= FSL_FEATURE_SOC_USART_COUNT)
-    {
-        status = gUartInvalidParameter_c;
-    }
-    else
-    {
+        if (instance >= FSL_FEATURE_SOC_USART_COUNT)
+        {
+            status = gUartInvalidParameter_c;
+            break;
+        }
         pUsartStates[instance]->rxCb = cb;
         pUsartStates[instance]->rxCbParam = cbParam;
-    }
+#if gUartDMA_d
+        USART_StartRingBufferDMA(instance);
+        TMR_StartSingleShotTimer(mUARTTimerID[instance], USART_DMA_TIMEOUT, (pfTmrCallBack_t)UART_DataRxTimeout, (void *)instance);
 #endif
+#endif
+    }while(0);
     return status;
 }
 
@@ -1338,6 +1579,44 @@ void UART0_IRQHandler(void)
 
 /************************************************************************************/
 #if FSL_FEATURE_SOC_USART_COUNT
+#if !gUartDMA_d
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1)
+void USART_Poll(uint32_t instance)
+{
+    uint8_t data;
+    uint32_t rx_lvl;
+    uartState_t *pState = pUsartStates[instance];
+
+    while (rx_lvl = u16AHI_UartReadRxFifoLevel(instance))
+    {
+        serialRingState_t  * rx_ring = &pState->rx_ring;
+
+        /* is there still room in the ring buffer */
+        while (rx_ring->space_left > 0)
+        {
+            data = u8AHI_UartReadData(instance);
+            Serial_RingProduceChar(rx_ring, data);
+            rx_lvl--;
+
+            if (rx_lvl == 0)
+                break;
+        }
+        if (pState->rxSize == 0)
+        {
+            pState->rxCb(pState);
+        }
+
+        /* If we have exited the above loop with the Rx Buffer full,
+         *  disable Rx interrupt
+        */
+        if (rx_ring->space_left == 0)
+        {
+            pState->overrun_cnt++;
+        }
+    }
+}
+#endif /* defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1) */
+
 static void USART_ISR(void)
 {
     do {
@@ -1361,27 +1640,19 @@ static void USART_ISR(void)
         volatile uint32_t stat;
         uint8_t data;
         stat = USART_GetStatusFlags(base);
-        /* Check if data was received */
-        if (kUSART_RxError & stat)
-        {
-            data = USART_ReadByte(base); /* char doomed to be dropped anyway */
-            SERIAL_DBG_LOG("stat=0x%x dropping char 0x%x", stat, data);
 
-            USART_ClearStatusFlags(base, kUSART_RxError);
-        }
-        if ( (kUSART_RxFifoNotEmptyFlag & stat) &&
-             (kUSART_RxLevelInterruptEnable & USART_GetEnabledInterrupts(base)))
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1)
+        if (instance == gSerialMgrDmaHelperIf_c)
         {
-            uint32_t rx_lvl =  (stat & USART_FIFOSTAT_RXLVL_MASK) >> USART_FIFOSTAT_RXLVL_SHIFT;
-
-            if (NULL != pState->rxCb)
+            uint32_t rx_lvl = u16AHI_UartReadRxFifoLevel(0);
+            while (rx_lvl)
             {
                 serialRingState_t  * rx_ring = &pState->rx_ring;
 
                 /* is there still room in the ring buffer */
                 while (rx_ring->space_left > 0)
                 {
-                    data = USART_ReadByte(base);
+                    data = u8AHI_UartReadData(0);
                     //pState->rxSize--;
                     Serial_RingProduceCharProtected(rx_ring, data);
                     rx_lvl--;
@@ -1389,30 +1660,77 @@ static void USART_ISR(void)
                     if (rx_lvl == 0)
                         break;
                 }
+                
                 if (pState->rxSize == 0)
+                {
                     pState->rxCb(pState);
+                }
 
-                /* If we have exited the above loop with the Rx Buffer full,
-                 *  disable Rx interrupt */
+                /*
+                 * If we have exited the above loop with the Rx Buffer full,
+                 *  disable Rx interrupt
+                 */
                 if (rx_ring->space_left == 0)
                 {
-                    if (IS_USART_HW_FLOW_CONTROL_SET(base))
+                    pState->overrun_cnt++;
+                }
+            }
+        }
+        else
+        {
+#endif /* defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1) */
+            /* Check if data was received */
+            if (kUSART_RxError & stat)
+            {
+                data = USART_ReadByte(base); /* char doomed to be dropped anyway */
+                SERIAL_DBG_LOG("stat=0x%x dropping char 0x%x", stat, data);
+                USART_ClearStatusFlags(base, kUSART_RxError);
+            }
+            if ( (kUSART_RxFifoNotEmptyFlag & stat) &&
+                (kUSART_RxLevelInterruptEnable & USART_GetEnabledInterrupts(base)))
+            {
+                uint32_t rx_lvl =  (stat & USART_FIFOSTAT_RXLVL_MASK) >> USART_FIFOSTAT_RXLVL_SHIFT;
+                if (NULL != pState->rxCb)
+                {
+                    serialRingState_t  * rx_ring = &pState->rx_ring;
+
+                    /* is there still room in the ring buffer */
+                    while (rx_ring->space_left > 0)
                     {
-                        USART_DisableInterrupts(base, kUSART_RxLevelInterruptEnable);
+                        data = USART_ReadByte(base);
+                        //pState->rxSize--;
+                        Serial_RingProduceCharProtected(rx_ring, data);
+                        rx_lvl--;
+
+                        if (rx_lvl == 0)
+                            break;
                     }
-                    else
+                    if (pState->rxSize == 0)
+                        pState->rxCb(pState);
+
+                    /* If we have exited the above loop with the Rx Buffer full,
+                     *  disable Rx interrupt */
+                    if (rx_ring->space_left == 0)
                     {
-                        if (rx_lvl > 0)
+                        if (IS_USART_HW_FLOW_CONTROL_SET(base))
                         {
-                            data = USART_ReadByte(base);
-                            SERIAL_DBG_LOG("Losing byte %x", data);
-                            pState->overrun_cnt++;
+                            USART_DisableInterrupts(base, kUSART_RxLevelInterruptEnable);
+                        }
+                        else
+                        {
+                            if (rx_lvl > 0)
+                            {
+                                data = USART_ReadByte(base);
+                                SERIAL_DBG_LOG("Losing byte %x", data);
+                                pState->overrun_cnt++;
+                            }
                         }
                     }
                 }
             }
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1)
         }
-
+#endif
         /* Check if data Tx has end */
         if ((kUSART_TxFifoEmptyFlag & stat) &&
             (kUSART_TxLevelInterruptEnable & USART_GetEnabledInterrupts(base)))
@@ -1420,7 +1738,28 @@ static void USART_ISR(void)
             if (pState->txSize)
             {
                 pState->txSize--;
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+                if (instance == gSerialMgrDmaHelperIf_c)
+                {
+                    OSA_InterruptDisable();
+                    /*
+                     * Wait for USART transmitter idle (not FIFO). This is due
+                     * to the fact that even if the TX FIFO interrupt is generated,
+                     * the transmitter could be running and as such corruption happens
+                     * on the serial line.
+                     */
+                    while (!(base->STAT & USART_INTSTAT_TXIDLE_MASK))
+                    {
+                    }
+                }
+#endif
                 USART_WriteByte(base, *(pState->pTxData++));
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d == 1)
+                if (instance == gSerialMgrDmaHelperIf_c)
+                {
+                    OSA_InterruptEnable();
+                }
+#endif
             }
             else if (0 == pState->txSize)
             {
@@ -1432,8 +1771,9 @@ static void USART_ISR(void)
                 }
             }
         }
-
     } while (0);
 
 }
 #endif
+#endif
+

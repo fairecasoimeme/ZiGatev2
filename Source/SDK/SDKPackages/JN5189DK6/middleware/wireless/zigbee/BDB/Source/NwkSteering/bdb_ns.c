@@ -83,6 +83,7 @@ static uint8               u8ScanChannel;
 /****************************************************************************/
 /***        Exported Functions                                            ***/
 /****************************************************************************/
+WEAK void vNsTryNwkJoinAppCb(ZPS_tsNwkNetworkDescr *pNwkDescr);
 
 /****************************************************************************
  *
@@ -238,13 +239,14 @@ PUBLIC void BDB_vNsStateMachine(BDB_tsZpsAfEvent *psZpsAfEvent)
                     }
                     else
                     {
+                        DBG_vPrintf(TRACE_BDB, "u8ScanChannel = %d, LAST_SCAN_CHANNEL = %d\n",
+                                    u8ScanChannel, LAST_SCAN_CHANNEL(u32ScanChannels));
                         /* 8.3-3 If the Status parameter from the NLME-NETWORK-DISCOVERY.confirm
                              primitive is not equal to SUCCESS, indicating that the channel scan was not
                              successful, the node SHALL continue from step 12 (8.3-12). */
-#if ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
-                        if((!u32ScanChannels) || (u8ScanChannel > BDB_CHANNEL_MAX))
+#if !(defined(SINGLE_CHANNEL)) || ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
+                        if(((!u32ScanChannels) || (u8ScanChannel > LAST_SCAN_CHANNEL(u32ScanChannels))) && (bDoPrimaryScan == FALSE))
                         {
-                            if(bDoPrimaryScan == FALSE)
 #else
                         if (TRUE)
                         {
@@ -559,7 +561,7 @@ PRIVATE void vNsDiscoverNwk()
             ZPS_vNwkNibClearDiscoveryNT(ZPS_pvAplZdoGetNwkHandle());
             eNS_State = E_NS_WAIT_DISCOVERY;
 #ifdef ENABLE_SUBG_IF
-            if(ZPS_E_SUCCESS == ZPS_eAplZdoDiscoverNetworks(SUBG_PAGE_28 | (u32ScanChannels & (1<<u8ScanChannel))))
+            if (ZPS_E_SUCCESS == ZPS_eAplZdoDiscoverNetworks(SUBG_CH2MASK(u8ScanChannel, bDoPrimaryScan)))
 #else
             if(ZPS_E_SUCCESS == ZPS_eAplZdoDiscoverNetworks(u32ScanChannels & (1<<u8ScanChannel)))
 #endif
@@ -639,6 +641,9 @@ PRIVATE void vNsTryNwkJoin(bool_t bStartWithIndex0,
                      bdbcMaxSameNetworkRetryAttempts times in succession (bdbcRecSame-
                      NetworkRetryAttempts times in succession is RECOMMENDED)... */
             u8RecSameNwkRetryAttempts++;
+
+            vNsTryNwkJoinAppCb(&pNwkDescr[u8NwkIndex]);
+
             if( ( u8RecSameNwkRetryAttempts < BDBC_REC_SAME_NETWORK_RETRY_ATTEMPTS ) && \
                ( u8RecSameNwkRetryAttempts < BDBC_MAX_SAME_NETWORK_RETRY_ATTEMPTS ) )
             {
@@ -669,10 +674,9 @@ PRIVATE void vNsTryNwkJoin(bool_t bStartWithIndex0,
         }
     }
 
-#if ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
-    if((!u32ScanChannels) || (u8ScanChannel > BDB_CHANNEL_MAX))
+#if !(defined(SINGLE_CHANNEL)) || ((SINGLE_CHANNEL < BDB_CHANNEL_MIN) || (SINGLE_CHANNEL > BDB_CHANNEL_MAX))
+    if(((!u32ScanChannels) || (u8ScanChannel > LAST_SCAN_CHANNEL(u32ScanChannels))) && (bDoPrimaryScan == FALSE))
     {
-        if(bDoPrimaryScan == FALSE)
 #else
     if (TRUE)
     {
@@ -916,6 +920,23 @@ PRIVATE void vNsTclkResendVerKey(void)
     ZPS_eAfVerifyKeyReqRsp(ZPS_psAplAibGetAib()->u64ApsTrustCenterAddress, 4 /*ZPS_APL_REQ_KEY_TC_LINK_KEY*/);
     ZTIMER_eStart(u8TimerBdbNs, ZTIMER_TIME_MSEC(BDBC_TC_LINK_KEY_EXCHANGE_TIMEOUT*1000));
     sBDB.sAttrib.u8bdbTCLinkKeyExchangeAttempts++;
+}
+
+/****************************************************************************
+ *
+ * NAME: vNsTryNwkJoinAppCb
+ *
+ * DESCRIPTION:
+ *  Calls at the app layer a function to allow to do something before attempting
+ *  to join. An example would be to change the scheduling policy.
+ *
+ * RETURNS:
+ * void
+ *
+ ****************************************************************************/
+WEAK void vNsTryNwkJoinAppCb(ZPS_tsNwkNetworkDescr *pNwkDescr)
+{
+
 }
 /****************************************************************************/
 /***        END OF FILE                                                   ***/

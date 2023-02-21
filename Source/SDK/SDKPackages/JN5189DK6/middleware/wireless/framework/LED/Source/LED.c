@@ -109,7 +109,7 @@ typedef struct LED_RgbDimInfo_tag
 ******************************************************************************/
 static void LED_GpioSet(const gpioOutputPinConfig_t* pOutputConfig, LED_OpMode_t operation);
 #if gTMR_Enabled_d
-static void LED_FlashTimeout(uint8_t timerId);
+static void LED_FlashTimeout(void *timerId);
 #endif
 #if gLedRgbEnabled_d
 static void LED_RgbLedInit(void);
@@ -150,6 +150,7 @@ static bool_t mfLedInSerialMode;
 /* Flashing Mode: indicates how many LEDs are in flashing mode */
 static uint8_t mLedFlashingLEDs = 0;  /* flashing LEDs */
 static uint8_t mLedStartFlashingPosition = LED1;
+static bool_t isInitialized = FALSE;
 #if gTMR_Enabled_d
 /* LED timer ID */
 static tmrTimerID_t mLEDTimerID = gTmrInvalidTimerID_c;
@@ -208,23 +209,27 @@ void LED_Init
     void
 )
 {
-	GpioOutputPinInit(ledPins, gLEDsOnTargetBoardCnt_c);
+	if (!isInitialized)
+	{
+		GpioOutputPinInit(ledPins, gLEDsOnTargetBoardCnt_c);
 
 #if gLedRgbEnabled_d
-    LED_RgbLedInit();
+		LED_RgbLedInit();
 #endif
 
-    /* allocate a timer for use in flashing LEDs */
+		/* allocate a timer for use in flashing LEDs */
 #if gTMR_Enabled_d
-    mLEDTimerID = TMR_AllocateTimer();
+		mLEDTimerID = TMR_AllocateTimer();
 #endif
-    
+
 #if gLedRgbEnabled_d && gRgbLedDimmingEnabled_d && gTMR_Enabled_d
-    /* allocate a timer for use in RGB dimming */
-    mRGBLedTimerID = TMR_AllocateTimer();
-    mRbgDimInfo.ongoing = FALSE;
-    mRbgDimInfo.interval = gRgbLedDimDefaultInterval_c;    
+		/* allocate a timer for use in RGB dimming */
+		mRGBLedTimerID = TMR_AllocateTimer();
+		mRbgDimInfo.ongoing = FALSE;
+		mRbgDimInfo.interval = gRgbLedDimDefaultInterval_c;
 #endif /* gLedRgbEnabled_d && gRgbLedDimmingEnabled_d && gTMR_Enabled_d */
+		isInitialized = TRUE;
+	}
 }
 
 /******************************************************************************
@@ -264,6 +269,7 @@ void
         /* turn off LED */
         GpioSetPinOutput(ledPins + i);
     }
+    isInitialized = FALSE;
 }
 
 /******************************************************************************
@@ -939,9 +945,10 @@ static void LED_DecrementBlip(void)
 ******************************************************************************/
 static void LED_FlashTimeout
 (
-    uint8_t timerId
+    void *timerId
 )
 {
+    (void) timerId;
 #if gLedColorWheelEnabled_d && gLedRgbEnabled_d
     if(!gColorWheelIdx)
     {
@@ -971,8 +978,6 @@ static void LED_FlashTimeout
             mLedFlashingLEDs |= mLedStartFlashingPosition;
         }
     }
-
-    timerId = timerId;  /* prevent compiler warning */
 }
 
 #if gLedColorWheelEnabled_d && gLedRgbEnabled_d

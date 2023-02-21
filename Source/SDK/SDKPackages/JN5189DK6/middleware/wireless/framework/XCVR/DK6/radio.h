@@ -46,12 +46,12 @@ extern "C" {
 /****************************************************************************/
 /***    Radio driver version (XYYY): X major version, YYY minor version   ***/
 /****************************************************************************/
-#define RADIO_VERSION (2096)
+#define RADIO_VERSION (2099)
 
 /****************************************************************************/
 /***    Radio calibration data record version                             ***/
 /****************************************************************************/
-#define RADIO_CAL_RECORD_VERSION (1002)
+#define RADIO_CAL_RECORD_VERSION (1003)
 
 /****************************************************************************/
 /***    Radio driver int time values									  ***/
@@ -261,6 +261,22 @@ void vRadio_Standard_Init(uint32_t u32RadioStandard);
  *
  ****************************************************************************/
 uint8_t u8Radio_GetEDfromRSSI(int16_t i16RSSIval);
+
+/****************************************************************************
+ *
+ * NAME:       i16Radio_GetRSSIfromED
+ *
+ * DESCRIPTION:
+ * Returns RSSI value calculateod from Energy Detect value
+ *
+ * PARAMETERS:
+ * uint8_t ED in [0..255] range
+ *
+ * RETURNS:
+ * int16_t i16RSSIval: RSSI value expressed in fourth of dBm (2'complement signed value)
+ *
+ ****************************************************************************/
+int16_t i16Radio_GetRSSIfromED(uint8_t u8Ed);
 
 /****************************************************************************
  *

@@ -1,3 +1,21 @@
+/****************************************************************************
+ *
+ * Copyright 2020,2022-2023 NXP.
+ *
+ * NXP Confidential. 
+ * 
+ * This software is owned or controlled by NXP and may only be used strictly 
+ * in accordance with the applicable license terms.  
+ * By expressly accepting such terms or by downloading, installing, activating 
+ * and/or otherwise using the software, you are agreeing that you have read, 
+ * and that you agree to comply with and are bound by, such license terms.  
+ * If you do not agree to be bound by the applicable license terms, 
+ * then you may not retain, install, activate or otherwise use the software. 
+ * 
+ *
+ ****************************************************************************/
+
+
 /*****************************************************************************
  *
  * MODULE:      Zigbee Protocol Stack Application Layer
@@ -6,31 +24,7 @@
  *
  * DESCRIPTION: Zigbee Device Profile (ZDP) interface
  *
- *****************************************************************************
- *
- * This software is owned by NXP B.V. and/or its supplier and is protected
- * under applicable copyright laws. All rights are reserved. We grant You,
- * and any third parties, a license to use this software solely and
- * exclusively on NXP products [NXP Microcontrollers such as JN5168, JN5179].
- * You, and any third parties must reproduce the copyright and warranty notice
- * and any other legend of ownership on each copy or partial copy of the
- * software.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Copyright NXP B.V. 2016. All rights reserved
- *
- ****************************************************************************/
+ *****************************************************************************/
 
 #ifndef ZPS_APL_ZDP_H_
 #define ZPS_APL_ZDP_H_
@@ -60,12 +54,17 @@
 #define ZPS_ZDP_SIMPLE_DESC_REQ_CLUSTER_ID                  (0x0004)    /* [ISP001377_sfr 102] */
 #define ZPS_ZDP_ACTIVE_EP_REQ_CLUSTER_ID                    (0x0005)    /* [ISP001377_sfr 103] */
 #define ZPS_ZDP_MATCH_DESC_REQ_CLUSTER_ID                   (0x0006)    /* [ISP001377_sfr 104] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_COMPLEX_DESC_REQ_CLUSTER_ID                 (0x0010)    /* [ISP001377_sfr 105] */
 #define ZPS_ZDP_USER_DESC_REQ_CLUSTER_ID                    (0x0011)    /* [ISP001377_sfr 106] */
 #define ZPS_ZDP_DISCOVERY_CACHE_REQ_CLUSTER_ID              (0x0012)    /* [ISP001377_sfr 107] */
+#endif
 #define ZPS_ZDP_DEVICE_ANNCE_REQ_CLUSTER_ID                 (0x0013)    /* [ISP001377_sfr 108] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_USER_DESC_SET_REQ_CLUSTER_ID                (0x0014)    /* [ISP001377_sfr 109] */
+#endif
 #define ZPS_ZDP_SYSTEM_SERVER_DISCOVERY_REQ_CLUSTER_ID      (0x0015)    /* [ISP001377_sfr 110] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_DISCOVERY_STORE_REQ_CLUSTER_ID              (0x0016)    /* [ISP001377_sfr 111] */
 #define ZPS_ZDP_NODE_DESC_STORE_REQ_CLUSTER_ID              (0x0017)    /* [ISP001377_sfr 112] */
 #define ZPS_ZDP_POWER_DESC_STORE_REQ_CLUSTER_ID             (0x0018)    /* [ISP001377_sfr 113] */
@@ -76,8 +75,10 @@
 #define ZPS_ZDP_EXTENDED_SIMPLE_DESC_REQ_CLUSTER_ID         (0x001d)    /* [ISP001377_sfr 118] */
 #define ZPS_ZDP_EXTENDED_ACTIVE_EP_REQ_CLUSTER_ID           (0x001e)    /* [ISP001377_sfr 119] */
 #define ZPS_ZDP_END_DEVICE_BIND_REQ_CLUSTER_ID              (0x0020)    /* [ISP001377_sfr 120] */
+#endif
 #define ZPS_ZDP_BIND_REQ_CLUSTER_ID                         (0x0021)    /* [ISP001377_sfr 121] */
 #define ZPS_ZDP_UNBIND_REQ_CLUSTER_ID                       (0x0022)    /* [ISP001377_sfr 122] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_BIND_REGISTER_REQ_CLUSTER_ID                (0x0023)    /* [ISP001377_sfr 123] */
 #define ZPS_ZDP_REPLACE_DEVICE_REQ_CLUSTER_ID               (0x0024)    /* [ISP001377_sfr 124] */
 #define ZPS_ZDP_STORE_BKUP_BIND_ENTRY_REQ_CLUSTER_ID        (0x0025)    /* [ISP001377_sfr 125] */
@@ -86,14 +87,24 @@
 #define ZPS_ZDP_RECOVER_BIND_TABLE_REQ_CLUSTER_ID           (0x0028)    /* [ISP001377_sfr 128] */
 #define ZPS_ZDP_BACKUP_SOURCE_BIND_REQ_CLUSTER_ID           (0x0029)    /* [ISP001377_sfr 129] */
 #define ZPS_ZDP_RECOVER_SOURCE_BIND_REQ_CLUSTER_ID          (0x002a)    /* [ISP001377_sfr 130] */
+#endif
+#ifdef R23_UPDATES
+#define ZPS_ZDP_CLEAR_ALL_BINDINGS_REQ_CLUSTER_ID           (0x002b)
+#endif
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_NWK_DISC_REQ_CLUSTER_ID                (0x0030)    /* [ISP001377_sfr 131] */
+#endif
 #define ZPS_ZDP_MGMT_LQI_REQ_CLUSTER_ID                     (0x0031)    /* [ISP001377_sfr 132] */
 #define ZPS_ZDP_MGMT_RTG_REQ_CLUSTER_ID                     (0x0032)    /* [ISP001377_sfr 133] */
 #define ZPS_ZDP_MGMT_BIND_REQ_CLUSTER_ID                    (0x0033)    /* [ISP001377_sfr 134] */
 #define ZPS_ZDP_MGMT_LEAVE_REQ_CLUSTER_ID                   (0x0034)    /* [ISP001377_sfr 135] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_DIRECT_JOIN_REQ_CLUSTER_ID             (0x0035)    /* [ISP001377_sfr 136] */
+#endif
 #define ZPS_ZDP_MGMT_PERMIT_JOINING_REQ_CLUSTER_ID          (0x0036)    /* [ISP001377_sfr 137] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_CACHE_REQ_CLUSTER_ID                   (0x0037)    /* [ISP001377_sfr 138] */
+#endif
 #define ZPS_ZDP_MGMT_NWK_UPDATE_REQ_CLUSTER_ID              (0x0038)    /* [ISP001377_sfr 139] */
 
 #define ZPS_ZDP_PARENT_ANNCE_CLUSTER_ID                     (0x001F)
@@ -111,11 +122,14 @@
 #define ZPS_ZDP_SIMPLE_DESC_RSP_CLUSTER_ID                  (0x8004)    /* [ISP001377_sfr 144] */
 #define ZPS_ZDP_ACTIVE_EP_RSP_CLUSTER_ID                    (0x8005)    /* [ISP001377_sfr 145] */
 #define ZPS_ZDP_MATCH_DESC_RSP_CLUSTER_ID                   (0x8006)    /* [ISP001377_sfr 146] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_COMPLEX_DESC_RSP_CLUSTER_ID                 (0x8010)    /* [ISP001377_sfr 147] */
 #define ZPS_ZDP_USER_DESC_RSP_CLUSTER_ID                    (0x8011)    /* [ISP001377_sfr 148] */
 #define ZPS_ZDP_DISCOVERY_CACHE_RSP_CLUSTER_ID              (0x8012)    /* [ISP001377_sfr 151] */
 #define ZPS_ZDP_USER_DESC_CONF_RSP_CLUSTER_ID               (0x8014)    /* [ISP001377_sfr 150] */
+#endif
 #define ZPS_ZDP_SYSTEM_SERVER_DISCOVERY_RSP_CLUSTER_ID      (0x8015)    /* [ISP001377_sfr 149] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_DISCOVERY_STORE_RSP_CLUSTER_ID              (0x8016)    /* [ISP001377_sfr 152] */
 #define ZPS_ZDP_NODE_DESC_STORE_RSP_CLUSTER_ID              (0x8017)    /* [ISP001377_sfr 153] */
 #define ZPS_ZDP_POWER_DESC_STORE_RSP_CLUSTER_ID             (0x8018)    /* [ISP001377_sfr 154] */
@@ -126,8 +140,10 @@
 #define ZPS_ZDP_EXTENDED_SIMPLE_DESC_RSP_CLUSTER_ID         (0x801d)    /* [ISP001377_sfr 158] */
 #define ZPS_ZDP_EXTENDED_ACTIVE_EP_RSP_CLUSTER_ID           (0x801e)    /* [ISP001377_sfr 159] */
 #define ZPS_ZDP_END_DEVICE_BIND_RSP_CLUSTER_ID              (0x8020)    /* [ISP001377_sfr 160] */
+#endif
 #define ZPS_ZDP_BIND_RSP_CLUSTER_ID                         (0x8021)    /* [ISP001377_sfr 161] */
 #define ZPS_ZDP_UNBIND_RSP_CLUSTER_ID                       (0x8022)    /* [ISP001377_sfr 162] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_BIND_REGISTER_RSP_CLUSTER_ID                (0x8023)    /* [ISP001377_sfr 163] */
 #define ZPS_ZDP_REPLACE_DEVICE_RSP_CLUSTER_ID               (0x8024)    /* [ISP001377_sfr 164] */
 #define ZPS_ZDP_STORE_BKUP_BIND_RSP_CLUSTER_ID              (0x8025)    /* [ISP001377_sfr 165] */
@@ -136,14 +152,24 @@
 #define ZPS_ZDP_RECOVER_BIND_TABLE_RSP_CLUSTER_ID           (0x8028)    /* [ISP001377_sfr 168] */
 #define ZPS_ZDP_BKUP_SOURCE_BIND_RSP_CLUSTER_ID             (0x8029)    /* [ISP001377_sfr 169] */
 #define ZPS_ZDP_RECOVER_SOURCE_BIND_RSP_CLUSTER_ID          (0x802a)    /* [ISP001377_sfr 170] */
+#endif
+#ifdef R23_UPDATES
+#define ZPS_ZDP_CLEAR_ALL_BINDINGS_RSP_CLUSTER_ID           (0x802b)
+#endif
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_NWK_DISC_RSP_CLUSTER_ID                (0x8030)    /* [ISP001377_sfr 171] */
+#endif
 #define ZPS_ZDP_MGMT_LQI_RSP_CLUSTER_ID                     (0x8031)    /* [ISP001377_sfr 172] */
 #define ZPS_ZDP_MGMT_RTG_RSP_CLUSTER_ID                     (0x8032)    /* [ISP001377_sfr 173] */
 #define ZPS_ZDP_MGMT_BIND_RSP_CLUSTER_ID                    (0x8033)    /* [ISP001377_sfr 174] */
 #define ZPS_ZDP_MGMT_LEAVE_RSP_CLUSTER_ID                   (0x8034)    /* [ISP001377_sfr 175] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_DIRECT_JOIN_RSP_CLUSTER_ID             (0x8035)    /* [ISP001377_sfr 176] */
+#endif
 #define ZPS_ZDP_MGMT_PERMIT_JOINING_RSP_CLUSTER_ID          (0x8036)    /* [ISP001377_sfr 177] */
+#ifndef R23_UPDATES
 #define ZPS_ZDP_MGMT_CACHE_RSP_CLUSTER_ID                   (0x8037)    /* [ISP001377_sfr 178] */
+#endif
 #define ZPS_ZDP_MGMT_NWK_UPDATE_NOTIFY_CLUSTER_ID           (0x8038)    /* [ISP001377_sfr 179] */
 
 #define ZPS_ZDP_PARENT_ANNCE_RSP_CLUSTER_ID                 (0x801F)
@@ -155,8 +181,10 @@
 /* Maximum payload size possible for a ZDP message */
 #define ZPS_APL_ZDP_MAX_FRAME_SIZE      	50
 
+#ifndef R23_UPDATES
 /* Maximum size of a user descriptor */
 #define ZPS_ZDP_LENGTH_OF_USER_DESC         16
+#endif
 
 /* route table entry size is 5 bytes (see Table 2.128 in spec) */
 #define ZPS_APL_ZDP_MAX_NUM_MGMT_RTG_RSP_ROUTE_TABLE_ENTRIES 7
@@ -235,21 +263,27 @@ typedef struct {
     uint16* pu16OutClusterList;
 } ZPS_tsAplZdpMatchDescReq;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 22]  */
 typedef struct {
     uint16 u16NwkAddrOfInterest;
 } ZPS_tsAplZdpComplexDescReq;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 23]  */
 typedef struct {
     uint16 u16NwkAddrOfInterest;
 } ZPS_tsAplZdpUserDescReq;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 24]  */
 typedef struct {
     uint16 u16NwkAddr;
     uint64 u64IeeeAddr;
 } ZPS_tsAplZdpDiscoveryCacheReq;
+#endif
 
 /* [I SP001377_sfr 25]  */
 typedef struct {
@@ -258,19 +292,21 @@ typedef struct {
     uint8  u8Capability;
 } ZPS_tsAplZdpDeviceAnnceReq;
 
-
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 26]  */
 typedef struct {
     uint16 u16NwkAddrOfInterest;
     uint8  u8Length;
     char szUserDescriptor[ZPS_ZDP_LENGTH_OF_USER_DESC];
 } ZPS_tsAplZdpUserDescSet;
+#endif
 
 /* [I SP001377_sfr 27]  */
 typedef struct {
     uint16 u16ServerMask;
 } ZPS_tsAplZdpSystemServerDiscoveryReq;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 28]  */
 typedef struct {
     uint16 u16NwkAddr;
@@ -282,6 +318,7 @@ typedef struct {
     /* rest of message is variable length */
     uint8* pu8SimpleDescSizeList;
 } ZPS_tsAplZdpDiscoveryStoreReq;
+#endif
 
 #ifndef LITTLE_ENDIAN_PROCESSOR
 typedef struct {
@@ -289,16 +326,24 @@ typedef struct {
     unsigned eFrequencyBand    : 5;
     unsigned eApsFlags         : 3;
     unsigned eReserved         : 3; /* reserved */
+#ifndef R23_UPDATES
     unsigned bUserDescAvail    : 1;
     unsigned bComplexDescAvail : 1;
+#else
+    unsigned                   : 2; /* reserved */
+#endif
     unsigned eLogicalType      : 3;
 }ZPS_tsAplZdpNodeDescBitFields;
 #else
 typedef struct {
     /* ZPS_teZdoDeviceType */
     unsigned eLogicalType      : 3;
+#ifndef R23_UPDATES
     unsigned bComplexDescAvail : 1;
     unsigned bUserDescAvail    : 1;
+#else
+    unsigned                   : 2; /* reserved */
+#endif
     unsigned eReserved         : 3; /* reserved */
     unsigned eApsFlags         : 3;
     unsigned eFrequencyBand    : 5;
@@ -319,6 +364,7 @@ typedef struct {
     uint8 u8DescriptorCapability;
 } ZPS_tsAplZdpNodeDescriptor;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 29]  */
 typedef struct {
     uint16 u16NwkAddr;
@@ -326,6 +372,7 @@ typedef struct {
     /* rest of message is variable length */
     ZPS_tsAplZdpNodeDescriptor sNodeDescriptor;
 } ZPS_tsAplZdpNodeDescStoreReq;
+#endif
 
 #ifdef LITTLE_ENDIAN_PROCESSOR
 typedef struct {
@@ -351,6 +398,7 @@ typedef struct {
     }uBitUnion;
 } ZPS_tsAplZdpNodePowerDescriptor;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 30]  */
 typedef struct {
     uint16 u16NwkAddr;
@@ -367,6 +415,7 @@ typedef struct {
     /* rest of message is variable length */
     uint8* pu8ActiveEpList;
 } ZPS_tsAplZdpActiveEpStoreReq;
+#endif
 
 
 typedef struct
@@ -391,6 +440,7 @@ typedef struct {
     uint16* pu16OutClusterList;
 }ZPS_tsAplZdpSimpleDescType;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 32]  */
 typedef struct {
     uint16 u16NwkAddr;
@@ -424,7 +474,9 @@ typedef struct {
     uint16 u16NwkAddr;
     uint8  u8StartIndex;
 } ZPS_tsAplZdpExtendedActiveEpReq;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 37]  */
 typedef struct {
     uint16 u16BindingTarget;
@@ -437,6 +489,7 @@ typedef struct {
     uint8 u8NumOutClusters;
     uint16 *pu16OutClusterList;
 } ZPS_tsAplZdpEndDeviceBindReq;
+#endif
 
 /* [I SP001377_sfr 38,39]  */
 typedef struct {
@@ -453,8 +506,12 @@ typedef struct {
             uint8  u8DstEndPoint;
         } sExtended;
     } uAddressField;
+#ifdef R23_UPDATES
+    tuClearAllBindingsReq *psTlv;
+#endif
 } ZPS_tsAplZdpBindUnbindReq;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 40]  */
 typedef struct {
     uint64 u64NodeAddress;
@@ -501,6 +558,7 @@ typedef struct {
         } sExtended;
     };
 } ZPS_tsAplZdpRemoveBkupBindEntryReq;
+#endif
 
 typedef struct
 {
@@ -517,6 +575,7 @@ typedef struct
    ZPS_tsAplZdpBindingTableEntry* psBindingTableEntryForSpSrcAddr;
 }ZPS_tsAplZdpBindingTable;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 44]  */
 typedef struct {
     uint16 u16BindingTableEntries;
@@ -551,6 +610,7 @@ typedef struct {
     uint8  u8ScanDuration;
     uint8  u8StartIndex;
 } ZPS_tsAplZdpMgmtNwkDiscReq;
+#endif
 
 /* [I SP001377_sfr 49]  */
 typedef struct {
@@ -573,11 +633,13 @@ typedef struct {
     uint8  u8Flags;
 } ZPS_tsAplZdpMgmtLeaveReq;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 53]  */
 typedef struct {
     uint64 u64DeviceAddress;
     uint8  u8Capability;
 } ZPS_tsAplZdpMgmtDirectJoinReq;
+#endif
 
 /* [I SP001377_sfr 54]  */
 typedef struct {
@@ -585,10 +647,12 @@ typedef struct {
     bool_t bTcSignificance;
 } ZPS_tsAplZdpMgmtPermitJoiningReq;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 55]  */
 typedef struct {
     uint8 u8StartIndex;
 } ZPS_tsAplZdpMgmtCacheReq;
+#endif
 
 /* [I SP001377_sfr 56]  */
 typedef struct
@@ -700,6 +764,7 @@ typedef struct {
     uint8* pu8MatchList;
 } ZPS_tsAplZdpMatchDescRsp;
 
+#ifndef R23_UPDATES
 typedef struct {
     uint8 u8XMLTag;
     uint8 u8FieldCount;
@@ -714,7 +779,9 @@ typedef struct {
     /* rest of the message is variable Length */
     ZPS_tsAplZdpComplexDescElement sComplexDescriptor;
 } ZPS_tsAplZdpComplexDescRsp;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 65]  */
 typedef struct {
     uint8  u8Status;
@@ -723,7 +790,9 @@ typedef struct {
     /* rest of the message is variable Length */
     char szUserDescriptor[ZPS_ZDP_LENGTH_OF_USER_DESC];
 } ZPS_tsAplZdpUserDescRsp;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 68]  */
 typedef struct {
     uint8  u8Status;
@@ -734,6 +803,7 @@ typedef struct {
     uint8  u8Status;
     uint16 u16NwkAddrOfInterest;
 } ZPS_tsAplZdpUserDescConf;
+#endif
 
 /* [I SP001377_sfr 66]  */
 typedef struct {
@@ -741,6 +811,7 @@ typedef struct {
     uint16 u16ServerMask;
 } ZPS_tsAplZdpSystemServerDiscoveryRsp;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 69]  */
 typedef struct {
     uint8   u8Status;
@@ -802,11 +873,14 @@ typedef struct {
     /* rest of the message is variable Length */
     uint8* pu8ActiveEpList;
 } ZPS_tsAplZdpExtendedActiveEpRsp;
+#endif
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 78]  */
 typedef struct {
     uint8 u8Status;
 } ZPS_tsAplZdpEndDeviceBindRsp;
+#endif
 
 /* [I SP001377_sfr 79]  */
 typedef struct {
@@ -819,6 +893,7 @@ typedef struct {
 } ZPS_tsAplZdpUnbindRsp;
 
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 81]  */
 typedef struct {
     uint8  u8Status;
@@ -874,6 +949,7 @@ typedef struct {
     /* rest of the message is variable Length */
     uint64* pu64RcSourceTableList;
 } ZPS_tsAplZdpRecoverSourceBindRsp;
+#endif
 
 typedef struct
 {
@@ -886,6 +962,7 @@ typedef struct
     uint8  u8EndDeviceCapacity; /**< End device capacity */
 } ZPS_tsAplZdpNetworkDescr;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 89]  */
 typedef struct {
     uint8 u8Status;
@@ -895,6 +972,7 @@ typedef struct {
     /* rest of the message is variable Length */
     ZPS_tsAplZdpNetworkDescr* psZdpNetworkDescrList;
 } ZPS_tsAplZdpMgmtNwkDiscRsp;
+#endif
 
 typedef struct
 {
@@ -991,17 +1069,19 @@ typedef struct {
     uint8  u8Status;
 } ZPS_tsAplZdpMgmtLeaveRsp;
 
+#ifndef R23_UPDATES
 /* [I SP001377_sfr 94]  */
 typedef struct {
     uint8  u8Status;
 } ZPS_tsAplZdpMgmtDirectJoinRsp;
+#endif
 
 /* [I SP001377_sfr 95]  */
 typedef struct {
     uint8  u8Status;
 } ZPS_tsAplZdpMgmtPermitJoiningRsp;
 
-
+#ifndef R23_UPDATES
 typedef struct {
     uint64 u64ExtendedAddress;
     uint16 u16NwkAddress;
@@ -1016,6 +1096,7 @@ typedef struct {
     /* rest of the message is variable Length */
     ZPS_tsAplDiscoveryCache* psDiscoveryCacheList;
 } ZPS_tsAplZdpMgmtCacheRsp;
+#endif
 
 /* [I SP001377_sfr 97]  */
 typedef struct {
@@ -1123,6 +1204,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMatchDescRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMatchDescReq *psZdpMatchDescReq);
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpComplexDescRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1130,7 +1212,9 @@ PUBLIC ZPS_teStatus zps_eAplZdpComplexDescRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpComplexDescReq *psZdpComplexDescReq);
+#endif
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpUserDescRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1138,12 +1222,15 @@ PUBLIC ZPS_teStatus zps_eAplZdpUserDescRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpUserDescReq *psZdpUserDescReq);
+#endif
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpDiscoveryCacheRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpDiscoveryCacheReq *psZdpDiscoveryCacheReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpDeviceAnnceRequest(
     void *pvApl,
@@ -1151,6 +1238,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpDeviceAnnceRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpDeviceAnnceReq *psZdpDeviceAnnceReq);
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpUserDescSetRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1158,6 +1246,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpUserDescSetRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpUserDescSet *psZdpUserDescSetReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpSystemServerDiscoveryRequest(
     void *pvApl,
@@ -1165,6 +1254,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpSystemServerDiscoveryRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpSystemServerDiscoveryReq *psZdpSystemServerDiscoveryReq);
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpDiscoveryStoreRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1240,6 +1330,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpEndDeviceBindRequest(
     PDUM_thAPduInstance hAPduInst,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpEndDeviceBindReq *psZdpEndDeviceBindReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpBindUnbindRequest(
     void *pvApl,
@@ -1258,6 +1349,17 @@ PUBLIC ZPS_teStatus zps_eAplZdpUnbindRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpBindUnbindReq *psZdpUnbindReq);
 
+#ifdef R23_UPDATES
+PUBLIC ZPS_teStatus zps_eAplZdpClearAllBindingsRequest(
+    void *pvApl,
+    PDUM_thAPduInstance hAPduInst,
+    ZPS_tuAddress uDstAddr,
+    bool bExtAddr,
+    uint8 *pu8SeqNumber,
+    tuClearAllBindingsReq *psTlvClearAllBindingsReq);
+#endif
+
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpBindRegisterRequest(
     void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1329,6 +1431,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMgmtNwkDiscRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMgmtNwkDiscReq *psZdpMgmtNwkDiscReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpMgmtLqiRequest(
         void *pvApl,
@@ -1362,6 +1465,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMgmtLeaveRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMgmtLeaveReq *psZdpMgmtLeaveReq);
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpMgmtDirectJoinRequest(
         void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1369,6 +1473,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMgmtDirectJoinRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMgmtDirectJoinReq *psZdpMgmtDirectJoinReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpMgmtPermitJoiningRequest(
         void *pvApl,
@@ -1378,6 +1483,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMgmtPermitJoiningRequest(
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMgmtPermitJoiningReq *psZdpMgmtPermitJoiningReq);
 
+#ifndef R23_UPDATES
 PUBLIC ZPS_teStatus zps_eAplZdpMgmtCacheRequest(
         void *pvApl,
     PDUM_thAPduInstance hAPduInst,
@@ -1385,6 +1491,7 @@ PUBLIC ZPS_teStatus zps_eAplZdpMgmtCacheRequest(
     bool bExtAddr,
     uint8 *pu8SeqNumber,
     ZPS_tsAplZdpMgmtCacheReq *psZdpMgmtCacheReq);
+#endif
 
 PUBLIC ZPS_teStatus zps_eAplZdpMgmtNwkUpdateRequest(
     void *pvApl,
@@ -1556,6 +1663,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMatchDescRequest(
     return zps_eAplZdpMatchDescRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMatchDescReq);
 }
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpComplexDescRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -1571,7 +1679,9 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpComplexDescRequest(
 {
     return zps_eAplZdpComplexDescRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpComplexDescReq);
 }
+#endif
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpUserDescRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -1587,7 +1697,9 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpUserDescRequest(
 {
     return zps_eAplZdpUserDescRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpUserDescReq);
 }
+#endif
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpDiscoveryCacheRequest(
     PDUM_thAPduInstance hAPduInst,
     uint8 *pu8SeqNumber,
@@ -1599,6 +1711,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpDiscoveryCacheRequest(
 {
     return zps_eAplZdpDiscoveryCacheRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, pu8SeqNumber, psZdpDiscoveryCacheReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpDeviceAnnceRequest(
     PDUM_thAPduInstance hAPduInst,
@@ -1612,6 +1725,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpDeviceAnnceRequest(
     return zps_eAplZdpDeviceAnnceRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, pu8SeqNumber, psZdpDeviceAnnceReq);
 }
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpUserDescSetRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -1627,6 +1741,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpUserDescSetRequest(
 {
     return zps_eAplZdpUserDescSetRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpUserDescSetReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpSystemServerDiscoveryRequest(
     PDUM_thAPduInstance hAPduInst,
@@ -1640,6 +1755,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpSystemServerDiscoveryRequest(
     return zps_eAplZdpSystemServerDiscoveryRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, pu8SeqNumber, psZdpSystemServerDiscoveryReq);
 }
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpDiscoveryStoreRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -1779,7 +1895,9 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpExtendedActiveEpRequest(
 {
     return zps_eAplZdpExtendedActiveEpRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpExtendedActiveEpReq);
 }
+#endif
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpEndDeviceBindRequest(
     PDUM_thAPduInstance hAPduInst,
     uint8 *pu8SeqNumber,
@@ -1791,6 +1909,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpEndDeviceBindRequest(
 {
     return zps_eAplZdpEndDeviceBindRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, pu8SeqNumber, psZdpEndDeviceBindReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpBindUnbindRequest(
     PDUM_thAPduInstance hAPduInst,
@@ -1810,6 +1929,26 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpBindUnbindRequest(
     return zps_eAplZdpBindUnbindRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, bBindReq, psZdpBindReq);
 }
 
+#ifdef R23_UPDATES
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpClearAllBindingsRequest(
+    PDUM_thAPduInstance hAPduInst,
+    ZPS_tuAddress uDstAddr,
+    bool bExtAddr,
+    uint8 *pu8SeqNumber,
+    tuClearAllBindingsReq *psTlvClearAllBindingsReq) ZPS_ZDP_ALWAYS_INLINE;
+ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpClearAllBindingsRequest(
+    PDUM_thAPduInstance hAPduInst,
+    ZPS_tuAddress uDstAddr,
+    bool bExtAddr,
+    uint8 *pu8SeqNumber,
+    tuClearAllBindingsReq *psTlvClearAllBindingsReq)
+{
+    return zps_eAplZdpClearAllBindingsRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst,
+            uDstAddr, bExtAddr, pu8SeqNumber, psTlvClearAllBindingsReq);
+}
+#endif
+
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpBindRegisterRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -1953,6 +2092,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtNwkDiscRequest(
 {
     return zps_eAplZdpMgmtNwkDiscRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMgmtNwkDiscReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtLqiRequest(
     PDUM_thAPduInstance hAPduInst,
@@ -2018,6 +2158,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtLeaveRequest(
     return zps_eAplZdpMgmtLeaveRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMgmtLeaveReq);
 }
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtDirectJoinRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -2033,6 +2174,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtDirectJoinRequest(
 {
     return zps_eAplZdpMgmtDirectJoinRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMgmtDirectJoinReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtPermitJoiningRequest(
     PDUM_thAPduInstance hAPduInst,
@@ -2050,6 +2192,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtPermitJoiningRequest(
     return zps_eAplZdpMgmtPermitJoiningRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMgmtPermitJoiningReq);
 }
 
+#ifndef R23_UPDATES
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtCacheRequest(
     PDUM_thAPduInstance hAPduInst,
     ZPS_tuAddress uDstAddr,
@@ -2065,6 +2208,7 @@ ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtCacheRequest(
 {
     return zps_eAplZdpMgmtCacheRequest(ZPS_pvAplZdoGetAplHandle(), hAPduInst, uDstAddr, bExtAddr, pu8SeqNumber, psZdpMgmtCacheReq);
 }
+#endif
 
 ZPS_APL_INLINE ZPS_teStatus ZPS_eAplZdpMgmtNwkUpdateRequest(
     PDUM_thAPduInstance hAPduInst,

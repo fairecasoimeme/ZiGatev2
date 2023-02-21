@@ -125,9 +125,10 @@
 #ifdef CPU_JN518X
 #define RTC1KHZTICKS_TO_MILLISECONDS(x)    (((x) *125)>>7)
 #define MILLISECONDS_TO_RTC1KHZTICKS(x)   (((x)<<7)/125)
-#define TICKS32K_TO_MILLISECONDS(x)   ((uint32_t)(((uint64_t)(x)*125)>>12)) /* mult by 1000 divided by 32768*/
-#define MILLISECONDS_TO_TICKS32K(x)   ((uint32_t)(((uint64_t)(x)<<12)/125))
+#define TICKS32K_TO_MILLISECONDS(x)   (((((uint64_t)x)*125))>>12) /* mult by 1000 divided by 32768*/
+#define MILLISECONDS_TO_TICKS32K(x)   (((((uint64_t)x)<<12))/125)
 #endif
+
 
 /************************************************************************************
 *************************************************************************************
@@ -140,7 +141,6 @@ typedef struct _tmr_adapter_pwm_param_type
     uint32_t initValue;
 }tmr_adapter_pwm_param_t;
 
-
 /*
  * \brief   Platofrm specific timer ticks type definition
  */
@@ -149,6 +149,8 @@ typedef struct _tmr_adapter_pwm_param_type
 #else
     typedef uint16_t tmrTimerTicks_t;
 #endif
+
+
 /************************************************************************************
 *************************************************************************************
 * Public prototypes
@@ -178,12 +180,11 @@ uint32_t PWR_GetTotalSleepDuration32kTicks(uint32_t now);
 void StackTimer_ReprogramDeadline(uint32_t sleep_duration_ticks);
 
 
-/* Uncomment line below if you intend to measure 
+/* Uncomment line below if you intend to measure
  * the drift between SysTick count and 32k timer */
 //#define PostStepTickAssess 1
 
 void SystickCheckDrift(void);
-
 
 
 #ifndef ENABLE_RAM_VECTOR_TABLE

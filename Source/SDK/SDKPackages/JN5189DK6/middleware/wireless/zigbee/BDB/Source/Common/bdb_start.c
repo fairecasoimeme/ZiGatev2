@@ -423,10 +423,29 @@ PUBLIC uint8 BDB_u8PickChannel(uint32 u32ChannelMask)
         }
     }
 #if RAND_CHANNEL
-    return au8ChanAr[(uint8)RND_u32GetRand(0, u8ChanArSize-1)];
+    /*
+     * In case RAND_CHANNEL is TRUE, that is the channel selection is random,
+     * ensure that all the selection on all elements of the array 0..u8ChanArSize.
+     * The reason why this works is because RND_u32GetRand uses the modulo operator
+     * and returns (n % (u32Max - u32Min) + u32Min).
+     *
+     * As such, in order to include the last value in the au8ChanAr in the pool of
+     * candidates, the input needs to go up to and including u8ChanArSize.
+     */
+    return au8ChanAr[(uint8)RND_u32GetRand(0, u8ChanArSize)];
 #else
     /* TestEvent - Return first channel from u32bdbPrimaryChannelSet */
-    for(u8i=BDB_CHANNEL_MIN;u8i<BDB_CHANNEL_MAX;u8i++)
+    /*
+     * The boundary issue (when u32ChannelMask has only BDB_CHANNEL_MAX set),
+     * is covered by the fact that the function returns the first channel in
+     * the au8ChanAr[], which is set by the first loop in the function to be
+     * equal to BDB_CHANNEL_MAX. So there's no need to iterate up to and including
+     * BDB_CHANNEL_MAX, so the condition below could be "less than" instead of
+     * "less than or equal". But for the sake of not surprising the user and because
+     * in other parts of the code we iterate up to and including BDB_CHANNEL_MAX,
+     * the condition below has been rewritten accordingly.
+     */
+    for(u8i=BDB_CHANNEL_MIN;u8i<=BDB_CHANNEL_MAX;u8i++)
     {
         if(sBDB.sAttrib.u32bdbPrimaryChannelSet & (1<<u8i))
         {
@@ -893,6 +912,10 @@ PUBLIC void BDB_vSetAssociationFilter()
     }
 
     ZPS_bAppAddBeaconFilter(&sBeaconFilter);
+#ifdef ENABLE_SUBG_IF
+	void *pvNwk = ZPS_pvAplZdoGetNwkHandle();
+	ZPS_vNwkNibSetMacEnhancedMode(pvNwk, TRUE);
+#endif
 }
 
 /****************************************************************************

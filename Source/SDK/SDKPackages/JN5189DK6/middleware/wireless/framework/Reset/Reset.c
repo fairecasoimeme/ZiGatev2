@@ -16,6 +16,7 @@
 *************************************************************************************
 ************************************************************************************/
 #include "fsl_device_registers.h"
+#include "EmbeddedTypes.h"
 
 #ifdef CPU_JN518X
 #include "fsl_reset.h"
@@ -31,6 +32,9 @@
 #define RST_DBG_LOG(...)
 #endif
 
+#ifndef gResetSystemReset_d
+#define gResetSystemReset_d 0
+#endif
 /************************************************************************************
 *************************************************************************************
 * Private type definitions
@@ -42,7 +46,6 @@
 * Public prototypes
 *************************************************************************************
 ************************************************************************************/
-void ResetMCU(void);
 
 /*
 * SafeActions_on_RamOff is declared weak.
@@ -61,16 +64,27 @@ __attribute__((weak)) void SafeActions_on_RamOff(void)
 ************************************************************************************/
 void ResetMCU(void)
 {
-  RST_DBG_LOG("sw reset");
+    RST_DBG_LOG("");
 
-  SafeActions_on_RamOff();
+    SafeActions_on_RamOff();
 
-#ifdef CPU_JN518X
-  RESET_SystemReset();
+#ifndef CPU_JN518X
+    NVIC_SystemReset();
 #else
-  NVIC_SystemReset();
+#if gResetSystemReset_d
+    /* Full IC reset */
+    RESET_SystemReset();
+#else
+    /* Let ResetMCU just reset the ARM core so that the ARM core executes a Cold boot
+     *  but keeps its RAM on, allowing the exchange of information across reset
+     * */
+    RESET_ArmReset();
 #endif
-  while(1){}
+#endif
+  /* never reached */
+    while(1){}
 }
+
+
 
 /********************************** EOF ***************************************/

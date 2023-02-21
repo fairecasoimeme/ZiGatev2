@@ -47,21 +47,10 @@
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
-#ifndef ZIGBEE_USE_FRAMEWORK
-PUBLIC bool_t bACI_WriteKey(tsReg128 *psKeyData)
-{
-    status_t status;
-    status = AES_SetKey(AES0, (uint8 *)psKeyData, 16);
-    if (status != kStatus_Success)
-    {
-        return FALSE;
-    }
-    return TRUE;
-}
 
 /****************************************************************************
  *
- * NAME: ZPS_u32Reverse
+ * NAME: u32Reverse
  *
  * DESCRIPTION:  reverse the byte order of a word
  *               
@@ -78,6 +67,18 @@ PUBLIC uint32 u32Reverse(uint32 u32InWord)
                   : [input]  "r"  (u32InWord)   );
 
     return u32OutWord;
+}
+
+#ifndef ZIGBEE_USE_FRAMEWORK
+PUBLIC bool_t bACI_WriteKey(tsReg128 *psKeyData)
+{
+    status_t status;
+    status = AES_SetKey(AES0, (uint8 *)psKeyData, 16);
+    if (status != kStatus_Success)
+    {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /****************************************************************************

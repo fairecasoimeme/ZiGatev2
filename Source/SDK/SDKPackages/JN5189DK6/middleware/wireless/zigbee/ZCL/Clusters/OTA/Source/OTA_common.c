@@ -45,6 +45,7 @@
 #include "OTA_private.h"
 #include "OtaSupport.h"
 #include "fsl_reset.h"
+#include "rom_psector.h"
 
 #ifdef APP0
 #include "fsl_flash.h"
@@ -222,6 +223,33 @@ PUBLIC  void vOtaSwitchLoads(void)
 #endif
 }
 
+PUBLIC bool_t bOtaIsImageAuthenticated(void)
+{
+#if (defined JENNIC_CHIP_FAMILY_JN518x)
+    bool_t authenticationEnabled = bOtaIsAuthenticationEnabled();
+    bool_t imgAuthenticated = false; 
+    if (authenticationEnabled)
+    {
+        imgAuthenticated = (gOtaImageAuthPass_c == OTA_ImageAuthenticate());
+    }
+    else
+    {
+        imgAuthenticated = true;
+    }
+    return imgAuthenticated;
+#else
+    return true;
+#endif
+}
+
+PUBLIC bool_t bOtaIsAuthenticationEnabled(void)
+{
+#if (defined JENNIC_CHIP_FAMILY_JN518x)   
+    return (psector_Read_ImgAuthLevel()>0);
+#else
+    return false;
+#endif
+}
 
 #if (defined JENNIC_CHIP_FAMILY_JN518x)
 #ifdef APP0

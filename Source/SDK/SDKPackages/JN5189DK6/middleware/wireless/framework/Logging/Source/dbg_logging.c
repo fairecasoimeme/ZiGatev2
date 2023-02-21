@@ -53,9 +53,6 @@
 
 typedef struct  {
     uint32_t  timestamp;
-#if gLoggingWithExtraTs
-    uint32_t extra_ts; /* BLE slot count for instance */
- #endif
     const char * function;
     uint8_t   n;
     uint8_t reserved[3];
@@ -111,15 +108,28 @@ volatile int vole = 1;
 
 volatile uint32_t __dwt_count;
 
+void dump_octet_string(const char * str, const unsigned char * data, size_t len)
+{
+    for (int i = 0; i < len; i++)
+    {
+      if (i % 16 == 0)
+      {
+          if (i>0) PRINTF("\r\n");
+          PRINTF("%s[%d] %x:\t", str, i, &data[i]);
+      }
+      if (data[i] < 0x10)
+          PRINTF("0%X", data[i]);
+      else
+          PRINTF("%02X", data[i]);
+    }
+    PRINTF("\r\n");
+}
 /*******************************************************************************
  * Private functions
  *******************************************************************************/
 #if	gLoggingActive_d
 
 static void vDbgLogAdd(
-#if gLoggingWithExtraTs
-                       uint32_t extra_ts,
-#endif
                        const char *function,
                        const char *fmt,
                        int n,
@@ -152,9 +162,6 @@ static void vDbgLogAdd(
         }
 
         entry->timestamp = (uint32_t)Timestamp_GetCounter32bit();
-#if gLoggingWithExtraTs
-        entry->extra_ts = extra_ts;
-#endif
         entry->function = (char*)function;
         entry->n = n;
         entry->format = fmt;
@@ -214,11 +221,7 @@ void DbgLogAdd(const char * function, const char *fmt, int n, ...)
     {
         va_list args;
         va_start(args,n);
-#if gLoggingWithExtraTs
-        vDbgLogAdd(0, function, fmt, n, args);
-#else
         vDbgLogAdd(function, fmt, n, args);
-#endif
         va_end(args);
     }
 #else
@@ -228,28 +231,7 @@ void DbgLogAdd(const char * function, const char *fmt, int n, ...)
 #endif
 }
 
-void DbgLogAddExtraTs(const char * function, const char *fmt, uint32_t timestamp, int n, ...)
-{
-#if	gLoggingActive_d
-    if (!log_handle.lock)
-    {
-        va_list args;
-        va_start(args,n);
-#if gLoggingWithExtraTs
-        vDbgLogAdd(timestamp, function, fmt, n, args);
-#else
-        vDbgLogAdd(function, fmt, n, args);
-        NOT_USED(timestamp);
-#endif
-        va_end(args);
-    }
-#else
-    NOT_USED(function);
-    NOT_USED(fmt);
-    NOT_USED(n);
-    NOT_USED(timestamp);
-#endif
-}
+
 #define LOG_ITEM_MAX_SZ  (32+ENTRY_MAX_ARGS*8)
 
 void DbgLogDump(bool stop)
@@ -270,11 +252,8 @@ void DbgLogDump(bool stop)
     while (log->nb_entries > 0)
     {
         entry = &log_handle.log_array[read_index];
-#if gLoggingWithExtraTs
-        PRINTF("%d:%d: %s", entry->timestamp, entry->extra_ts, entry->function);
-#else
+
         PRINTF("%d: %s", entry->timestamp, entry->function);
-#endif
 
         switch (entry->n)
         {

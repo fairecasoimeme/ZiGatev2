@@ -34,6 +34,14 @@
 
 WWAH ?= 0
 LEGACY ?= 0
+R23_UPDATES ?= 0
+ifeq ($(R23_UPDATES),1)
+ifeq ($(LEGACY),0)
+    R22PLUS = _R23
+else
+    $(info ***** Conflicting R23 settings, probably building the GU *****)
+endif
+endif
 OTA ?= 0
 OTA_INTERNAL_STORAGE ?= 0
 ifeq ($(OS),Windows_NT)
@@ -91,6 +99,10 @@ endif
 
 ifeq ($(WWAH),1)
     CFLAGS += -DWWAH_SUPPORT
+endif
+
+ifeq ($(R23_UPDATES),1)
+    CFLAGS += -DR23_UPDATES
 endif
 
 ###############################################################################
@@ -182,6 +194,9 @@ endif
 APPSRC += ZQueue.c
 APPSRC += ZTimer.c
 APPSRC += app_zps_link_keys.c
+ifeq ($(R23_UPDATES),1)
+APPSRC += tlv.c
+endif
 ###############################################################################
 # Paths to network and application layer libs for stack config tools
 
@@ -269,8 +284,8 @@ ifeq ($(FRAMEWORK_SWITCH),0)
     SUBWCREV             ?= $(SDK2_BASE_DIR)/tools/zigbee_3.0/TortoiseSVN/bin/SubWCRev.exe
 endif
 
-TOOLCHAIN_PATH       ?= $(SDK2_BASE_DIR)/../MCUXpressoIDE_11.0.1_2563/ide/tools/bin
-TOOLCHAIN_DIR_PATH   ?= $(SDK2_BASE_DIR)/../MCUXpressoIDE_11.0.1_2563/ide/tools
+TOOLCHAIN_PATH       ?= $(SDK2_BASE_DIR)/../MCUXpressoIDE_11.7.0_9198/ide/tools/bin
+TOOLCHAIN_DIR_PATH   ?= $(SDK2_BASE_DIR)/../MCUXpressoIDE_11.7.0_9198/ide/tools
 ifeq ($(FRAMEWORK_SWITCH),0)
 TOOL_BASE_DIR        ?= $(SDK2_BASE_DIR)/tools/zigbee_3.0
 else
@@ -361,11 +376,13 @@ endif
     APPSRC += fsl_wtimer.c
     APPSRC += fsl_inputmux.c
     APPSRC += fsl_fmeas.c
+    APPSRC += fsl_sha.c
     APPSRC += Exceptions_NVIC.c
     APPSRC += MicroExceptions_arm.c
     APPSRC += Debug.c
     ifeq ($(OTA),1)
         APPSRC += OtaSupport.c
+        APPSRC += OtaUtils.c
         APPSRC += psector_api.c
     endif
     APPSRC += FunctionLib.c
@@ -408,7 +425,9 @@ ifeq ($(SELOTA),APP0)
     INCFLAGS += -I$(FRAMEWORK_BASE_DIR)/Selective_OTA/Include
 endif
 
-
+ifeq ($(R23_UPDATES),1)
+APPSRC += tlv.c
+endif
 
 ifeq ($(SELOTA),APP1)
     APPSRC += startup_jn5189_app1.c

@@ -25,7 +25,18 @@
 #include "rom_psector.h"
 #include "rom_secure.h"
 #include "rom_api.h"
+
+/* This flag can be set to 1 to redirect OTA AES usage through SecLib,
+ * ensuring mutex protection against concurrent access to AES hardware. */
+#ifndef gOTA_UseSecLibAes
+#define gOTA_UseSecLibAes 0
+#endif
+
+#if gOTA_UseSecLibAes
+#include "SecLib.h"
+#else
 #include "rom_aes.h"
+#endif
 
 /************************************************************************************
 *************************************************************************************
@@ -37,10 +48,11 @@
 #define CRC_FINALIZE(x)                ((x) ^ ~0UL)
 
 #ifdef PDM_EXT_FLASH
-#define BOOT_BLOCK_OFFSET_MAX_VALUE     0x9de00
+#define DEFAULT_PDM_SIZE                0x00
 #else
-#define BOOT_BLOCK_OFFSET_MAX_VALUE     0x96000
+#define DEFAULT_PDM_SIZE                0x7e00
 #endif
+#define INTERNAL_FLASH_MAX_SAFE_VALUE   0x9de00
 
 #define SIGNATURE_WRD_LEN               (SIGNATURE_LEN / 4)
 
@@ -58,15 +70,6 @@
 * Private definitions
 *************************************************************************************
 ************************************************************************************/
-
-typedef struct {
-    IMAGE_CERT_T certificate;
-    uint8_t signature[SIGNATURE_LEN];
-} ImageCertificate_t;
-
-typedef struct {
-    uint8_t signature[SIGNATURE_LEN];
-} ImageSignature_t;
 
 typedef struct {
     uint16_t blob_id;
@@ -91,12 +94,11 @@ typedef uint32_t (*flash_GetDmaccStatus_t)(uint8_t *address);
 * Private memory declarations
 *************************************************************************************
 ************************************************************************************/
-
-const static efuse_LoadUniqueKey_t efuse_LoadUniqueKey   = (efuse_LoadUniqueKey_t) ROM_API_efuse_LoadUniqueKey;
-const static aesLoadKeyFromOTP_t aesLoadKeyFromOTP       = (aesLoadKeyFromOTP_t) ROM_API_aesLoadKeyFromOTP;
-const static crc_update_t crc_update                       = (crc_update_t)ROM_API_crc_update;
-const static boot_CheckVectorSum_t boot_CheckVectorSum     = (boot_CheckVectorSum_t)ROM_API_boot_CheckVectorSum;
-const static flash_GetDmaccStatus_t flash_GetDmaccStatus   = (flash_GetDmaccStatus_t) ROM_API_flash_GetDmaccStatus;
+static const efuse_LoadUniqueKey_t efuse_LoadUniqueKey     = (efuse_LoadUniqueKey_t) ROM_API_efuse_LoadUniqueKey;
+static const aesLoadKeyFromOTP_t aesLoadKeyFromOTP         = (aesLoadKeyFromOTP_t) ROM_API_aesLoadKeyFromOTP;
+static const crc_update_t crc_update                       = (crc_update_t)ROM_API_crc_update;
+static const boot_CheckVectorSum_t boot_CheckVectorSum     = (boot_CheckVectorSum_t)ROM_API_boot_CheckVectorSum;
+static const flash_GetDmaccStatus_t flash_GetDmaccStatus   = (flash_GetDmaccStatus_t) ROM_API_flash_GetDmaccStatus;
 
 /******************************************************************************
 *******************************************************************************
@@ -111,6 +113,36 @@ static bool_t OtaUtils_IsInternalFlashAddr(uint32_t image_addr)
     ROM_GetFlash(&internalFlashAddrStart, &internalFlashSize);
     return ((image_addr >= internalFlashAddrStart)
             && image_addr < (internalFlashAddrStart+internalFlashSize));
+}
+
+static bool_t OtaUtils_IsExternalFlashAddr(uint32_t image_addr, uint32_t ext_flash_size)
+{
+    return (image_addr >= (uint32_t) FSL_FEATURE_SPIFI_START_ADDR
+                && image_addr < (FSL_FEATURE_SPIFI_START_ADDR + ext_flash_size));
+}
+
+static const psector_page_data_t * OtaUtils_GetPage0ValidSubpage(void)
+{
+#define SECT_STATE_PAGE0_POS 0
+#define SECT_STATE_PAGE0_WIDTH 16
+
+    const psector_page_data_t * ret = NULL;
+    const uint32_t * pBI_psect_state = (uint32_t*)0x04015fe4;
+    uint32_t  val = * pBI_psect_state;
+    uint8_t subpage_state;
+    val = (val >> SECT_STATE_PAGE0_POS) & ((1<<SECT_STATE_PAGE0_WIDTH) -1);
+    const psector_page_data_t * page_addr[2] = { (psector_page_data_t *)0x9e800, (psector_page_data_t *)0x9ea00 };
+    for (int i = 0; i < 2; i++)
+    {
+        subpage_state = (val & 0xff);
+        if (subpage_state != PAGE_STATE_ERROR)
+        {
+            ret =  page_addr[i];
+            break;
+        }
+        val >>=8;
+    }
+    return ret;
 }
 
 /* In case of wrong ImgType, IMG_TYPE_NB is returned  */
@@ -205,33 +237,33 @@ static otaUtilsResult_t OtaUtils_ReadFromEncryptedExtFlash(uint16_t nbBytesToRea
             nbByteToAlignEnd = 0;
         }
 
+        aesContext_t aesContext;
         if (eType == eEfuseKey)
         {
             //aesInit();
-            efuse_LoadUniqueKey();
-            aesLoadKeyFromOTP(AES_KEY_128BITS);
+            OtaUtils_AesLoadKeyFromOTP(&aesContext, AES_KEY_128BITS);
         }
         else if (eType == eSoftwareKey && pParam != NULL)
         {
             sOtaUtilsSoftwareKey * pSoftKey = (sOtaUtilsSoftwareKey *) pParam;
-            aesLoadKeyFromSW(AES_KEY_128BITS, (uint32_t*)pSoftKey->pSoftKeyAes);
+            OtaUtils_AesLoadKeyFromSW(&aesContext, AES_KEY_128BITS, (uint32_t*)pSoftKey->pSoftKeyAes);
             break;
         }
 
-        aesMode(AES_MODE_ECB_DECRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
+        OtaUtils_AesSetMode(&aesContext, AES_MODE_ECB_DECRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
         if (nbByteToAlignStart)
         {
-            aesProcess((void*)alignedBufferStart, (void*)alignedBufferStart,  1);
+            OtaUtils_AesProcessBlocks(&aesContext, (void*)alignedBufferStart, (void*)alignedBufferStart,  1);
             nb_blocks -=1;
         }
         if (nbByteToAlignEnd)
         {
-            aesProcess((void*)pBuf, (void*)pBuf,  nb_blocks-1);
-            aesProcess((void*)alignedBufferEnd, (void*)alignedBufferEnd,  1);
+            OtaUtils_AesProcessBlocks(&aesContext, (void*)pBuf, (void*)pBuf,  nb_blocks-1);
+            OtaUtils_AesProcessBlocks(&aesContext, (void*)alignedBufferEnd, (void*)alignedBufferEnd,  1);
         }
         else
         {
-            aesProcess((void*)pBuf, (void*)pBuf,  nb_blocks);
+            OtaUtils_AesProcessBlocks(&aesContext, (void*)pBuf, (void*)pBuf,  nb_blocks);
         }
 
         /* Fill missing pBuf bytes */
@@ -307,25 +339,24 @@ static bool_t OtaUtils_VerifySignature(uint32_t address,
 
 static bool_t OtaUtils_FindBlankPage(uint32_t startAddr, uint16_t size)
 {
-	bool_t result = FALSE;
-	uint32_t addrIterator = startAddr;
+    bool_t result = FALSE;
+    uint32_t addrIterator = startAddr;
 
+    addrIterator &= ~(FLASH_PAGE_SIZE -1); /* Align address iterator with begining of the flash page.
+                                              This allows to check the exact number of page needed in a single while loop
+                                              and not checking an extra page when startAddr+size is a multiple of FLASH_PAGE_SIZE */
 
-	while (addrIterator < startAddr+size)
-	{
-		if (flash_GetDmaccStatus((uint8_t *)addrIterator) == 0)
-		{
-			result = TRUE;
-			break;
-		}
-		addrIterator += FLASH_PAGE_SIZE;
-	}
+    while (addrIterator < startAddr+size)
+    {
+        if (flash_GetDmaccStatus((uint8_t *)addrIterator) == 0)
+        {
+            result = TRUE;
+            break;
+        }
+        addrIterator += FLASH_PAGE_SIZE;
+    }
 
-	/* Check the endAddr */
-	if (!result && flash_GetDmaccStatus((uint8_t *)startAddr+size) == 0)
-		result = TRUE;
-
-	return result;
+    return result;
 }
 
 /******************************************************************************
@@ -333,6 +364,57 @@ static bool_t OtaUtils_FindBlankPage(uint32_t startAddr, uint16_t size)
 * Public functions
 *******************************************************************************
 ******************************************************************************/
+
+uint32_t OtaUtils_AesLoadKeyFromOTP(aesContext_t* pContext,
+                                    uint32_t keySize)
+{
+#if gOTA_UseSecLibAes
+    pContext->keySize = keySize;
+    pContext->pSoftwareKey = NULL;
+    return 0;
+#else
+    efuse_LoadUniqueKey();
+    return aesLoadKeyFromOTP((AES_KEY_SIZE_T)keySize);
+#endif
+}
+
+uint32_t OtaUtils_AesLoadKeyFromSW(aesContext_t* pContext,
+                                   uint32_t  keySize,
+                                   uint32_t* pKey)
+{
+#if gOTA_UseSecLibAes
+    pContext->keySize = keySize;
+    pContext->pSoftwareKey = pKey;
+    return 0;
+#else
+    return aesLoadKeyFromSW((AES_KEY_SIZE_T)keySize, pKey);
+#endif
+}
+
+uint32_t OtaUtils_AesSetMode(aesContext_t* pContext,
+                          uint32_t modeVal,
+                          uint32_t flags)
+{
+#if gOTA_UseSecLibAes
+    pContext->mode = modeVal;
+    pContext->flags = flags;
+    return 0;
+#else
+    return aesMode((AES_MODE_T)modeVal, flags);
+#endif
+}
+
+uint32_t OtaUtils_AesProcessBlocks(const aesContext_t* pContext,
+                                   uint32_t* pBlockIn,
+                                   uint32_t* pBlockOut,
+                                   uint32_t  numBlocks)
+{
+#if gOTA_UseSecLibAes
+    return AES_128_ProcessBlocks((const void*)pContext, pBlockIn, pBlockOut, numBlocks);
+#else
+    return aesProcess(pBlockIn, pBlockOut, numBlocks);
+#endif
+}
 
 otaUtilsResult_t OtaUtils_ReadFromInternalFlash(uint16_t nbBytesToRead,
                                                 uint32_t address,
@@ -390,6 +472,120 @@ otaUtilsResult_t OtaUtils_ReadFromEncryptedExtFlashSoftwareKey(uint16_t nbBytesT
     return OtaUtils_ReadFromEncryptedExtFlash(nbBytesToRead, address, pOutbuf, pFunctionEepromRead, eSoftwareKey, pParam);
 }
 
+uint32_t OtaUtils_GetModifiableInternalFlashTopAddress(void)
+{
+    uint32_t int_reserved_or_pdm_size = 0;
+    bool is_pdm_found = false;
+
+    /* Access PSECT from flash directly without initiate full structure in RAM (only pointer) */
+    const psector_page_data_t *  page = OtaUtils_GetPage0ValidSubpage();
+    assert(page != NULL);
+
+    /* Go through PSECT and update int_flash_top_addr if the NVM or Reserved partition is found in internal flash. Else, use the default value */
+    for (int i = 0; i < IMG_DIRECTORY_MAX_SIZE; i++)
+    {
+        if(page->page0_v3.img_directory[i].img_type == OTA_UTILS_PSECT_NVM_PARTITION_IMAGE_TYPE)
+        {
+            is_pdm_found = true;
+            if(OtaUtils_IsInternalFlashAddr(page->page0_v3.img_directory[i].img_base_addr))
+            {
+                int_reserved_or_pdm_size += page->page0_v3.img_directory[i].img_nb_pages*FLASH_PAGE_SIZE;
+                /* Continuing looping on the image directory in case other reserved or DPM partitions are found */
+            }
+        }
+        else if((page->page0_v3.img_directory[i].img_type == OTA_UTILS_PSECT_RESERVED_PARTITION_IMAGE_TYPE && OtaUtils_IsInternalFlashAddr(page->page0_v3.img_directory[i].img_base_addr)))
+        {
+            int_reserved_or_pdm_size += page->page0_v3.img_directory[i].img_nb_pages*FLASH_PAGE_SIZE;
+            /* Continuing looping on the image directory in case other reserved or DPM partitions are found */
+        }
+    }
+    if(!is_pdm_found)
+        int_reserved_or_pdm_size += DEFAULT_PDM_SIZE; /* No specific PDM found - use the default PDM size */
+
+    if(int_reserved_or_pdm_size > INTERNAL_FLASH_MAX_SAFE_VALUE)
+        int_reserved_or_pdm_size = INTERNAL_FLASH_MAX_SAFE_VALUE; /* Should never enter here ! */
+
+    return (INTERNAL_FLASH_MAX_SAFE_VALUE - int_reserved_or_pdm_size); /* reduce the accessible flash size by the reserved/PDM size */
+}
+
+bool OtaUtils_ImgDirectorySanityCheck(psector_page_data_t * page0, uint32_t ext_flash_size)
+{
+    const image_directory_entry_t * img_directory = &page0->page0_v3.img_directory[0];
+    bool res = false;
+    uint32_t img_base, img_end;
+    for (int i = 0; i < IMG_DIRECTORY_MAX_SIZE; i++)
+    {
+        if(img_directory[i].img_nb_pages != 0)
+        {
+            img_base = img_directory[i].img_base_addr;
+            img_end = img_base + FLASH_PAGE_SIZE * img_directory[i].img_nb_pages - 1;
+            bool overlap = false;
+            if(OtaUtils_IsInternalFlashAddr(img_base))
+            {
+                if(img_directory[i].img_type == OTA_UTILS_PSECT_EXT_FLASH_TEXT_PARTITION_IMAGE_TYPE)
+                {
+                    /* Wrong address for this partition type */
+                    res = false;
+                    break;
+                }
+                if(OtaUtils_IsInternalFlashAddr(img_end) && img_end < INTERNAL_FLASH_MAX_SAFE_VALUE)
+                {
+                    /* Partition boundaries are good for internal flash - Check with other partitions */
+                    for (int j = i+1; j < IMG_DIRECTORY_MAX_SIZE; j++ )
+                    {
+                        if(img_directory[j].img_nb_pages != 0)
+                        {
+                            uint32_t other_entry_base = img_directory[j].img_base_addr;
+                            uint32_t other_entry_end = other_entry_base + FLASH_PAGE_SIZE * img_directory[j].img_nb_pages - 1;
+                            if(OtaUtils_IsInternalFlashAddr(other_entry_base))
+                            {
+                                if (((img_base < other_entry_base) && (img_end > other_entry_base)) || /* Partition ends in the middle of another one */
+                                        ((img_base >= other_entry_base) && (img_base < other_entry_end))) /* Partition starts in the middle on another one */
+                                {
+                                    overlap = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    res =  !overlap;
+                }
+                else
+                {
+                    res = false;
+                    break;
+                }
+            }
+            else
+            {
+                if (OtaUtils_IsExternalFlashAddr(img_base, ext_flash_size) && OtaUtils_IsExternalFlashAddr(img_end, ext_flash_size))
+                {
+                    for (int j = i+1; j < IMG_DIRECTORY_MAX_SIZE; j++ )
+                    {
+                        uint32_t other_entry_base = img_directory[j].img_base_addr;
+                        uint32_t other_entry_end = other_entry_base + FLASH_PAGE_SIZE * img_directory[j].img_nb_pages;
+                        if(OtaUtils_IsExternalFlashAddr(other_entry_base, ext_flash_size))
+                        {
+                            if (((img_base < other_entry_base) && (img_end > other_entry_base)) ||
+                                    ((img_base >= other_entry_base) && (img_base < other_entry_end)))
+                            {
+                                overlap = true;
+                                break;
+                            }
+                        }
+                    }
+                    res =  !overlap;
+                }
+                else
+                {
+                    res = false;
+                    break;
+                }
+            }
+        }
+    }
+    return res;
+}
 
 uint32_t OtaUtils_ValidateImage(OtaUtils_ReadBytes pFunctionRead,
                                 void *pReadFunctionParam,
@@ -435,7 +631,7 @@ uint32_t OtaUtils_ValidateImage(OtaUtils_ReadBytes pFunctionRead,
 
         if (uImgParser.imgHeader.bootBlockOffset % sizeof(uint32_t) ) break;
 
-        if (uImgParser.imgHeader.bootBlockOffset + sizeof(BOOT_BLOCK_T) >= BOOT_BLOCK_OFFSET_MAX_VALUE) break;
+        if (uImgParser.imgHeader.bootBlockOffset + sizeof(BOOT_BLOCK_T) >= OtaUtils_GetModifiableInternalFlashTopAddress()) break;
 
         /* compute CRC of the header */
         uint32_t crc = ~0UL;
@@ -469,6 +665,10 @@ uint32_t OtaUtils_ValidateImage(OtaUtils_ReadBytes pFunctionRead,
         if (uImgParser.imgBootBlock.stated_size < (bootBlockOffsetFound + sizeof(BOOT_BLOCK_T))) break;
         if (uImgParser.imgBootBlock.img_len > uImgParser.imgBootBlock.stated_size) break;
 
+        /* Refuse OTA FW update if MinVersion has a version lower than the registered minimum version */
+        uint32_t min_version = psector_Read_MinVersion();
+        if (uImgParser.imgBootBlock.version < min_version) break;
+
         if (uImgParser.imgBootBlock.compatibility_offset != 0)
         {
             uint32_t compatibility_list_sz = 0;
@@ -500,26 +700,24 @@ uint32_t OtaUtils_ValidateImage(OtaUtils_ReadBytes pFunctionRead,
                 OTA_UTILS_DEBUG("Certificate found\n");
                 /* Check that the certificate is inside the img */
                 if ((uImgParser.imgBootBlock.certificate_offset + sizeof(ImageCertificate_t)) != imgSizeFound)
+                {
                     break;
+                }
                 /* If there is a certificate is must comply with the expectations */
                 /* There must be a trailing ImageAuthTrailer_t appended to boot block */
-                if (pFunctionRead(sizeof(ImageCertificate_t),  imgAddr + uImgParser.imgBootBlock.certificate_offset, (uint8_t *)&uImgParser.imgCertificate, pReadFunctionParam, pFunctionEepromRead) != gOtaUtilsSuccess_c)
+                if (pFunctionRead(sizeof(ImageCertificate_t), imgAddr + uImgParser.imgBootBlock.certificate_offset, (uint8_t *)&uImgParser.imgCertificate, pReadFunctionParam, pFunctionEepromRead) != gOtaUtilsSuccess_c)
+                {
                     break;
+                }
                 if (uImgParser.imgCertificate.certificate.certificate_marker != CERTIFICATE_MARKER)
-                    break;
-                /* Accesses to certificate header, certificate signature and image signature fields
-                 * indirectly allow their correct presence via the Bus Fault TRY-CATCH.
-                 */
-                if (uImgParser.imgCertificate.certificate.public_key[0] == uImgParser.imgCertificate.certificate.public_key[SIGNATURE_WRD_LEN-1])
-                    break;
-                const uint32_t * cert_sign = (uint32_t*)&uImgParser.imgCertificate.signature[0];
-                if (cert_sign[0] == cert_sign[SIGNATURE_WRD_LEN-1])
                 {
                     break;
                 }
                 /* Check the signature of the certificate */
                 if (!secure_VerifyCertificate(&uImgParser.imgCertificate.certificate, pKey, &uImgParser.imgCertificate.signature[0]))
+                {
                     break;
+                }
                 pKey =  (const uint32_t *)&uImgParser.imgCertificate.certificate.public_key[0];
                 imgSignatureOffset += sizeof(ImageCertificate_t);
             }
@@ -530,12 +728,11 @@ uint32_t OtaUtils_ValidateImage(OtaUtils_ReadBytes pFunctionRead,
             OTA_UTILS_DEBUG("Img signature found\n");
             /* Read the img signature */
             if (pFunctionRead(sizeof(ImageSignature_t), imgAddr + imgSignatureOffset, (uint8_t *)&uImgParser.imgCertificate.signature, pReadFunctionParam, pFunctionEepromRead) != gOtaUtilsSuccess_c)
-                    break;
+            {
+                break;
+            }
 
             const uint8_t * img_sign = (uint8_t*)&uImgParser.imgCertificate.signature[0];
-            if (img_sign[0] == img_sign[SIGNATURE_WRD_LEN-1])
-                break;
-
             if (!OtaUtils_VerifySignature(imgAddr, imgSignatureOffset, pKey, img_sign, pFunctionRead,
                                             pReadFunctionParam, pFunctionEepromRead))
                 break;
@@ -551,6 +748,7 @@ otaUtilsResult_t OtaUtils_ReconstructRootCert(IMAGE_CERT_T *pCert, const psector
 {
     otaUtilsResult_t result = gOtaUtilsError_c;
     uint32_t keyValid;
+    aesContext_t aesContext;
     do
     {
         if (pCert == NULL || pPage0 == NULL)
@@ -563,10 +761,9 @@ otaUtilsResult_t OtaUtils_ReconstructRootCert(IMAGE_CERT_T *pCert, const psector
             break;
         }
         /* Decrypt the public key using the efuse key */
-        efuse_LoadUniqueKey();
-        aesLoadKeyFromOTP(AES_KEY_128BITS);
-        aesMode(AES_MODE_ECB_DECRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
-        aesProcess((uint32_t*)&pPage0->page0_v3.image_pubkey[0], &pCert->public_key[0],  SIGNATURE_LEN/16);
+        OtaUtils_AesLoadKeyFromOTP(&aesContext, AES_KEY_128BITS);
+        OtaUtils_AesSetMode(&aesContext, AES_MODE_ECB_DECRYPT, AES_INT_BSWAP | AES_OUTT_BSWAP);
+        OtaUtils_AesProcessBlocks(&aesContext, (uint32_t*)&pPage0->page0_v3.image_pubkey[0], &pCert->public_key[0],  SIGNATURE_LEN/16);
 
         if (pFlashPage != NULL)
         {

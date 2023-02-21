@@ -102,14 +102,14 @@ else:
                  print ("Creation of the directory %s failed" % args.cert_path)
             else:
                 #exponent 3 is mandatory a shortcut is taken in the verification code of the boot ROM
-                cert_key = RSA.generate(2048, e=3L)
+                cert_key = RSA.generate(2048, e=3)
 
                 private_key_file=args.cert_path+"/priv_key.pem"
                 public_cert_c_file=args.cert_path+"/certificate.c"
                 public_cert_bin_file=args.cert_path+"/cert.bin"
 
                 with open(private_key_file, 'w') as key_file:
-                    key_file.write(cert_key.exportKey('PEM', args.password))
+                    key_file.write((cert_key.exportKey('PEM', args.password)).decode('utf-8'))
 
 
                 #get public key of certificate
@@ -118,8 +118,8 @@ else:
 
                 #private certificate key is exported
                 with open(private_key_file, 'w') as oem_key_file:
-                    oem_key_file.write(cert_key.exportKey('PEM', args.password))
+                    oem_key_file.write((cert_key.exportKey('PEM', args.password)).decode('utf-8'))
 
                 write_cert_bin_file(public_cert_bin_file, args.customer, args.device_min,args. device_max, exported_key, key)
         else:
-             print args.cert_path + " already exists! Provide another path or destroy it first"
+             print (args.cert_path + " already exists! Provide another path or destroy it first")

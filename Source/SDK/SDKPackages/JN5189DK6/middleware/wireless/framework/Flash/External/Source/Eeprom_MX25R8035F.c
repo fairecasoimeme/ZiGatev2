@@ -31,6 +31,15 @@
 #endif
 #include "fsl_debug_console.h"
 
+/* Uncomment the following line to have the external flash put back to read mode after write/erase */
+//#define gSpifiReadModeDefault
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+/* For FreeRTOS apps which call EEPROM on idle task, enter/exit critical section is required */
+#include "FreeRTOS.h"
+#include "task.h"
+#endif
+
 /*! *********************************************************************************
 *************************************************************************************
 * Private macros
@@ -40,7 +49,10 @@
 #define gEepromWriteEnable_d   1
 #endif
 
+/* Semaphore is used by default and in case app is using SPIFI read mode default on baremetal */
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
 static osaSemaphoreId_t       mExtEepromSemaphoreId;
+#endif
 
 #define IS_WORD_ALIGNED(x) (((uint32_t)(x) & 0x3) == 0)
 #define IS_PAGE_ALIGNED(x) (((uint32_t)(x) & (EEPROM_PAGE_SIZE-1)) == 0)
@@ -145,7 +157,7 @@ static void     EEPROM_WriteEnable(void);
 static uint32_t EEPROM_ReadStatusReq(void);
 static uint32_t EEPROM_ReadIDReq(void);
 static uint32_t EEPROM_ReadResReq(void);
-
+static uint8_t EEPROM_isBusyPrivate(void);
 
 
 #define MX25_SR_WIP_POS 0     /* Write In Progress */
@@ -205,6 +217,7 @@ static uint8_t sectorRamBuffer[gEepromParams_SectorSize_c];
 
 static uint32_t eEpromFlashID = FLASH_UNKNOWN_ID;
 
+static void EEPROM_SetRead(uint32_t Addr);
 /*! *********************************************************************************
 *************************************************************************************
 * Public Functions
@@ -223,11 +236,14 @@ ee_err_t EEPROM_Init(void)
     bool_t resReqCalled = FALSE;
 
 #if osNumberOfSemaphores
+/* Semaphore is used by default and in case app is using SPIFI read mode default on baremetal */
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
     if( (mExtEepromSemaphoreId == NULL)
                && ((mExtEepromSemaphoreId = OSA_SemaphoreCreate(1)) == NULL))
     {
         panic( ID_PANIC(0,0), (uint32_t)EEPROM_Init, 0, 0 );
     }
+#endif
 #endif
 
 #if defined gFlashBlockBitmap_d
@@ -252,10 +268,12 @@ ee_err_t EEPROM_Init(void)
         /* Initialize SPIFI base driver */
         SPIFI_GetDefaultConfig(&config);
 
-        if (CHIP_USING_SPIFI_DUAL_MODE())
+        /* Default SPIFI configuration is Quad */
+        if(IS_SPIFI_DUAL_MODE())
         {
             config.dualMode = kSPIFI_DualMode;
         }
+
         SPIFI_Init(SPIFI, &config);
 
         EEPROM_WriteEnable();
@@ -318,8 +336,12 @@ ee_err_t EEPROM_Init(void)
         {
             initialized = 1;
         }
-        while (EEPROM_isBusy());
+        while (EEPROM_isBusyPrivate());
     }
+
+#ifdef gSpifiReadModeDefault
+    EEPROM_SetRead(0);
+#endif
 
     return status;
 }
@@ -335,16 +357,24 @@ ee_err_t EEPROM_DeInit(void)
 {
     if (initialized)
     {
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+        portENTER_CRITICAL();
+#else
         OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
-
+#endif
         SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_DP]);
         SPIFI_Deinit(SPIFI);
         SYSCON->AHBCLKCTRLSET[0] = SYSCON_AHBCLKCTRLSET0_SPIFI_CLK_SET_MASK;
         BOARD_SetSpiFi_LowPowerEnter();
         initialized = 0;
 
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+        portEXIT_CRITICAL();
+#else
         OSA_SemaphorePost(mExtEepromSemaphoreId);
         OSA_SemaphoreDestroy(mExtEepromSemaphoreId);
+        mExtEepromSemaphoreId = NULL;
+#endif
     }
     return ee_ok;
 }
@@ -364,11 +394,15 @@ ee_err_t EEPROM_ChipErase(void)
 
     EEPROM_DBG_LOG("");
 
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portENTER_CRITICAL();
+#else
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
 
     /* Wait for idle state : check before operation in order to let previous
      * operation terminate rather than blocking */
-    while (EEPROM_isBusy());
+    while (EEPROM_isBusyPrivate());
 
     /* Enable write */
     EEPROM_WriteEnable();
@@ -376,7 +410,11 @@ ee_err_t EEPROM_ChipErase(void)
     /* Erase command */
     SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_ERASE_ALL]);
 
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portEXIT_CRITICAL();
+#else
     OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
 
 #if defined gFlashBlockBitmap_d
     /* Mark Flash as erased */
@@ -413,9 +451,13 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
     }
     EEPROM_DBG_LOG("");
 
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portENTER_CRITICAL();
+#else
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
 
-    while (EEPROM_isBusy());
+    while (EEPROM_isBusyPrivate());
 
     EEPROM_WriteEnable();
 
@@ -442,7 +484,16 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
 #endif
         break;
     default:
+
+#if defined(gSpifiReadModeDefault)
+        EEPROM_SetRead(0);
+#endif
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+        portEXIT_CRITICAL();
+#else
         OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
         return ee_error;
     }
 
@@ -452,7 +503,15 @@ ee_err_t EEPROM_EraseBlock(uint32_t Addr, uint32_t block_size)
     /* Erase sector or block */
     SPIFI_SetCommand(SPIFI, &command[cmd]);
 
+#if defined(gSpifiReadModeDefault)
+    EEPROM_SetRead(0);
+#endif
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portEXIT_CRITICAL();
+#else
     OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
 
     return ee_ok;
 }
@@ -493,16 +552,37 @@ ee_err_t EEPROM_EraseArea(uint32_t *Addr, int32_t *size, bool non_blocking)
         erase_addr = SECTOR_ADDR(Addr);
         for (erase_addr = *Addr; remain_sz > 0; )
         {
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+            portENTER_CRITICAL();
+#else
             OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
 
-            if (non_blocking && EEPROM_isBusy())
+            if (non_blocking && EEPROM_isBusyPrivate())
             {
                 status = ee_busy;
+
+#if defined(gSpifiReadModeDefault)
+                EEPROM_SetRead(0);
+#endif
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+                portEXIT_CRITICAL();
+#else
                 OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
                 break;
             }
 
+#if defined(gSpifiReadModeDefault)
+            EEPROM_SetRead(0);
+#endif
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+            portEXIT_CRITICAL();
+#else
             OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
 
 #if defined gFlashBlockBitmap_d
             block_nb = BLOCK_NUMBER(erase_addr);
@@ -697,18 +777,15 @@ ee_err_t EEPROM_WriteData(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
 }
 #endif /* gEepromWriteEnable_d */
 
-void EEPROM_SetRead(void)
+static void EEPROM_SetRead(uint32_t Addr)
 {
-
-    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
-
-    while (EEPROM_isBusy());
+    while (EEPROM_isBusyPrivate());
 
     /* Set start address */
-    SPIFI_SetCommandAddress(SPIFI, FSL_FEATURE_SPIFI_START_ADDR );
+    SPIFI_SetCommandAddress(SPIFI, FSL_FEATURE_SPIFI_START_ADDR + Addr );
 
     /* Enable read */
-    if (CHIP_USING_SPIFI_DUAL_MODE())
+    if (IS_SPIFI_DUAL_MODE())
     {
         SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_DREAD]);
     }
@@ -716,8 +793,6 @@ void EEPROM_SetRead(void)
     {
         SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_QREAD]);
     }
-
-    OSA_SemaphorePost(mExtEepromSemaphoreId);
 }
 
 
@@ -739,35 +814,28 @@ ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
     {
         return ee_error;
     }  
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
 
-    while (EEPROM_isBusy());
+    /* Enable read mode */
+    EEPROM_SetRead(Addr);
 
-    /* Set start address */
-    SPIFI_SetCommandAddress(SPIFI, FSL_FEATURE_SPIFI_START_ADDR + Addr);
-
-    /* Enable read */
-    if (CHIP_USING_SPIFI_DUAL_MODE())
-    {
-        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_DREAD]);
-    }
-    else
-    {
-        SPIFI_SetMemoryCommand(SPIFI, &command[CMD_SPIFI_QREAD]);
-    }
     uint8_t * flash_addr = (uint8_t*)(FSL_FEATURE_SPIFI_START_ADDR + Addr);
 
     FLib_MemCpy((void *)inbuf, (void *)flash_addr, NoOfBytes);
 
+#if !defined(gSpifiReadModeDefault)
     /* Reset the SPIFI to switch to command mode */
     SPIFI_ResetCommand(SPIFI);
+#endif
 
-    OSA_SemaphorePost(mExtEepromSemaphoreId);
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
+	OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
 
     return ee_ok;
 }
-
-
 
 /*! *********************************************************************************
 * \brief   Check if the memory controller is busy
@@ -777,7 +845,19 @@ ee_err_t EEPROM_ReadData(uint16_t NoOfBytes, uint32_t Addr, uint8_t *inbuf)
 ********************************************************************************** */
 uint8_t EEPROM_isBusy(void)
 {
-    return (EEPROM_ReadStatusReq() & EEPROM_BUSY_FLAG_MASK) == EEPROM_BUSY_FLAG_MASK;
+    uint8_t res = 0;
+
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
+    OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
+
+    res = EEPROM_isBusyPrivate();
+
+#if (!defined(gSpifiReadModeDefault) || (defined(gSpifiReadModeDefault) && (USE_RTOS == 0)))
+    OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
+
+    return res;
 }
 
 /*! *********************************************************************************
@@ -785,6 +865,11 @@ uint8_t EEPROM_isBusy(void)
 * Private Functions
 *************************************************************************************
 ********************************************************************************** */
+
+static uint8_t EEPROM_isBusyPrivate(void)
+{
+    return (EEPROM_ReadStatusReq() & EEPROM_BUSY_FLAG_MASK) == EEPROM_BUSY_FLAG_MASK;
+}
 
 /*! *********************************************************************************
 * \brief   Read the memory controller status register
@@ -908,12 +993,18 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
     }
 #endif /* gFlashBlockBitmap_d */
 
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portENTER_CRITICAL();
+#else
     OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
+#endif
+
+    while (EEPROM_isBusyPrivate());
 
     EEPROM_WriteEnable();
     SPIFI_SetCommandAddress(SPIFI, Addr + FSL_FEATURE_SPIFI_START_ADDR);
 
-    if (CHIP_USING_SPIFI_DUAL_MODE())
+    if (IS_SPIFI_DUAL_MODE())
     {
         command[CMD_SPIFI_DPROGRAM_PAGE].dataLen = NoOfBytes;
         SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_DPROGRAM_PAGE]);
@@ -923,9 +1014,18 @@ void EepromWritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Outbuf)
         command[CMD_SPIFI_QPROGRAM_PAGE].dataLen = NoOfBytes;
         SPIFI_SetCommand(SPIFI, &command[CMD_SPIFI_QPROGRAM_PAGE]);
     }
+
     SPIFI_WriteBuffer(SPIFI, Outbuf, NoOfBytes);
 
+#if defined(gSpifiReadModeDefault)
+    EEPROM_SetRead(0);
+#endif
+
+#if defined(gSpifiReadModeDefault) && (USE_RTOS == 1)
+    portEXIT_CRITICAL();
+#else
     OSA_SemaphorePost(mExtEepromSemaphoreId);
+#endif
 }
 
 /*! *********************************************************************************
@@ -944,12 +1044,6 @@ static ee_err_t EEPROM_WritePage(uint32_t NoOfBytes, uint32_t Addr, uint8_t *Out
 
     if (NoOfBytes > 0)
     {
-        OSA_SemaphoreWait(mExtEepromSemaphoreId, osaWaitForever_c);
-
-        while (EEPROM_isBusy());
-
-        OSA_SemaphorePost(mExtEepromSemaphoreId);
-
         EepromWritePage(NoOfBytes, Addr, Outbuf);
     }
 

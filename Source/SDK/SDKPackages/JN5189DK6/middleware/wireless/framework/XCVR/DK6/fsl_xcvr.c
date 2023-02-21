@@ -261,14 +261,14 @@ xcvrStatus_t XCVR_WakeUpInit(void)
 }
 
 #if gRadioUsePdm_d
-bool bRadioCB_WriteNVM(uint8_t *pu8DataBlock, uint16_t u16Len)
+WEAK bool bRadioCB_WriteNVM(uint8_t *pu8DataBlock, uint16_t u16Len)
 {
     bool st = false;
     st = (PDM_eSaveRecordData(PDM_RADIO_KMOD_TAG_OFFSET, pu8DataBlock, (uint16_t)u16Len) ==  PDM_E_STATUS_OK);
     return st;
 }
 
-uint16_t u16RadioCB_ReadNVM(uint8_t *pu8DataBlock , uint16_t u16MaxLen)
+WEAK uint16_t u16RadioCB_ReadNVM(uint8_t *pu8DataBlock , uint16_t u16MaxLen)
 {
     uint16_t lengthPtr = 0;
     if (PDM_bDoesDataExist(PDM_RADIO_KMOD_TAG_OFFSET, &lengthPtr))

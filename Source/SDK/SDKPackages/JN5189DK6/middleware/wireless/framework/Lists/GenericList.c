@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2022 NXP
 * All rights reserved.
 *
 * \file
@@ -18,6 +18,19 @@
 #include "GenericList.h"
 #include "fsl_os_abstraction.h"
 
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
+
+/*
+ * Messaging module uses the underlying generic list module.
+ * The LIST_* APIs are redefined for backward compatibility.
+ * ListInit being called by Bluetooth Host stack library require ListInit to be a
+ * function to link.
+ */
+void ListInit(list_handle_t list, uint32_t max)
+{
+    LIST_Init(list, max);
+}
+#else
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -264,7 +277,7 @@ listElementHandle_t ListGetPrev(listElementHandle_t element)
 *
 * \param[in] element - ID of the element to remove.
 *
-* \return gOrphanElement_c if element is not part of any list.
+* \return gListOrphanElement_c if element is not part of any list.
 *         gListOk_c if removal was successful.
 *
 * \pre
@@ -278,7 +291,7 @@ listStatus_t ListRemoveElement(listElementHandle_t element)
 {
   if(element->list == NULL)
   {
-    return gOrphanElement_c; /*Element was previusly removed or never added*/
+    return gListOrphanElement_c; /*Element was previously removed or never added*/
   }
   
   OSA_InterruptDisable();
@@ -313,7 +326,7 @@ listStatus_t ListRemoveElement(listElementHandle_t element)
 * \param[in] element - ID of a member of a list.
 *            newElement - new element to insert before the given member.
 *
-* \return gOrphanElement_c if element is not part of any list.
+* \return gListOrphanElement_c if element is not part of any list.
 *         gListFull_c if list is full.
 *         gListOk_c if insertion was successful.
 *
@@ -328,7 +341,7 @@ listStatus_t ListAddPrevElement(listElementHandle_t element, listElementHandle_t
 {
   if(element->list == NULL)
   {
-    return gOrphanElement_c; /*Element was previusly removed or never added*/
+    return gListOrphanElement_c; /*Element was previusly removed or never added*/
   }
   OSA_InterruptDisable();
 
@@ -503,7 +516,7 @@ listStatus_t ListTest()
   element = (listElementHandle_t)MEM_BufferFwkAlloc(sizeof(listElement_t));
   LIST_ASSERT(element != NULL);
   element->list = NULL;
-  LIST_ASSERT(ListAddPrevElement(element, newElement) == gOrphanElement_c); 
+  LIST_ASSERT(ListAddPrevElement(element, newElement) == gListOrphanElement_c);
   MEM_BufferFree(newElement);
   MEM_BufferFree(element);
   LIST_ASSERT(ListGetSize(list) == max+3);
@@ -513,7 +526,7 @@ listStatus_t ListTest()
   LIST_ASSERT(element == list->head);
   LIST_ASSERT(ListRemoveElement(element) == gListOk_c);
   LIST_ASSERT(list->head != element);
-  LIST_ASSERT(ListRemoveElement(element) == gOrphanElement_c);
+  LIST_ASSERT(ListRemoveElement(element) == gListOrphanElement_c);
   MEM_BufferFree(element);
   element = ListGetHead(list)->next->next;
   LIST_ASSERT(ListRemoveElement(element) == gListOk_c);
@@ -557,5 +570,5 @@ listStatus_t ListTest(void)
 {
   return gListOk_c;
 }
-#endif
-
+#endif 
+#endif /* gMemManagerLight */

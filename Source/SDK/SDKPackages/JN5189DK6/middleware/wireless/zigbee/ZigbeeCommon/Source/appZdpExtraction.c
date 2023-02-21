@@ -1,3 +1,21 @@
+/****************************************************************************
+ *
+ * Copyright 2020,2022 NXP.
+ *
+ * NXP Confidential. 
+ * 
+ * This software is owned or controlled by NXP and may only be used strictly 
+ * in accordance with the applicable license terms.  
+ * By expressly accepting such terms or by downloading, installing, activating 
+ * and/or otherwise using the software, you are agreeing that you have read, 
+ * and that you agree to comply with and are bound by, such license terms.  
+ * If you do not agree to be bound by the applicable license terms, 
+ * then you may not retain, install, activate or otherwise use the software. 
+ * 
+ *
+ ****************************************************************************/
+
+
  /*
  * MODULE:      Utils
  *
@@ -5,35 +23,11 @@
  *
  * DESCRIPTION:
  *
- *****************************************************************************
- *
- * This software is owned by NXP B.V. and/or its supplier and is protected
- * under applicable copyright laws. All rights are reserved. We grant You,
- * and any third parties, a license to use this software solely and
- * exclusively on NXP products [NXP Microcontrollers such as JN5168, JN5179].
- * You, and any third parties must reproduce the copyright and warranty notice
- * and any other legend of ownership on each copy or partial copy of the
- * software.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Copyright NXP B.V. 2016. All rights reserved
- *
- ****************************************************************************/
+ *****************************************************************************/
 
 #include "appZdpExtraction.h"
 #include <string.h>
-#include "log.h"
+#include "dbg.h"
 
 /****************************************************************************
  *
@@ -56,10 +50,10 @@
  *
  ****************************************************************************/
  
-PUBLIC bool_t zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent , 
                                                 ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t     bZdp = FALSE;
+    bool     bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8    u8SeqNum;
@@ -132,10 +126,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEven
  *
  ****************************************************************************/    
  
-PUBLIC bool_t zps_bAplZdpUnpackIeeeAddressResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackIeeeAddressResponse(ZPS_tsAfEvent *psZdoServerEvent , 
                                                 ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t    bZdp = FALSE;
+    bool    bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -206,10 +200,10 @@ PUBLIC bool_t zps_bAplZdpUnpackIeeeAddressResponse(ZPS_tsAfEvent *psZdoServerEve
  * @note
  *
  ****************************************************************************/                                                
-PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent , 
                                           ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8 u8SeqNum;
@@ -268,10 +262,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/
-PUBLIC bool_t zps_bAplZdpUnpackEnhancedNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackEnhancedNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent,
                                           ZPS_tsAfZdpEvent* psReturnStruct)
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     int i;
     if( psZdoServerEvent != NULL)
     {
@@ -353,27 +347,43 @@ PUBLIC bool_t zps_bAplZdpUnpackEnhancedNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEv
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackPermitJoinReq(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackPermitJoinReq(ZPS_tsAfEvent *psZdoServerEvent ,
                                            ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8 u8SeqNum;
         uint32 u32Location = 0;
-        
 
         PDUM_thAPduInstance hAPduInst = psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst;
         uint16 u16ClusterId = psZdoServerEvent->uEvent.sApsDataIndEvent.u16ClusterId;
         
         bZdp = TRUE;
-        u8SeqNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[0];
-        u32Location++;
+        u8SeqNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[u32Location++];
         
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        PDUM_u16APduInstanceReadNBO( psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst , 1, "bb", &psReturnStruct->uZdpData.sPermitJoiningReq);
+        u32Location += PDUM_u16APduInstanceReadNBO(psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst,
+                           u32Location, "bb", &psReturnStruct->uZdpData.sPermitJoiningReq);
+#ifdef R23_UPDATES
+#ifndef ZPS_ZDP_MGMT_PERMIT_JOINING_REQ_FMT
+#define ZPS_ZDP_MGMT_PERMIT_JOINING_REQ_FMT             "bb"
+#endif
+        uint8 u8PayloadSize = PDUM_u16SizeNBO("b" ZPS_ZDP_MGMT_PERMIT_JOINING_REQ_FMT);
+        u8PayloadSize = PDUM_u16APduInstanceGetPayloadSize(hAPduInst) - u8PayloadSize;
+        uint8 u8Size = MIN(sizeof(psReturnStruct->uLists.au8Data) - 1, u8PayloadSize);
+        psReturnStruct->uLists.au8Data[0] = u8Size;
+        if (u8Size)
+        {
+            char acFormat[] = {'a', 0, 0};
+            acFormat[1] = u8Size;
+
+            PDUM_u16APduInstanceReadNBO(psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst,
+                    u32Location, acFormat, psReturnStruct->uLists.au8Data + 1);
+        }
+#endif
     }
     return bZdp;
 }
@@ -400,10 +410,10 @@ PUBLIC bool_t zps_bAplZdpUnpackPermitJoinReq(ZPS_tsAfEvent *psZdoServerEvent ,
  *
  ****************************************************************************/
  
-PUBLIC bool_t zps_bAplZdpUnpackDevicAnnounce(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackDevicAnnounce(ZPS_tsAfEvent *psZdoServerEvent ,
                                            ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8 u8SeqNum;
@@ -445,10 +455,10 @@ PUBLIC bool_t zps_bAplZdpUnpackDevicAnnounce(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/                                       
-PUBLIC bool_t zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                               ZPS_tsAfZdpEvent* psReturnStruct )                                              
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -473,6 +483,11 @@ PUBLIC bool_t zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent 
         {
             APDU_BUF_READ16_INC( psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.uBitUnion.u16Value,hAPduInst , u32Location);
             psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.u8MacFlags = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+#ifdef R23_UPDATES
+            /* Default 1 Allocate Address */
+            ZPS_NWK_CAP_SET_ALLOC_ADDR(psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.u8MacFlags);
+#endif
+
             APDU_BUF_READ16_INC( psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.u16ManufacturerCode,hAPduInst , u32Location);
             psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.u8MaxBufferSize = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
             APDU_BUF_READ16_INC( psReturnStruct->uZdpData.sNodeDescRsp.sNodeDescriptor.u16MaxRxSize,hAPduInst , u32Location);
@@ -509,10 +524,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent 
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackPowerDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackPowerDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -568,10 +583,10 @@ PUBLIC bool_t zps_bAplZdpUnpackPowerDescResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                 ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -642,10 +657,10 @@ PUBLIC bool_t zps_bAplZdpUnpackSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEven
  * @note
  *
  ****************************************************************************/                                            
-PUBLIC bool_t zps_bAplZdpUnpackActiveEpResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackActiveEpResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                               ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -701,10 +716,10 @@ PUBLIC bool_t zps_bAplZdpUnpackActiveEpResponse(ZPS_tsAfEvent *psZdoServerEvent 
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -750,6 +765,7 @@ PUBLIC bool_t zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent
 }    
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackDiscCacheResponse
@@ -770,10 +786,10 @@ PUBLIC bool_t zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackDiscCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackDiscCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -815,10 +831,10 @@ PUBLIC bool_t zps_bAplZdpUnpackDiscCacheResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackNodeDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNodeDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -859,10 +875,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNodeDescStoreResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackActiveEpStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackActiveEpStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -904,10 +920,10 @@ PUBLIC bool_t zps_bAplZdpUnpackActiveEpStoreResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackSimpleDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackSimpleDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                      ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -950,10 +966,10 @@ PUBLIC bool_t zps_bAplZdpUnpackSimpleDescStoreResponse(ZPS_tsAfEvent *psZdoServe
  *
  ****************************************************************************/
  
-PUBLIC bool_t zps_bAplZdpUnpackRemoveNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackRemoveNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                      ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -994,10 +1010,10 @@ PUBLIC bool_t zps_bAplZdpUnpackRemoveNodeCacheResponse(ZPS_tsAfEvent *psZdoServe
  * @note
  *
  ****************************************************************************/                                                 
-PUBLIC bool_t zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                       ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -1018,10 +1034,11 @@ PUBLIC bool_t zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServ
     return bZdp;
 }    
 #endif
+#endif
 
 /****************************************************************************
  *
- * NAME:       zps_bAplZdpUnpackDiscStoreResponse
+ * NAME:       zps_bAplZdpUnpackSingleStatusResponse
  */
 /**
  * 
@@ -1039,10 +1056,10 @@ PUBLIC bool_t zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServ
  * @note
  *
  ****************************************************************************/                                                   
-PUBLIC bool_t zps_bAplZdpUnpackDiscStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackSingleStatusResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1058,7 +1075,10 @@ PUBLIC bool_t zps_bAplZdpUnpackDiscStoreResponse(ZPS_tsAfEvent *psZdoServerEvent
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        psReturnStruct->uZdpData.sDiscoveryCacheRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+        /* Being in a union with other data structures that have a byte status
+         * as a first field, this assignment will be reflected in all other
+         * union members */
+        psReturnStruct->uZdpData.sSingleStatusRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
     }
     return bZdp;
 }
@@ -1083,10 +1103,10 @@ PUBLIC bool_t zps_bAplZdpUnpackDiscStoreResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/                                                                                                            
-PUBLIC bool_t zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1103,12 +1123,13 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        psReturnStruct->uZdpData.sDiscoveryCacheRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+        psReturnStruct->uZdpData.sMgmtLeaveRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
     }
     return bZdp;
 }
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackMgmtDirectJoinResponse
@@ -1129,11 +1150,11 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/                                                   
-PUBLIC bool_t zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                     ZPS_tsAfZdpEvent* psReturnStruct )
 {
     
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1153,7 +1174,7 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServer
     }
     return bZdp;
 }    
-
+#endif
 #endif
 /****************************************************************************
  *
@@ -1175,10 +1196,10 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServer
  * @note
  *
  ****************************************************************************/                                                    
-PUBLIC bool_t zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                     ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1194,12 +1215,13 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServer
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        psReturnStruct->uZdpData.sDiscoveryCacheRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+        psReturnStruct->uZdpData.sPermitJoiningRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
     }
     return bZdp;
 }    
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackEndDeviceBindResponse
@@ -1220,10 +1242,10 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServer
  * @note
  *
  ****************************************************************************/                                                    
-PUBLIC bool_t zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1245,6 +1267,7 @@ PUBLIC bool_t zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerE
     return bZdp;
 }    
 #endif
+#endif
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackBindResponse
@@ -1265,10 +1288,10 @@ PUBLIC bool_t zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                               
-PUBLIC bool_t zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                           ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1284,7 +1307,7 @@ PUBLIC bool_t zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        psReturnStruct->uZdpData.sDiscoveryCacheRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+        psReturnStruct->uZdpData.sBindRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
     }
     return bZdp;
 }    
@@ -1310,10 +1333,10 @@ PUBLIC bool_t zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/                                          
-PUBLIC bool_t zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                             ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1328,13 +1351,14 @@ PUBLIC bool_t zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
         
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
- 
-        psReturnStruct->uZdpData.sDiscoveryCacheRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
+
+        psReturnStruct->uZdpData.sUnbindRsp.u8Status = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
     }
     return bZdp;
 }    
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackReplaceDeviceResponse
@@ -1355,10 +1379,10 @@ PUBLIC bool_t zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/                                            
-PUBLIC bool_t zps_bAplZdpUnpackReplaceDeviceResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackReplaceDeviceResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1400,10 +1424,10 @@ PUBLIC bool_t zps_bAplZdpUnpackReplaceDeviceResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                                       
-PUBLIC bool_t zps_bAplZdpUnpackStoreBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackStoreBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1446,10 +1470,10 @@ PUBLIC bool_t zps_bAplZdpUnpackStoreBkupBindResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                                       
-PUBLIC bool_t zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                     ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1469,7 +1493,7 @@ PUBLIC bool_t zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServer
     }
     return bZdp;
 }    
-
+#endif
 #endif
 /****************************************************************************
  *
@@ -1491,10 +1515,10 @@ PUBLIC bool_t zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServer
  * @note
  *
  ****************************************************************************/                                                    
-PUBLIC bool_t zps_bAplZdpUnpackMgmtLqiResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtLqiResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                              ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1559,16 +1583,15 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtLqiResponse(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/                                             
-PUBLIC bool_t zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                              ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
         uint32     u32Location = 0;
         uint32     u32LoopCounter;
-        uint32     tmpMaxLoop=0;
         
         PDUM_thAPduInstance hAPduInst = psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst;
         uint16 u16ClusterId = psZdoServerEvent->uEvent.sApsDataIndEvent.u16ClusterId;
@@ -1586,16 +1609,9 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent ,
         psReturnStruct->uZdpData.sRtgRsp.u8StartIndex = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
         psReturnStruct->uZdpData.sRtgRsp.u8RoutingTableCount = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
 
-        if (psReturnStruct->uZdpData.sRtgRsp.u8RoutingTableEntries > ZPS_APL_ZDP_MAX_NUM_MGMT_RTG_RSP_ROUTE_TABLE_ENTRIES)
-        {
-        	tmpMaxLoop=ZPS_APL_ZDP_MAX_NUM_MGMT_RTG_RSP_ROUTE_TABLE_ENTRIES;
-        }else{
-        	tmpMaxLoop=psReturnStruct->uZdpData.sRtgRsp.u8RoutingTableEntries;
-        }
-
         if(ZPS_E_SUCCESS == psReturnStruct->uZdpData.sRtgRsp.u8Status)
         {
-            for(u32LoopCounter = 0 ; u32LoopCounter < tmpMaxLoop ; u32LoopCounter++)
+            for(u32LoopCounter = 0 ; u32LoopCounter < psReturnStruct->uZdpData.sRtgRsp.u8RoutingTableEntries ; u32LoopCounter++)
             {
                 APDU_BUF_READ16_INC( psReturnStruct->uZdpData.sRtgRsp.asRoutingTableList[ u32LoopCounter].u16NwkDstAddr,hAPduInst , u32Location);
                 psReturnStruct->uZdpData.sRtgRsp.asRoutingTableList[ u32LoopCounter].u8Flags = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[ u32Location++ ];
@@ -1627,10 +1643,10 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent ,
  * @note
  *
  ****************************************************************************/                                         
-PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateNotifyResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNwkUpdateNotifyResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                      ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1690,10 +1706,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateNotifyResponse(ZPS_tsAfEvent *psZdoServe
  * @note
  *
  ****************************************************************************/                                         
-PUBLIC bool_t zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoServerEvent ,
                                                      ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1721,6 +1737,7 @@ PUBLIC bool_t zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoSe
     return bZdp;
 }
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackComplexDescResponse
@@ -1741,10 +1758,10 @@ PUBLIC bool_t zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoSe
  * @note
  *
  ****************************************************************************/                                                         
-PUBLIC bool_t zps_bAplZdpUnpackComplexDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackComplexDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                  ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1807,10 +1824,10 @@ PUBLIC bool_t zps_bAplZdpUnpackComplexDescResponse(ZPS_tsAfEvent *psZdoServerEve
  * @note
  *
  ****************************************************************************/                                             
-PUBLIC bool_t zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                               ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1839,7 +1856,8 @@ PUBLIC bool_t zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent 
     return bZdp;
 }    
 #endif
-
+#endif
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackUserDescConfirmResponse
@@ -1860,10 +1878,10 @@ PUBLIC bool_t zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent 
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                      ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1884,7 +1902,7 @@ PUBLIC bool_t zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServe
     }
     return bZdp;
 }    
-
+#endif
 
 /****************************************************************************
  *
@@ -1906,10 +1924,10 @@ PUBLIC bool_t zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServe
  * @note
  *
  ****************************************************************************/                                                     
-PUBLIC bool_t zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                       ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1925,14 +1943,14 @@ PUBLIC bool_t zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServ
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
-        
         PDUM_u16APduInstanceReadNBO(hAPduInst , u32Location, "bh",
-                &psReturnStruct->uZdpData.sUserDescConf);
+                &psReturnStruct->uZdpData.sSystemServerDiscoveryRsp);
     }
     return bZdp;
 }    
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackBkupBindTableResponse
@@ -1953,10 +1971,10 @@ PUBLIC bool_t zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServ
  * @note
  *
  ****************************************************************************/                                                  
-PUBLIC bool_t zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -1969,17 +1987,14 @@ PUBLIC bool_t zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerE
         u8SeqNum = (( pdum_tsAPduInstance* )hAPduInst )->au8Storage[0];
         u32Location++;
         
-        
-        
         psReturnStruct->u8SequNumber = u8SeqNum;
         psReturnStruct->u16ClusterId = u16ClusterId;
 
         PDUM_u16APduInstanceReadNBO(hAPduInst , u32Location, "bh",
-                &psReturnStruct->uZdpData.sUserDescConf);
+                &psReturnStruct->uZdpData.sBackupBindTableRsp);
     }
     return bZdp;
 }
-
 
 /****************************************************************************
  *
@@ -2001,10 +2016,10 @@ PUBLIC bool_t zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                                       
-PUBLIC bool_t zps_bAplZdpUnpackPowerDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackPowerDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                     ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8       u8SeqNum;
@@ -2048,10 +2063,10 @@ PUBLIC bool_t zps_bAplZdpUnpackPowerDescStoreResponse(ZPS_tsAfEvent *psZdoServer
  * @note
  *
  ****************************************************************************/                                                
-PUBLIC bool_t zps_bAplZdpUnpackFindNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackFindNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                    ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -2096,10 +2111,10 @@ PUBLIC bool_t zps_bAplZdpUnpackFindNodeCacheResponse(ZPS_tsAfEvent *psZdoServerE
  * @note
  *
  ****************************************************************************/                                           
-PUBLIC bool_t zps_bAplZdpUnpackExtendedSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackExtendedSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                         ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -2165,10 +2180,10 @@ PUBLIC bool_t zps_bAplZdpUnpackExtendedSimpleDescResponse(ZPS_tsAfEvent *psZdoSe
  * @note
  *
  ****************************************************************************/                                                        
-PUBLIC bool_t zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                             ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -2206,7 +2221,6 @@ PUBLIC bool_t zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZ
     return bZdp;
 }                                                            
 
-
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackRecoverBindTableResponse
@@ -2227,10 +2241,10 @@ PUBLIC bool_t zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZ
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                       ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -2286,7 +2300,6 @@ PUBLIC bool_t zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServ
     return bZdp;
 }
 
-
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackRecoverSourceBindResponse
@@ -2307,10 +2320,10 @@ PUBLIC bool_t zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServ
  * @note
  *
  ****************************************************************************/                                                      
-PUBLIC bool_t zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                        ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -2350,7 +2363,6 @@ PUBLIC bool_t zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoSer
     return bZdp;
 }    
 
-
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackBindRegisterResponse
@@ -2371,10 +2383,10 @@ PUBLIC bool_t zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoSer
  * @note
  *
  ****************************************************************************/                                                   
-PUBLIC bool_t zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                   ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -2428,7 +2440,6 @@ PUBLIC bool_t zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEv
     }
     return bZdp;
 }
-
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackMgmtNwkDiscResponse
@@ -2449,10 +2460,10 @@ PUBLIC bool_t zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEv
  * @note
  *
  ****************************************************************************/                                                  
-PUBLIC bool_t zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                  ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8SeqNum;
@@ -2496,6 +2507,7 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEve
     return bZdp;
 }    
 #endif
+#endif
 
 /****************************************************************************
  *
@@ -2517,10 +2529,10 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEve
  * @note
  *
  ****************************************************************************/                                                 
-PUBLIC bool_t zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                               ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8      u8value;
@@ -2582,6 +2594,7 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent 
 }    
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackMgmtCacheResponse
@@ -2602,11 +2615,11 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent 
  * @note
  *
  ****************************************************************************/                                              
-PUBLIC bool_t zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+PUBLIC bool zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent ,
                                                ZPS_tsAfZdpEvent* psReturnStruct )
                                                
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     if( psZdoServerEvent != NULL)
     {
         uint8     u8SeqNum;
@@ -2645,8 +2658,106 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent
     }
     return bZdp;
 }
-
 #endif
+#endif
+
+/****************************************************************************
+ *
+ * NAME:       zps_bAplZdpUnpackMgmtMibIeeeResponse
+ */
+/**
+ *
+ *
+ * @ingroup
+ *
+ * @param
+ * @param
+ * @param
+ *
+ * @param
+ *
+ * @return
+ *
+ * @note
+ *
+ ****************************************************************************/
+PUBLIC bool zps_bAplZdpUnpackMgmtMibIeeeResponse(ZPS_tsAfEvent *psZdoServerEvent ,
+                                                 ZPS_tsAfZdpEvent* psReturnStruct )
+
+{
+    bool bZdp = FALSE;
+    if( psZdoServerEvent != NULL)
+    {
+        uint8     u8SeqNum;
+        uint32    u32Location = 0;
+        uint32    u32LoopCounter;
+
+
+        PDUM_thAPduInstance hAPduInst = psZdoServerEvent->uEvent.sApsDataIndEvent.hAPduInst;
+        uint16 u16ClusterId = psZdoServerEvent->uEvent.sApsDataIndEvent.u16ClusterId;
+
+        bZdp = TRUE;
+        u8SeqNum = APDU_BUF_INC(hAPduInst, u32Location);
+
+        psReturnStruct->u8SequNumber = u8SeqNum;
+        psReturnStruct->u16ClusterId = u16ClusterId;
+
+        psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8Status = APDU_BUF_INC(hAPduInst, u32Location);
+        /*
+         * zigbee Document 05-3474-22, April 19, 2017 - Table 2-142, pg. 195:
+         * Status - The status of the Mgmt_NWK_IEEE_Joining_List_req command.
+         *          If Status is not SUCCESS, no other fields are included
+         */
+
+        if(ZPS_E_SUCCESS == psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8Status)
+        {
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8IeeeJoiningListUpdateID = APDU_BUF_INC(hAPduInst, u32Location);
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8MibJoiningPolicy = APDU_BUF_INC(hAPduInst, u32Location);
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningListTotal = APDU_BUF_INC(hAPduInst, u32Location);
+
+            /*
+             * zigbee Document 05-3474-22, April 19, 2017 - Table 2-142, pg. 195:
+             * StartIndex - The starting index in the mibIeeeJoiningList.
+             *              This field shall be omitted if the IeeeJoiningListTotal is 0
+             */
+            if (psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningListTotal != 0)
+            {
+                psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8StartIndex = APDU_BUF_INC(hAPduInst, u32Location);
+            }
+            else
+            {
+                psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8StartIndex = 0;
+            }
+
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningCount = APDU_BUF_INC(hAPduInst, u32Location);
+
+            /*
+             * zigbee Document 05-3474-22, April 19, 2017 - Table 2-142, pg. 195:
+             * IeeeJoiningList - A list of IEEE addresses from the mibIeeeJoiningList.
+             *                   This field shall be omitted if the IeeeJoiningListTotal is 0.
+             */
+            for(u32LoopCounter = 0;
+                (psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningListTotal != 0) &&
+                        (u32LoopCounter < psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningCount);
+                u32LoopCounter++)
+            {
+                u32Location += PDUM_u16APduInstanceReadNBO(hAPduInst , u32Location, "l",
+                                    &psReturnStruct->uLists.au64Data[ u32LoopCounter]);
+            }
+        }
+        else
+        {
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8IeeeJoiningListUpdateID = 0;
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8MibJoiningPolicy = 0;
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningListTotal = 0;
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.u8StartIndex = 0;
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.IeeeJoiningCount = 0;
+            psReturnStruct->uZdpData.sMgmtMibIeeeRsp.pu64IEEEAddr = NULL;
+        }
+    }
+    return bZdp;
+}
+
 /****************************************************************************
  *
  * NAME:       zps_bAplZdpUnpackResponse
@@ -2667,9 +2778,9 @@ PUBLIC bool_t zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent
  * @note
  *
  ****************************************************************************/    
-PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_tsAfZdpEvent* psReturnStruct )
+PUBLIC bool zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_tsAfZdpEvent* psReturnStruct )
 {
-    bool_t bZdp = FALSE;
+    bool bZdp = FALSE;
     uint16 u16ClusterId = psZdoServerEvent->uEvent.sApsDataIndEvent.u16ClusterId;
     switch(u16ClusterId)
     {
@@ -2713,32 +2824,40 @@ PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_ts
             bZdp = zps_bAplZdpUnpackMatchDescResponse( psZdoServerEvent , psReturnStruct );
             break;
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
         /*Structures are the same size and should align in the union */
         case ZPS_ZDP_DISCOVERY_CACHE_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackDiscCacheResponse( psZdoServerEvent , psReturnStruct );
             break;
 #endif
+#endif
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
         case ZPS_ZDP_DISCOVERY_STORE_RSP_CLUSTER_ID:
         case ZPS_ZDP_NODE_DESC_STORE_RSP_CLUSTER_ID:
         case ZPS_ZDP_ACTIVE_EP_STORE_RSP_CLUSTER_ID:
         case ZPS_ZDP_SIMPLE_DESC_STORE_RSP_CLUSTER_ID:
         case ZPS_ZDP_REMOVE_NODE_CACHE_RSP_CLUSTER_ID:
         case ZPS_ZDP_BKUP_SOURCE_BIND_RSP_CLUSTER_ID:        
-        case ZPS_ZDP_MGMT_DIRECT_JOIN_RSP_CLUSTER_ID:        
+        case ZPS_ZDP_MGMT_DIRECT_JOIN_RSP_CLUSTER_ID:
         case ZPS_ZDP_REPLACE_DEVICE_RSP_CLUSTER_ID:
         case ZPS_ZDP_STORE_BKUP_BIND_RSP_CLUSTER_ID:
         case ZPS_ZDP_REMOVE_BKUP_BIND_RSP_CLUSTER_ID:
 #endif
+#endif
+#ifndef R23_UPDATES
         case ZPS_ZDP_END_DEVICE_BIND_RSP_CLUSTER_ID:
+#endif
         case ZPS_ZDP_MGMT_LEAVE_RSP_CLUSTER_ID:
         case ZPS_ZDP_BIND_RSP_CLUSTER_ID:
         case ZPS_ZDP_UNBIND_RSP_CLUSTER_ID:
+#ifdef R23_UPDATES
+        case ZPS_ZDP_CLEAR_ALL_BINDINGS_RSP_CLUSTER_ID:
+#endif
         case ZPS_ZDP_MGMT_PERMIT_JOINING_RSP_CLUSTER_ID:
-            bZdp = zps_bAplZdpUnpackDiscStoreResponse( psZdoServerEvent , psReturnStruct );
+            bZdp = zps_bAplZdpUnpackSingleStatusResponse(psZdoServerEvent, psReturnStruct);
             break;
-
         case ZPS_ZDP_MGMT_LQI_RSP_CLUSTER_ID:
              bZdp = zps_bAplZdpUnpackMgmtLqiResponse( psZdoServerEvent , psReturnStruct );
             break;
@@ -2756,10 +2875,10 @@ PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_ts
         	bZdp = zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify( psZdoServerEvent , psReturnStruct );
             break;
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
         case ZPS_ZDP_COMPLEX_DESC_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackComplexDescResponse( psZdoServerEvent , psReturnStruct );
             break;
-
         case ZPS_ZDP_USER_DESC_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackUserDescResponse( psZdoServerEvent , psReturnStruct );
             break;
@@ -2768,11 +2887,13 @@ PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_ts
         case ZPS_ZDP_USER_DESC_CONF_RSP_CLUSTER_ID:
         case ZPS_ZDP_BKUP_BIND_TABLE_RSP_CLUSTER_ID:
 #endif
+#endif
         case ZPS_ZDP_SYSTEM_SERVER_DISCOVERY_RSP_CLUSTER_ID:
-            bZdp = zps_bAplZdpUnpackUserDescConfirmResponse( psZdoServerEvent , psReturnStruct );
+            bZdp = zps_bAplZdpUnpackSystemServerDiscResponse( psZdoServerEvent , psReturnStruct );
             break;
 
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
         case ZPS_ZDP_POWER_DESC_STORE_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackPowerDescStoreResponse( psZdoServerEvent , psReturnStruct );
             break;
@@ -2788,7 +2909,7 @@ PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_ts
         case ZPS_ZDP_EXTENDED_ACTIVE_EP_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackExtendedActiveEndpointResponse( psZdoServerEvent , psReturnStruct );
             break;
-            
+
         case ZPS_ZDP_BIND_REGISTER_RSP_CLUSTER_ID:
             bZdp = zps_bAplZdpUnpackBindRegisterResponse( psZdoServerEvent , psReturnStruct );
             break;
@@ -2806,14 +2927,21 @@ PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent ,ZPS_ts
             bZdp = zps_bAplZdpUnpackMgmtNwkDiscResponse( psZdoServerEvent , psReturnStruct );
             break;
 #endif
+#endif
         case ZPS_ZDP_MGMT_BIND_RSP_CLUSTER_ID:
               bZdp = zps_bAplZdpUnpackMgmtBindResponse( psZdoServerEvent , psReturnStruct );
             break;
 #ifdef LEGACY_SUPPORT
+#ifndef R23_UPDATES
         case ZPS_ZDP_MGMT_CACHE_RSP_CLUSTER_ID:
              bZdp = zps_bAplZdpUnpackMgmtCacheResponse( psZdoServerEvent , psReturnStruct );
             break;
 #endif
+#endif
+        case ZPS_ZDP_MGMT_MIB_IEEE_RSP_CLUSTER_ID:
+            bZdp = zps_bAplZdpUnpackMgmtMibIeeeResponse( psZdoServerEvent , psReturnStruct );
+            break;
+
         default:
             bZdp = FALSE;
             break;

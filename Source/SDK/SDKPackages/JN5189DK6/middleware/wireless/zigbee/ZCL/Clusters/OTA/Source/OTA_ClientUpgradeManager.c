@@ -1499,6 +1499,10 @@ PRIVATE bool_t bOtaHandleImageNotify( tsOTA_Common *psOTA_Common,
     }
 
     sReceivedFrame = psOTA_Common->sOTACallBackMessage.uMessage.sImageNotifyPayload;
+    if (sReceivedFrame.u8QueryJitter < OTA_MIN_QUERY_JITTER || sReceivedFrame.u8QueryJitter > OTA_MAX_QUERY_JITTER)
+    {
+        return bPollRequired;
+    }
 
     /* check Notify payload type */
     if((sReceivedFrame.ePayloadType == E_CLD_OTA_QUERY_JITTER) ||

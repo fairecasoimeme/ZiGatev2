@@ -75,14 +75,14 @@ extern "C" {
         #define OTA_REMOVE_BOOTLOADER_SPECIFIC_BYTES_LENGTH    0
         #define OTA_FLS_MAGIC_NUMBER_LENGTH                    0
         #define OTA_BOOTLOADER_BLOCK_LENGTH                    8
+        #define OTA_BOOTLOADER_SIGNATURE_SIZE                  256
         #define OTA_BOOTLOADER_HEADER_MARKER_OFFSET            0x20
         #define NVM_BYTES_PER_SEGMENT                          512
 #if (defined gEepromType_d) && (gEepromType_d != gEepromDevice_InternalFlash_c)
         #define OTA_SECTOR_CONVERTION                          1
 #else
-		#define OTA_SECTOR_CONVERTION                          64
-#endif
         #define OTA_SECTOR_CONVERTION                          64
+#endif
         #define OTA_IV_LOCATION                                0x260
         #ifdef APP0 /* Building with selective OTA */
             #ifndef OTA_APP1_SHADOW_FLASH_OFFSET
@@ -154,6 +154,8 @@ extern "C" {
 #define OTA_HEADER_STRING_SIZE                    (uint8)32
 #define OTA_MAX_HEADER_SIZE                       (uint8)69
 #define OTA_MIN_HEADER_SIZE                       (uint8)56
+#define OTA_MAX_QUERY_JITTER                      (uint8)100
+#define OTA_MIN_QUERY_JITTER                      (uint8)1
 #define OTA_FILE_IDENTIFIER                       (uint32)0x0BEEF11E
 #define OTA_TAG_ID_UPGRADE_IMAGE                  (uint16)0x0000
 #define OTA_TAG_ID_EDCA_SIGNATURE                 (uint16)0x0001

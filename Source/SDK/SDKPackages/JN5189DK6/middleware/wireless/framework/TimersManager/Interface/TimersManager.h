@@ -111,6 +111,39 @@ extern "C" {
 #define gTmrTotalTimers_c   ( gTmrApplicationTimers_c + gTmrStackTimers_c )
 #endif
 
+  /* 32k FRO clock: if using 32k FRO (gClkUseFro32K=1) then default to recalibrating it
+ * on every wake (gClkRecalFro32K=1). If 32k FRO should only be calibrated on first
+ * start, user must explicitly set gClkRecalFro32K=0 */
+#if (defined gClkUseFro32K) && (gClkUseFro32K != 0) && !(defined gClkRecalFro32K)
+#define gClkRecalFro32K (1)
+#endif
+
+/* Tune FRO32K calibration - The default values are optimized for BLE only */
+
+/* Configure the calibration duration. in multiple of square 2 or 30.5us.
+    If PWR_FRO32K_CAL_WAKEUP_END is set to 1, recommended value is 4 , Calibration duration will be 2^4*30.5us = 488us
+    If not, Please set FRO32K_CAL_SCALE to have calibration duration smaller than you periodic active period. For BLE,
+      it can be set to 5 or 6 , (976us, or 1.952ms) */
+#ifndef FRO32K_CAL_SCALE
+#define FRO32K_CAL_SCALE              6
+#endif
+
+/* Averaging parameter to calculate the new frequency estimation using exponential filter
+    If val is the last frequency estimation and freq is the new measurement, the new frequency estimation will be:
+       val = ((val << FRO32K_CAL_AVERAGE) - val + freq) >> FRO32K_CAL_AVERAGE
+    The lower the FRO32K_CAL_AVERAGE the value is , the higher is the noise but the higher the reaction to temperature variation
+    FRO32K_CAL_AVERAGE can be smaller if FRO32K_CAL_SCALE is higher */
+#ifndef FRO32K_CAL_AVERAGE
+#define FRO32K_CAL_AVERAGE            5
+#endif
+
+/* When the calibration results are checked, if the calibration is not completed, it will issue a PRINTF for warning. This situation shall be
+    avoided as much as possible as no new estimation can be performed, When this happens, this usually means FRO32K_CAL_SCALE is too big
+    and shall be reduced   */
+#ifndef FRO32K_CAL_INCOMPLETE_PRINTF
+#define FRO32K_CAL_INCOMPLETE_PRINTF  1   /* set to 1 to PRINTF when CAL is completed when we check it    */
+#endif
+
 /*
  * \brief   Typecast the macro argument into milliseconds
  */
@@ -184,6 +217,12 @@ typedef enum {
     gTmrOutOfRange_c
 }tmrErrCode_t;
 
+typedef enum {
+    gFroCalibrationInactive_c,
+    gFro32kCalibration_c,
+    gFro48MCalibration_c
+}tmrFroCalibrationState_t;
+
 /*
  * \brief   16-bit timer ticks type definition
  */
@@ -228,6 +267,24 @@ typedef uint8_t     tmrTimerType_t;
  * \brief   Timer callback function
  */
 typedef void ( *pfTmrCallBack_t ) ( void * param );
+
+typedef struct {
+    uint32_t sleep_start_ts_32kTicks;
+    uint32_t compensation_32kticks;
+    bool_t osSleep_activity_scheduled;
+    uint32_t sysTick_CSR;
+    uint32_t sysTick_RV;
+    uint32_t idle_tick_jump;
+    uint32_t exitTicklessDuration32kTick;
+    uint32_t rtosSystickExpectedIdleTime;
+} tmrlp_tickless_systick_t;
+
+
+/* @brief:  lp_32k_dyn must match the clock_32k_hk_t structure */
+typedef struct  {
+    uint32_t freq32k;          /*!< 32k clock actual calculated frequency in Hz */
+    uint32_t freq32k_16thHz;  /*!< 32k clock actual calculated frequency in 16th of Hz */
+} TMR_clock_32k_hk_t;
 
 
 /*****************************************************************************
@@ -775,8 +832,9 @@ uint64_t TMR_PITGetTimestamp(void);
 
 
 
-#define TICKS32kHz_TO_USEC(x) (((x)*15625U) >> 9)
-#define TICKS32kHz_TO_MSEC(x) (((x)*125U) >> 12)
+#define TICKS32kHz_TO_USEC(x) ((((uint64_t)x)*15625U) >> 9)
+#define TICKS32kHz_TO_MSEC(x) ((((uint64_t)x)*125U) >> 12) /* mult by 1000 divided by 32768*/
+#define MILLISECONDS_TO_TICKS32K(x)   (((((uint64_t)x)<<12))/125)
 #define TICKS1kHz_TO_MSEC(x) (((x))
 #define TICKS1kHz_TO_USEC(x) (((x)*1000U)
 
@@ -798,16 +856,150 @@ uint64_t Timestamp_Get_uSec(void);
 uint64_t Timestamp_Get_mSec(void);
 void     Timestamp_Deinit(void);
 
+typedef enum
+{
+    TMR_E_ACTIVITY_OK,
+    TMR_E_ACTIVITY_RUNNING,
+    TMR_E_ACTIVITY_FREE,
+    TMR_E_ACTIVITY_INVALID,
+} TMR_teActivityStatus;
+
+typedef struct _sActivityTimerEvt
+{
+    struct _sActivityTimerEvt *psNext;
+    uint32_t u32TickDelta;
+    void (*prCallbackfn)(void);
+    uint8_t u8Status;
+} TMR_tsActivityWakeTimerEvent;
+
+TMR_teActivityStatus TMR_eScheduleActivity32kTicks(TMR_tsActivityWakeTimerEvent *psTmr,
+								                    uint32_t u32Ticks,
+								                    void (*prCallbackfn)(void));
+TMR_teActivityStatus TMR_eScheduleActivity32kTicksAndGetCurrentTimestampValue(TMR_tsActivityWakeTimerEvent *psTmr,
+                                                    uint32_t u32Ticks,
+                                                    void (*prCallbackfn)(void),
+                                                    uint32_t *pCurrentTimestampValue);
+TMR_teActivityStatus TMR_eRemoveActivity(TMR_tsActivityWakeTimerEvent *psTmr);
+TMR_teActivityStatus TMR_eRemoveActivityUnsafe(TMR_tsActivityWakeTimerEvent *psTmr);
+/*---------------------------------------------------------------------------
+ * Name: TMR_eScheduleActivityMs() with compensation if FRO32K is used
+ *---------------------------------------------------------------------------*/
+TMR_teActivityStatus TMR_eScheduleActivityMs(TMR_tsActivityWakeTimerEvent *psWake,
+                                   uint32_t u32TimeMs,
+                                   void (*prCallbackfn)(void));
+
+/*  API to Handle systick and tickless mode in Freertos */
+void tickless_init(void);
+void tickless_SystickCheckDrift(void);
+void tickless_SystickCheckDriftInit(void);
+void tickless_PostProcessing(tmrlp_tickless_systick_t * p_lp_ctx);
+void tickless_PreProcessing(tmrlp_tickless_systick_t * p_lp_ctx, uint32_t xExpectedIdleTime);
+bool_t tickless_EstimateCoreClockFreq(void);
+void tickless_StartFroCalibration(void);
+
+/*---------------------------------------------------------------------------
+ * Name: FRO32K_Init
+ * Description: -
+ * Parameters: -
+ * Return: -
+ *---------------------------------------------------------------------------*/
+void FRO32K_Init(void);
+
+/*---------------------------------------------------------------------------
+ * Name: FRO32K_StartCalibration
+ *   It is supposed that 32MHz crystal is running and FRO32K running when calling this API
+ *   FRO32K calibration shall be called idealy from Idle Task
+ *   If Calibration on FRO48Mhz has started, this last shall be completed before
+ *      starting FRO32K calibration as it uses the same Hardware module
+ * Parameters: - None
+ * Return: - None
+ *---------------------------------------------------------------------------*/
+void FRO32K_StartCalibration(void);
+
+/*---------------------------------------------------------------------------
+ * Name: FRO32K_CompleteCalibration
+ * Description: -
+ * Parameters: - None
+ * Return: - 0 if calibration is not completed, new frequency measurement in unit
+ *       of 1/(2^freq_scale)th of Hertz for higher accuracy
+ *---------------------------------------------------------------------------*/
+uint32_t FRO32K_CompleteCalibration(void);
+
+/*---------------------------------------------------------------------------
+ * Name: FRO48M_StartCalibration
+ *   It is supposed that 32MHz crystal is running when calling this API
+ *   FRO48M calibration shall be called idealy from Idle Task.
+ *   If Calibration on FRO32K has started,this last shall be completed before
+ *     starting FRO48M calibration as it uses the same Hardware module
+ * Parameters: - None
+ * Return: - None
+ *---------------------------------------------------------------------------*/
+void FRO48M_StartCalibration(void);
+
+/*---------------------------------------------------------------------------
+ * Name: FRO48M_CompleteCalibration
+ * Description: -
+ * Parameters: -
+ * Return: - 0 if calibration is not completed, new frequency measurement in Hertz
+ *---------------------------------------------------------------------------*/
+uint32_t FRO48M_CompleteCalibration(void);
+
+/*---------------------------------------------------------------------------
+ * Name: TMR_Convert32kTicks2Us
+ * Description: -
+ * Parameters: -
+ * Return: -
+ *---------------------------------------------------------------------------*/
+uint64_t TMR_Convert32kTicks2Us(uint64_t u64ticks);
+
+/*---------------------------------------------------------------------------
+ * Name: TMR_ConvertUsToTicks
+ * Description: -
+ * Parameters: -
+ * Return: -
+ *---------------------------------------------------------------------------*/
+uint64_t TMR_ConvertUsToTicks(uint64_t u64timeUs);
+
+/*---------------------------------------------------------------------------
+ * Name: TMR_GetTimestampUs
+ * Description: -
+ * Parameters: -
+ * Return: -
+ *---------------------------------------------------------------------------*/
+uint64_t TMR_GetTimestampUs(void);
+
+/*---------------------------------------------------------------------------
+ * Name: TMR_Get32kHandle
+ * Description: return handle on 32k housekeeping structure.
+ * Parameters: -
+ * Return: pointer on structure
+ *---------------------------------------------------------------------------*/
+void * TMR_Get32kHandle(void);
 
 
 #if defined gLoggingActive_d && (gLoggingActive_d > 0)
 #include "dbg_logging.h"
+
 #ifndef DBG_TMR
 #define DBG_TMR 0
 #endif
 #define TMR_DBG_LOG(fmt, ...)   if (DBG_TMR) do { DbgLogAdd(__FUNCTION__ , fmt, VA_NUM_ARGS(__VA_ARGS__), ##__VA_ARGS__); } while (0);
+
+#ifndef DBG_SYSTICK
+#define DBG_SYSTICK 0
+#endif
+#define SYSTICK_DBG_LOG(fmt, ...)   if (DBG_SYSTICK) do { DbgLogAdd(__FUNCTION__ , fmt, VA_NUM_ARGS(__VA_ARGS__), ##__VA_ARGS__); } while (0);
+
+#ifndef DBG_TMR_SCHEDULE_ACT
+#define DBG_TMR_SCHEDULE_ACT 0
+#endif
+#define TMR_SCHEDULE_ACT_LOG(fmt, ...)   if (DBG_TMR_SCHEDULE_ACT) do { DbgLogAdd(__FUNCTION__ , fmt, VA_NUM_ARGS(__VA_ARGS__), ##__VA_ARGS__); } while (0);
+
+
 #else
 #define TMR_DBG_LOG(...)
+#define SYSTICK_DBG_LOG(...)
+#define TMR_SCHEDULE_ACT_LOG(...)
 #endif
 
 #ifdef __cplusplus

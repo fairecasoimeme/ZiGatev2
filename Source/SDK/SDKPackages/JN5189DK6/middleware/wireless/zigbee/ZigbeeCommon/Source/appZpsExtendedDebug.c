@@ -643,7 +643,7 @@ PUBLIC void vDisplayBindingTable( void )
         if (tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DstAddrMode == ZPS_E_ADDR_MODE_GROUP)
         {
             // Group
-            DBG_vPrintf(TRACE_ZBP_UTILS, "\r\nGroup Addr 0x%x, ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16AddrOrLkUp);
+            DBG_vPrintf(TRACE_ZBP_UTILS, "\r\nGroup Addr 0x%x, ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved);
             DBG_vPrintf(TRACE_ZBP_UTILS, "Dest Ep %d, ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint);
             DBG_vPrintf(TRACE_ZBP_UTILS, "Cluster Id 0x%x ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16ClusterId);
 
@@ -651,7 +651,7 @@ PUBLIC void vDisplayBindingTable( void )
         else
         {
             
-            u64Addr = ZPS_u64NwkNibGetMappedIeeeAddr( ZPS_pvAplZdoGetNwkHandle(), tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16AddrOrLkUp);
+            u64Addr = ZPS_u64NwkNibGetMappedIeeeAddr( ZPS_pvAplZdoGetNwkHandle(), tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved);
             DBG_vPrintf(TRACE_ZBP_UTILS, "\r\nMAC addr 0x%x %x, ", (uint32)(u64Addr>>32), (uint32)(u64Addr&0xffffffff));
             DBG_vPrintf(TRACE_ZBP_UTILS, " Dest EP %d, ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint);
             DBG_vPrintf(TRACE_ZBP_UTILS, "Cluster Id 0x%x ", tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16ClusterId);

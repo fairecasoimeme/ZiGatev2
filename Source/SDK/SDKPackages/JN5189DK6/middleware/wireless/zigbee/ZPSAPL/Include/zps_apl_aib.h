@@ -56,7 +56,9 @@
 #define apsDesignatedCoordinator    bApsDesignatedCoordinator
 #define apsUseExtendedPANID         u64ApsUseExtendedPanid
 #define apsGroupTable               psAplApsmeGroupTable
+#ifndef R23_UPDATES
 #define apsNonmemberRadius          u8ApsNonMemberRadius
+#endif
 #define apsPermissionsConfiguration /* not implemented */
 #define apsUseInsecureJoin          bApsUseInsecureJoin
 #define apsInterframeDelay          u8ApsInterframeDelay
@@ -67,9 +69,16 @@
 #define apsDefaultTCApsLinkKey      psAplDefaultTCApsLinkKey
 #define apsTrustCenterAddress       u64ApsTrustCenterAddress
 #define apsSecurityTimeoutPeriod    u16ApsSecurityTimeOutPeriod
+#ifdef R23_UPDATES
+#define apsSupportedKeyNegotiationMethods u8ApsSupportedKeyNegotiationMethods
+#define apsZdoRestrictedMode        bApsZdoRestrictedMode
+#endif
 
 /* TODO - needs to be a table to support fragmentation */
 #define apsMaxWindowSize            u8ApsMaxWindowSize
+#ifdef R23_UPDATES
+#define apsMaxSizeAsdu              u8ApsMaxSizeAsdu
+#endif
 
 #define apscMaxDescriptorSize       (64UL)
 #define apscMaxFrameRetries         (3UL)
@@ -120,22 +129,7 @@ typedef struct
 }ZPS_tsPdmGroupTable;
 
 /* [I SP001349_sfr 50,54] */
-typedef struct
-{
-    uint16  u16AddrOrLkUp;
-    uint16  u16ClusterId;
-    uint8   u8DstAddrMode;
-    uint8   u8SourceEndpoint;
-    uint8   u8DestinationEndPoint;
-}ZPS_tsAplApsmeBindingTableStoreEntry;
-
-
-typedef struct
-{
-	ZPS_tsAplApsmeBindingTableStoreEntry* pvAplApsmeBindingTableEntryForSpSrcAddr;
-   uint32 u32SizeOfBindingTable;
-}ZPS_tsAplApsmeBindingTable;
-
+#define ZPS_tsAplApsmeBindingTableStoreEntry ZPS_tsAplApsmeBindingTableEntryDualAddr
 
 typedef struct
 {
@@ -148,9 +142,25 @@ typedef struct
 
 typedef struct
 {
-   ZPS_tsAplApsmeBindingTableEntry* pvAplApsmeBindingTableForRemoteSrcAddr;
-   uint32 u32SizeOfBindingCache;
-   uint64* pu64RemoteDevicesList;
+	ZPS_tuAddress  uDstAddress;
+    uint16         u16NwkAddrResolved;
+    uint16         u16ClusterId;
+    uint8          u8DstAddrMode;
+    uint8          u8SourceEndpoint;
+    uint8          u8DestinationEndPoint;
+}ZPS_tsAplApsmeBindingTableEntryDualAddr;
+
+typedef struct
+{
+	ZPS_tsAplApsmeBindingTableStoreEntry* pvAplApsmeBindingTableEntryForSpSrcAddr;
+    uint32 u32SizeOfBindingTable;
+}ZPS_tsAplApsmeBindingTable;
+
+typedef struct
+{
+    ZPS_tsAplApsmeBindingTableEntry* pvAplApsmeBindingTableForRemoteSrcAddr;
+    uint32 u32SizeOfBindingCache;
+    uint64* pu64RemoteDevicesList;
 }ZPS_tsAplApsmeBindingTableCache;
 
 
@@ -191,14 +201,25 @@ typedef struct
     bool_t  bApsDesignatedCoordinator;
     bool_t  bApsUseInsecureJoin;
     bool_t  bDecryptInstallCode;
+#ifdef R23_UPDATES
+    bool_t  bApsZdoRestrictedMode;
+#endif
     uint8   u8KeyType;
     /* volatile */
+#ifndef R23_UPDATES
+#define AIB_START_VOLATILE_SECTION u8ApsNonMemberRadius
     uint8   u8ApsNonMemberRadius;
+#else
+#define AIB_START_VOLATILE_SECTION u8ApsInterframeDelay
+#endif
     uint8   u8ApsInterframeDelay;
     uint8   u8ApsLastChannelEnergy;
     uint8   u8ApsLastChannelFailureRate;
     uint8   u8ApsChannelTimer;
     uint8   u8ApsMaxWindowSize;
+#ifdef R23_UPDATES
+    uint8   u8ApsMaxSizeAsdu; /* TODO: clarify overlap w/ ApsContext.u8MaxFragBlockSize */
+#endif
     ZPS_tsAplApsmeBindingTableType *psAplApsmeAibBindingTable;
     ZPS_tsAplApsmeAIBGroupTable    *psAplApsmeGroupTable;
     ZPS_tsAplApsKeyDescriptorTable  *psAplDeviceKeyPairTable; /* [I SP001379_sr 344] */
@@ -206,6 +227,9 @@ typedef struct
     bool_t   bParentAnnouncePending;
     bool_t   bUseInstallCode;
     uint16   u16ApsSecurityTimeOutPeriod;        /* [I SP001379_sr 344] */
+#ifdef R23_UPDATES
+    uint8    u8ApsSupportedKeyNegotiationMethods;
+#endif
     uint32   *pu32IncomingFrameCounter;
     uint32   *pau32ApsChannelMask;
 } ZPS_tsAplAib;

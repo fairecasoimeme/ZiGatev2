@@ -7,13 +7,25 @@
 *
 * SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
-
-#include "TMR_Adapter.h"
-#include "fsl_device_registers.h"
-#include "fsl_os_abstraction.h"
-#include "fsl_common.h"
-//#include "board.h"
 #include "TimersManager.h"
+#include "fsl_wtimer.h"
+#include "fsl_device_registers.h"
+#include "fsl_common.h"
+#include "fsl_os_abstraction.h"
+
+#include "fsl_debug_console.h"
+#include <assert.h>
+#include "TMR_Adapter.h"
+
+#ifndef DISABLE_TMR_ADAPTER
+//#include "board.h"
+
+#ifdef FSL_RTOS_FREE_RTOS
+#include "FreeRTOSConfig.h"
+#include "FreeRTOS.h"
+#include "portmacro.h"
+#include "task.h"
+#endif
 
 #if gTimerMgrUseFtm_c
   #include "fsl_ftm.h"
@@ -28,25 +40,21 @@
    #include "fsl_tpm.h"
 #endif
 
-#if gTimestampUseWtimer_c
-#include "fsl_wtimer.h"
-#endif
-
 #include "fsl_fmeas.h"
 #include "fsl_inputmux.h"
+#if defined(cPWR_UsePowerDownMode) && (cPWR_UsePowerDownMode == 1)
+#include "PWR_Interface.h"
+#endif
 
 #if defined mAppUseTickLessMode_c && (mAppUseTickLessMode_c != 0)
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "portmacro.h"
 #endif
-/************************************************************************************
-*************************************************************************************
-* Private prototypes
-*************************************************************************************
-************************************************************************************/
-extern void PWR_DisallowDeviceToSleep(void);
-extern void PWR_AllowDeviceToSleep(void);
+
+#if (defined(gSystickUseWtimer1ForSleepDuration) && gSystickUseWtimer1ForSleepDuration) && (defined(gTimestampUseWtimer_c) && gTimestampUseWtimer_c)
+#error "It is recommended to disable gTimestampUseWtimer_c if gSystickUseWtimer1ForSleepDuration is enabled to save power otherwise gSystickUseWtimer1ForSleepDuration should not be defined"
+#endif
 
 #ifndef FMEAS_SYSCON
 #if defined(FSL_FEATURE_FMEAS_USE_ASYNC_SYSCON) && (FSL_FEATURE_FMEAS_USE_ASYNC_SYSCON)
@@ -56,6 +64,13 @@ extern void PWR_AllowDeviceToSleep(void);
 #endif
 #endif
 
+/************************************************************************************
+*************************************************************************************
+* Private prototypes
+*************************************************************************************
+************************************************************************************/
+extern void PWR_DisallowDeviceToSleep(void);
+extern void PWR_AllowDeviceToSleep(void);
 
 /************************************************************************************
 *************************************************************************************
@@ -141,18 +156,10 @@ static const tpm_config_t mTpmConfig = {
 };
 #endif
 
+static tmrFroCalibrationState_t froCalibrationState = gFroCalibrationInactive_c;
+
 #ifdef CPU_JN518X
-
-//#define SYSTICK_DBG 1
-#ifdef  SYSTICK_DBG
-  #define MAX_NB_TICK_DRIFT 10
-  #include "fsl_debug_console.h"
-  #define DBG_SYSTICK PRINTF
-#else
-  #define DBG_SYSTICK(...)
-#endif
-
-
+#if 0
 #if (BOARD_TARGET_CPU_FREQ != BOARD_MAINCLK_XTAL32M) && !gClkUseFro32K
 #define CoreFreqVariable_c  1
 #else
@@ -177,7 +184,7 @@ typedef struct {
 } lp_tickless_systick_t;
 
 static lp_tickless_systick_t SysTick_lp_ctx;
-
+#endif
 #endif
 #endif
 
@@ -253,7 +260,7 @@ uint64_t Timestamp_Get_uSec(void)
 uint64_t Timestamp_Get_mSec(void)
 {
     uint64_t cnt = Timestamp_GetCounter64bit();
-    uint64_t msec = TICKS32kHz_TO_USEC(cnt);
+    uint64_t msec = TICKS32kHz_TO_MSEC(cnt);
     return msec;
 }
 
@@ -513,6 +520,8 @@ uint32_t StackTimer_ClearIntFlag(void)
 #if gTimerMgrUseLpcRtc_c
 
 #ifdef CPU_JN518X
+
+#if 0
 #if defined mAppUseTickLessMode_c &&  (mAppUseTickLessMode_c != 0)
 
 #if CoreFreqVariable_c
@@ -585,8 +594,7 @@ void StackTimer_PrePowerDownWakeCounterSet(uint32_t expected_suppressed_ticks)
     if (SysTick_lp_ctx.cal_ongoing)
     {
         Systick_EstimateCoreClockFreq();
-        DBG_SYSTICK("CoreFreq is %d\r\n",  SysTick_lp_ctx.estimated_core_freq);
-
+        SYSTICK_DBG_LOG("CoreFreq is %d",  SysTick_lp_ctx.estimated_core_freq);
     }
 #endif
     TMR_DBG_LOG("expected_idle_time_ms=%d tmrMgrExpiryCnt=%d", expected_idle_time_ms, SysTick_lp_ctx.original_tmr_value);
@@ -644,7 +652,7 @@ void SysTick_StopAndReadRemainingValue(void)
     core_ticks_to_32k_ticks =  (uint32_t)(((uint64_t)(val) * 32768) / core_freq);
 
     TMR_DBG_LOG("elapsed core ticks=%d residual_count=%d", val, core_ticks_to_32k_ticks);
-
+    (void) core_ticks_to_32k_ticks;
 #if CoreFreqVariable_c
     /* Store elapsed time since last tick converted in 32k ticks */
     SysTick_lp_ctx.systick_residual_count = core_ticks_to_32k_ticks;
@@ -659,13 +667,13 @@ void SysTickSetCal(bool on_noff)
     if (on_noff)
     {
         SysTick_lp_ctx.cal_ongoing = true;
-        PWR_DisallowDeviceToSleep();
+        //PWR_DisallowDeviceToSleep();
         SysTick_StartFroCalibration();
     }
     else
     {
         SysTick_lp_ctx.cal_ongoing = false;
-        PWR_AllowDeviceToSleep();
+        //PWR_AllowDeviceToSleep();
     }
 }
 #if CoreFreqVariable_c
@@ -673,51 +681,33 @@ void SysTickSetCal(bool on_noff)
 /* suppose 32MHz crystal is running and FRO48M running */
 void SysTick_StartFroCalibration(void)
 {
-    INPUTMUX_Init(INPUTMUX);
-
-    /* Setup to measure the selected target */
-    INPUTMUX_AttachSignal(INPUTMUX, 1U, kINPUTMUX_Xtal32MhzToFreqmeas);
-    INPUTMUX_AttachSignal(INPUTMUX, 0U, kINPUTMUX_MainClkToFreqmeas);
-
-    CLOCK_EnableClock(kCLOCK_Fmeas);
-
-    /* Start a measurement cycle and wait for it to complete. If the target
-       clock is not running, the measurement cycle will remain active
-       forever, so a timeout may be necessary if the target clock can stop */
-    FMEAS_StartMeasureWithScale(FMEAS_SYSCON, 17);
+    FRO48M_StartCalibration();
 }
 
 uint32_t SysTick_CompleteFroCalibration(void)
 {
-    uint32_t        freqComp    = 0U;
-    uint32_t        refCount    = 0U;
-    uint32_t        targetCount = 0U;
-    uint32_t        freqRef     = CLOCK_GetFreq(kCLOCK_Xtal32M);
-
-    if (FMEAS_IsMeasureComplete(FMEAS_SYSCON))
-    {
-        /* Wait 2^17 counts of the reference clock : 4096us */
-        /* Get computed frequency */
-        FMEAS_GetCountWithScale(FMEAS_SYSCON, 17, &refCount, &targetCount);
-        freqComp = (uint32_t)(((((uint64_t)freqRef)*refCount)) / targetCount);
-
-        /* Disable the clocks if disable previously */
-        CLOCK_DisableClock(kCLOCK_Fmeas);
-    }
-    return freqComp;
+    return FRO48M_CompleteCalibration();
 }
 
 
-static void Systick_EstimateCoreClockFreq(void)
+void Systick_EstimateCoreClockFreq(void)
 {
     if (SysTick_lp_ctx.cal_ongoing)
     {
         uint32_t core_freq = SysTick_CompleteFroCalibration();
+
         if (core_freq != 0)
         {
-            SysTick_lp_ctx.estimated_core_freq = (uint32_t)core_freq;
-            SysTick_GetCoreFreqTickReloadValue(); /* Sets TickCountForOneTick */
-            TMR_DBG_LOG("core_freq=%d", SysTick_lp_ctx.estimated_core_freq);
+            if (core_freq != 0xFFFFFFFF)
+            {
+                SysTick_lp_ctx.estimated_core_freq = (uint32_t)core_freq;
+                SysTick_GetCoreFreqTickReloadValue(); /* Sets TickCountForOneTick */
+                TMR_DBG_LOG("core_freq=%d", SysTick_lp_ctx.estimated_core_freq);
+            }
+            else
+            {
+                TMR_DBG_LOG("invalid calibration state");
+            }
 
             SysTickSetCal(false);
         }
@@ -841,13 +831,12 @@ void StackTimer_ReprogramDeadline(uint32_t sleep_duration_ticks)
 }
 
 
-uint32_t PWR_GetTotalSleepDuration32kTicks(uint32_t now)
+uint32_t PWR_GetTotalSleepDuration32kTicks(uint32_t start_of_sleep)
 {
     uint32_t ticks;
-    uint32_t start_of_sleep = SysTick_lp_ctx.sleep_start_ts;
     OSA_InterruptDisable();
 #ifdef gTimestampUseWtimer_c
-    ticks =  now;
+    ticks = Timestamp_GetCounter32bit();
     if (ticks > start_of_sleep)
     {
         ticks = (ticks - start_of_sleep);
@@ -907,6 +896,7 @@ void SysTick_Configure(void)
     /* Configure SysTick to interrupt at the requested rate. */
     SysTick_Config( SysTick_lp_ctx.TimerCountsForOneTick );
 }
+#endif
 
 /*---------------------------------------------------------------------------
 * Name: RTC_SetWakeupTimeMs
@@ -999,7 +989,7 @@ void SystickCheckDrift(void)
     do {
         if (nb_TICK > prev_delta_ticks)
         {
-            DBG_SYSTICK("\r\nsec=%d os_msec=%d cnt_msec=%d delta=%d freq=%d\r\n", sec, os_msec, cnt_msec, delta, SysTickGetCoreFreq());
+            SYSTICK_DBG_LOG("WARN:sec=%d os_msec=%d cnt_msec=%d delta=%d freq=%d", sec, os_msec, cnt_msec, delta, SysTickGetCoreFreq());
             prev_delta_ticks = nb_TICK;
         }
       #if defined MAX_NB_TICK_DRIFT
@@ -1132,3 +1122,1029 @@ void PWM_StartEdgeAlignedLowTrue(uint8_t instance, tmr_adapter_pwm_param_t *para
 }
 #endif
 #endif
+#endif /* DISABLE_TMR_ADAPTER */
+
+static TMR_tsActivityWakeTimerEvent  *psNextActivity = NULL;
+static volatile bool_t rejectWtimer1Irq = FALSE;
+static bool_t scheduleActivityAlreadyCalled = FALSE;
+
+static void TMR_vUtilSubstractValue(uint32_t *pCurrentValue, uint32_t substractValue)
+{
+    if (*pCurrentValue > substractValue)
+    {
+        *pCurrentValue -= substractValue;
+    }
+    else
+    {
+        *pCurrentValue = 0;
+    }
+
+}
+
+TMR_teActivityStatus TMR_eScheduleActivity32kTicks(TMR_tsActivityWakeTimerEvent *psTmr,
+                                                    uint32_t u32Ticks,
+                                                    void (*prCallbackfn)(void))
+{
+    return TMR_eScheduleActivity32kTicksAndGetCurrentTimestampValue(psTmr, u32Ticks, prCallbackfn, NULL);
+}
+
+TMR_teActivityStatus TMR_eScheduleActivityMs(TMR_tsActivityWakeTimerEvent *psWake,
+                                   uint32_t u32TimeMs,
+                                   void (*prCallbackfn)(void))
+{
+    uint64_t              u64AdjustedTicks;
+    uint32_t              u32Ticks;
+
+    u64AdjustedTicks = TMR_Convert32kTicks2Us((uint64_t)u32TimeMs) / 1000;
+
+    if (u64AdjustedTicks > 0xffffffff)
+    {
+        /* Overflowed, so limit to maximum uint32 value */
+        u32Ticks = 0xffffffff;
+    }
+    else
+    {
+        u32Ticks = (uint32_t)u64AdjustedTicks;
+    }
+    return TMR_eScheduleActivity32kTicks(psWake, u32Ticks, prCallbackfn);
+}
+
+TMR_teActivityStatus TMR_eScheduleActivity32kTicksAndGetCurrentTimestampValue(TMR_tsActivityWakeTimerEvent *psTmr,
+                                                    uint32_t u32Ticks,
+                                                    void (*prCallbackfn)(void),
+                                                    uint32_t *pCurrentTimestampValue)
+{
+    uint32_t              u32CurrentCount;
+    TMR_tsActivityWakeTimerEvent *psCurrentNode, *psNextNode;
+    TMR_teActivityStatus status = TMR_E_ACTIVITY_INVALID;
+    NVIC_DisableIRQ(WAKE_UP_TIMER1_IRQn);
+    do
+    {
+        if (TMR_E_ACTIVITY_RUNNING == psTmr->u8Status)
+        {
+            status = TMR_E_ACTIVITY_RUNNING;
+            break;
+        }
+        psTmr->psNext = NULL;
+        psTmr->prCallbackfn = prCallbackfn;
+        psTmr->u8Status = TMR_E_ACTIVITY_RUNNING;
+
+        /* Enable WTIMER if needed. Do not clear flag or stop the timer in
+            * case a timer was already running */
+        if (0 == (SYSCON->AHBCLKCTRLS[0] & SYSCON_AHBCLKCTRLSET0_WAKE_UP_TIMERS_CLK_SET_MASK))
+        {
+            WTIMER_Init();
+        }
+        TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x u32Ticks=%d", __LINE__, psTmr, u32Ticks);
+
+        /* Save the value of the currentTimestamp that would be loaded in wtimer1
+         * Can be changed later in the function depending on the timer list
+         */
+        if (pCurrentTimestampValue != NULL)
+            *pCurrentTimestampValue = u32Ticks;
+
+        if (psNextActivity == NULL)
+        {
+            // List currently empty, add at the head
+            psNextActivity           = psTmr;
+            psTmr->u32TickDelta = u32Ticks;
+
+            /* We can have a wakeup from lowpower Ram off in BLE (osTaskDelay() in RAM off) ,
+                In this case, Either the timer is still running, or has expired,
+                stop the timer in this case, the application shall handle what to do directly    */
+            if ( WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) != WTIMER_STATUS_NOT_RUNNING )
+            {
+                WTIMER_StopTimer(WTIMER_TIMER1_ID);
+            }
+            assert(WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_NOT_RUNNING);
+            TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x u32Ticks=%d", __LINE__, psNextActivity, u32Ticks);
+            WTIMER_StartTimerUnsafe(WTIMER_TIMER1_ID, u32Ticks);
+            status = TMR_E_ACTIVITY_OK;
+            break;
+        }
+        /* If we are here it means that wtimer1 is already running
+         * Make sure that the register has been correclty updated
+         * If TMR_eScheduleActivity32kTicks has just been called and has started a wtimer1,
+         * this one may not be running yet. A wait for status to become running will be done prior to
+         * the call to WTIMER_StopTimer.
+         */
+        if (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_NOT_RUNNING)
+        {
+            u32CurrentCount = psNextActivity->u32TickDelta;
+        }
+        else
+        {
+            /* catch time remaining on current timer */
+            u32CurrentCount = WTIMER_ReadTimerSafe(WTIMER_TIMER1_ID);
+        }
+        TMR_SCHEDULE_ACT_LOG("[%d] u32CurrentCount=%d", __LINE__, u32CurrentCount);
+
+        /* In case there is a pending IRQ, or if u32CurrentCount <= 4,
+        * we can assume that the timer has fired because the execution
+        * time to restart it will take at least 3 ticks
+        */
+        if (NVIC_GetPendingIRQ(WAKE_UP_TIMER1_IRQn) || u32CurrentCount <= 4)
+        {
+            u32CurrentCount = 0;
+        }
+
+        if (u32Ticks < u32CurrentCount)
+        {
+            // Inserting at head of queue
+            // Adjust time remaining on interrupted timer
+            psTmr->u32TickDelta       = u32Ticks;
+            psNextActivity->u32TickDelta   = u32CurrentCount - u32Ticks;
+            TMR_SCHEDULE_ACT_LOG("[L%d] 0x%d u32TickDelta=%d", __LINE__, psNextActivity, psNextActivity->u32TickDelta);
+            psTmr->psNext             = psNextActivity;
+            psNextActivity                 = psTmr;
+            TMR_SCHEDULE_ACT_LOG("[L%d] 0x%d u32Ticks=%d", __LINE__, psNextActivity, u32Ticks);
+            /* wait for status to become running  (cf. previous comment) */
+            while (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_NOT_RUNNING)
+            {
+                __asm volatile("nop");
+            }
+            /* stop the running timer */
+            WTIMER_StopTimer(WTIMER_TIMER1_ID);
+            /* Restart it with the new value */
+            WTIMER_StartTimerUnsafe(WTIMER_TIMER1_ID, u32Ticks);
+            status = TMR_E_ACTIVITY_OK;
+            break;
+        }
+
+        if (pCurrentTimestampValue != NULL)
+            *pCurrentTimestampValue = u32CurrentCount;
+
+        // Find where in the list to insert new wake point
+        for (psCurrentNode = psNextActivity; psCurrentNode != NULL;
+                    psCurrentNode = psCurrentNode->psNext)
+        {
+            if (psCurrentNode == psNextActivity)
+            {
+                TMR_vUtilSubstractValue(&u32Ticks, u32CurrentCount);
+            }
+            else
+            {
+                TMR_SCHEDULE_ACT_LOG("[L%d] 0x%d u32TickDelta=%d", __LINE__, psCurrentNode, psCurrentNode->u32TickDelta);
+                TMR_vUtilSubstractValue(&u32Ticks, psCurrentNode->u32TickDelta);
+            }
+
+            if (psCurrentNode->psNext == NULL)
+            {
+                // Add at end of list
+                psTmr->u32TickDelta   = u32Ticks;
+                TMR_SCHEDULE_ACT_LOG("[L%d] 0x%d u32TickDelta=%d", __LINE__, psTmr, psTmr->u32TickDelta);
+                psTmr->psNext         = NULL;
+                psCurrentNode->psNext  = psTmr;
+                status = TMR_E_ACTIVITY_OK;
+                break;
+            }
+            else
+            {
+                psNextNode = psCurrentNode->psNext;
+                if (u32Ticks < psNextNode->u32TickDelta)
+                {
+                    // Insert in to middle of list
+                    // adjust delta time of event after insertion point
+                    psTmr->u32TickDelta       = u32Ticks;
+                    TMR_SCHEDULE_ACT_LOG("[L%d] 0x%d u32TickDelta=%d", __LINE__, psTmr, psTmr->u32TickDelta);
+                    TMR_vUtilSubstractValue(&psNextNode->u32TickDelta, u32Ticks);
+                    psTmr->psNext = psNextNode;
+                    psCurrentNode->psNext      = psTmr;
+                    status = TMR_E_ACTIVITY_OK;
+                    break;
+                }
+            }
+        }
+    } while(0);
+    WTIMER_EnableInterrupts(WTIMER_TIMER1_ID);
+    if (!scheduleActivityAlreadyCalled)
+    {
+        NVIC_SetPriority(WAKE_UP_TIMER1_IRQn, gStackTimer_IsrPrio_c >> (8 - __NVIC_PRIO_BITS));
+        scheduleActivityAlreadyCalled = TRUE;
+    }
+    return status;
+}
+
+static TMR_teActivityStatus TMR_eRemoveActivityFunction(TMR_tsActivityWakeTimerEvent *psTmr, bool_t blocking)
+{
+    TMR_tsActivityWakeTimerEvent *psCurrentNode = NULL;
+    TMR_tsActivityWakeTimerEvent *psPreviousNode = NULL;
+    uint32_t remainingTime = 0;
+    TMR_teActivityStatus status = TMR_E_ACTIVITY_INVALID;
+    OSA_InterruptDisable();
+    if (psTmr->u8Status != TMR_E_ACTIVITY_RUNNING)
+    {
+        /* Nothing to do if timer is not running */
+        status = TMR_E_ACTIVITY_OK;
+    }
+    else
+    {
+        for (psCurrentNode = psNextActivity; psCurrentNode != NULL;
+                    psCurrentNode = psCurrentNode->psNext)
+        {
+            if (psCurrentNode == psTmr)
+            {
+                /* Is it the first element ? */
+                if (psCurrentNode == psNextActivity)
+                {
+                   /* If we are here it means that wtimer1 is already running
+                   * Make sure that the register has been correclty updated
+                   * If TMR_eScheduleActivity32kTicks has just been called and has started a wtimer1,
+                   * this one may not be running yet, wait for status to become running now.
+                   */
+                    while (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_NOT_RUNNING)
+                    {
+                        __asm volatile("nop");
+                    }
+                    /* Get the remain time if needed */
+                    if (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) != WTIMER_STATUS_EXPIRED
+                            /* We do not need to read the value if next element is empty */
+                            && psCurrentNode->psNext != NULL)
+                    {
+                        remainingTime = WTIMER_ReadTimerSafe(WTIMER_TIMER1_ID);
+                        TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x remainingTime=%d", __LINE__, psCurrentNode, remainingTime);
+                    }
+
+                    /*
+                     * When 1 < remainingTime < 4, there is an issue the wtimer hardware. Even if
+                     * WTIMER_StopTimer is called, an interrupt will fire 4 (32k ticks) later. As
+                     * a workaround this unwanted IRQ would be rejected.
+                     */
+                    if (remainingTime > 1 && remainingTime < 4)
+                    {
+                        rejectWtimer1Irq = TRUE;
+                    }
+
+                    if (!blocking && psCurrentNode->psNext == NULL)
+                    {
+                        /* Assume that WTIMER_StartTimerUnsafe would be called later at least
+                         * 2 (32k ticks) after this call
+                         */
+                        WTIMER_StopTimerUnsafe(WTIMER_TIMER1_ID);
+                    }
+                    else
+                    {
+                        WTIMER_StopTimer(WTIMER_TIMER1_ID);
+                    }
+                    psNextActivity->u8Status = TMR_E_ACTIVITY_FREE;
+                    /* Restart the next one if needed */
+                    psNextActivity = psCurrentNode->psNext;
+                    if (psNextActivity != NULL)
+                    {
+                        psNextActivity->u32TickDelta += remainingTime;
+                        TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x u32TickDelta=%d", __LINE__, psNextActivity, psNextActivity->u32TickDelta);
+                        WTIMER_StartTimerUnsafe(WTIMER_TIMER1_ID, psNextActivity->u32TickDelta);
+                    }
+                }
+                else if (psPreviousNode != NULL)
+                {
+                    psPreviousNode->psNext = psCurrentNode->psNext;
+                    if (psCurrentNode->psNext != NULL)
+                    {
+                        psCurrentNode->psNext->u32TickDelta += psCurrentNode->u32TickDelta;
+                        TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x deltaTick=%d", __LINE__, psCurrentNode->psNext, psCurrentNode->psNext->u32TickDelta);
+                    }
+                }
+                psCurrentNode->u8Status = TMR_E_ACTIVITY_FREE;
+                status = TMR_E_ACTIVITY_OK;
+                break;
+            }
+            psPreviousNode = psCurrentNode;
+        }
+    }
+    OSA_InterruptEnable();
+    return status;
+}
+
+TMR_teActivityStatus TMR_eRemoveActivity(TMR_tsActivityWakeTimerEvent *psTmr)
+{
+    return TMR_eRemoveActivityFunction(psTmr, TRUE);
+}
+
+TMR_teActivityStatus TMR_eRemoveActivityUnsafe(TMR_tsActivityWakeTimerEvent *psTmr)
+{
+    return TMR_eRemoveActivityFunction(psTmr, FALSE);
+}
+
+static void TMR_vActivityInterruptCallback(void)
+{
+    WTIMER_StopTimer(WTIMER_TIMER1_ID);
+    if (psNextActivity != NULL)
+    {
+        TMR_SCHEDULE_ACT_LOG("");
+
+        // If there is a callback function call it
+        if (psNextActivity->prCallbackfn != NULL)
+        {
+            psNextActivity->prCallbackfn();
+        }
+
+        // Free up the timer for future use
+        psNextActivity->u8Status  = TMR_E_ACTIVITY_FREE;
+        // Next wake event in the list
+        psNextActivity            = psNextActivity->psNext;
+
+        if (psNextActivity != NULL)
+        {
+            TMR_SCHEDULE_ACT_LOG("[L%d] 0x%x psNextActivity->u32TickDelta=%d", __LINE__, psNextActivity, psNextActivity->u32TickDelta);
+            // Start the timer for the next tmr event
+            WTIMER_StartTimerUnsafe(WTIMER_TIMER1_ID, psNextActivity->u32TickDelta);
+        }
+    }
+}
+
+/* Wake timer 1 interrupt handler */
+void WAKE_UP_TIMER1_IRQHandler(void)
+{
+    if (!rejectWtimer1Irq)
+    {
+        TMR_vActivityInterruptCallback();
+    }
+    else
+    {
+        TMR_SCHEDULE_ACT_LOG("[L%d] IRQ rejected", __LINE__);
+        rejectWtimer1Irq = FALSE;
+        WTIMER_ClearStatusFlags(WTIMER_TIMER1_ID);
+    }
+}
+
+
+#ifdef FSL_RTOS_FREE_RTOS
+//static tmrlp_tickless_systick_t SysTick_lp_ctx;
+
+typedef struct {
+#if 0
+    uint32_t sleep_start_ts;
+    bool     intercept_next_timer_irq;
+    uint32_t initial_core_freq;
+    uint32_t MaximumPossibleSuppressedTicks;
+    uint32_t TimerCountsForOneTick;
+    uint32_t StoppedTimerCompensation;
+    uint32_t suppressed_ticks_time_msec;
+    int32_t  original_tmr_value;
+    uint32_t origin_systick_ts;
+#if CoreFreqVariable_c
+    uint32_t systick_residual_count;
+    uint32_t estimated_core_freq;
+#endif
+#endif
+    bool        cal_ongoing;
+    uint32_t    core_clock_freq;
+    uint32_t    TimerCountsForOneSysTick;
+} tmr_fro_cal_t;
+
+static tmr_fro_cal_t tmr_fro_cal_ctx;
+
+
+static uint32_t idle_time_carry_ticks = 0;
+static TMR_tsActivityWakeTimerEvent osTimerEvent;
+#if gTimestampUseWtimer_c
+static uint32_t origin_systick_32k_ts = 0;
+#endif
+
+
+void tickless_PreProcessing(tmrlp_tickless_systick_t * p_lp_ctx, uint32_t xExpectedIdleTime)
+{
+    uint32_t core_freq = tmr_fro_cal_ctx.core_clock_freq;
+    uint32_t systick_cvr = 0;
+    uint32_t systick_rvr = 0;
+    uint32_t val = 0;
+    uint32_t count_for_one_tick;
+    uint32_t systick_residual_count_32kTicks = 0;
+    uint32_t xExpectedIdleTime_32k = WTIMER1_MAX_VALUE;
+    TMR_teActivityStatus status;
+
+    /* Set p_lp_ctx default values */
+    p_lp_ctx->osSleep_activity_scheduled = FALSE;
+    p_lp_ctx->idle_tick_jump = 0;
+    p_lp_ctx->rtosSystickExpectedIdleTime = xExpectedIdleTime;
+    p_lp_ctx->sysTick_CSR = SysTick->CTRL;
+
+    /* Value to be programmed in LOAD at next SYSTICK restore */
+    /* Nb Core ticks to countdown */
+    count_for_one_tick          =  tmr_fro_cal_ctx.TimerCountsForOneSysTick;
+    p_lp_ctx->sysTick_RV        =  (count_for_one_tick -1UL) & SysTick_LOAD_RELOAD_Msk;
+
+#if !defined(gSystickUseWtimer1ForSleepDuration) || !gSystickUseWtimer1ForSleepDuration
+    /* Get the initial ts in 32k that would be used to calculate the sleep duration */
+    p_lp_ctx->sleep_start_ts_32kTicks = Timestamp_GetCounter32bit();
+#endif
+
+    /* Disable SysTick counter and interrupt */
+    SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk);
+
+    /* clear PendSysTick bit in ICSR, if set */
+    SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
+
+    systick_cvr = SysTick->VAL & SysTick_VAL_CURRENT_Msk;
+    systick_rvr = SysTick->LOAD;
+    val = (systick_rvr - systick_cvr);
+#if 0
+    if (SysTick->CTRL & (SysTick_CTRL_COUNTFLAG_Msk))
+    {
+        val += systick_rvr;
+    }
+#endif
+    SYSTICK_DBG_LOG("cvr=%d rvr=%d val=%d", systick_cvr, systick_rvr, val);
+
+    systick_residual_count_32kTicks = (uint32_t)(((uint64_t)val << 15) / core_freq);
+
+    SYSTICK_DBG_LOG("residual_count_32k_tick=%d", systick_residual_count_32kTicks);
+
+    /* Get the compensation value that would be used to calculate the sleep duration */
+    p_lp_ctx->compensation_32kticks = idle_time_carry_ticks + systick_residual_count_32kTicks;
+
+    assert(TICKS32K_TO_MILLISECONDS(p_lp_ctx->compensation_32kticks) < 2*portTICK_PERIOD_MS);
+
+
+#define SUPPRESS_TICK_MAX_DURATION              (TICKS32K_TO_MILLISECONDS(WTIMER1_MAX_VALUE)/portTICK_PERIOD_MS)
+    /* Is there an OS event to schedule ?
+     * The expected Idle Time is calculated by FreeRTOS by using:
+     * xExpectedIdleTime = xNextTaskUnblockTime - xTickCount
+     * If there is no os event to schedule xNextTaskUnblockTime=0xffffffff
+     */
+    if ((~0)-xExpectedIdleTime == xTaskGetTickCount() || xExpectedIdleTime > SUPPRESS_TICK_MAX_DURATION)
+    {
+        xExpectedIdleTime = SUPPRESS_TICK_MAX_DURATION;
+    }
+
+#if defined(cPWR_UsePowerDownMode) && (cPWR_UsePowerDownMode == 1)
+    /* don t schedule wakeup due to OS event if device goes to lowpower RAM off and lowpower duration is equal to the max (meaning infinite) */
+    if ( (PWR_GetDeepSleepConfig() & PWR_CFG_RAM_ON ) || ( xExpectedIdleTime != SUPPRESS_TICK_MAX_DURATION))
+#endif
+    {
+        /* Convert the Idle time to 32k ticks */
+        xExpectedIdleTime_32k = MILLISECONDS_TO_TICKS32K(xExpectedIdleTime*portTICK_PERIOD_MS);
+
+        /* Add the necessary margin to take into account:
+         * - the systck residual count calculated before going to sleep
+         * - the carry calculated at the last wake up
+         * - the duration to exit from the tickless mode
+         */
+        xExpectedIdleTime_32k = xExpectedIdleTime_32k - p_lp_ctx->compensation_32kticks - p_lp_ctx->exitTicklessDuration32kTick;
+
+        SYSTICK_DBG_LOG("expected os_sleep duration = %d 32k tick", xExpectedIdleTime_32k);
+
+#if !defined(gSystickUseWtimer1ForSleepDuration) || (gSystickUseWtimer1ForSleepDuration == 0)
+        /* Schedule a low power timer event to process the next OS activity */
+        status = TMR_eScheduleActivity32kTicks(&osTimerEvent, xExpectedIdleTime_32k, NULL);
+#else
+        /* Schedule a low power timer event to process the next OS activity */
+        status = TMR_eScheduleActivity32kTicksAndGetCurrentTimestampValue(&osTimerEvent, xExpectedIdleTime_32k, NULL, &p_lp_ctx->sleep_start_ts_32kTicks);
+#endif
+        assert(status == TMR_E_ACTIVITY_OK);
+        (void) status;
+
+        p_lp_ctx->osSleep_activity_scheduled = TRUE;
+    }
+}
+
+static uint32_t TMR_GetTotalSleepDuration32kTicks(uint32_t start_of_sleep)
+{
+    uint32_t ticks;
+    OSA_InterruptDisable();
+#if defined(gSystickUseWtimer1ForSleepDuration) && gSystickUseWtimer1ForSleepDuration
+    if (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_NOT_RUNNING || start_of_sleep <= 4)
+    {
+        /* If the timer is not in running state or the start_of_sleep value is very small
+         * we can assume that we did not sleep
+         */
+        ticks = 0;
+    }
+    else
+    {
+        uint32_t now = WTIMER_ReadTimerSafe(WTIMER_TIMER1_ID);
+        if (WTIMER_GetStatusFlags(WTIMER_TIMER1_ID) == WTIMER_STATUS_RUNNING)
+        {
+            if (start_of_sleep >= now)
+            {
+                ticks = (start_of_sleep - now);
+            }
+            else
+            {
+                /* could happens when two calls to WTIMER_ReadTimerSafe are done too close */
+                ticks = 0;
+            }
+        }
+        else
+        {
+            /* Expired status: We always assume that wtimer1 has wrapped */
+            ticks = (WTIMER1_MAX_VALUE - now) + start_of_sleep + 1;
+        }
+    }
+#elif defined(gTimestampUseWtimer_c) && gTimestampUseWtimer_c
+    ticks = Timestamp_GetCounter32bit();
+    if (ticks > start_of_sleep)
+    {
+        ticks = (ticks - start_of_sleep);
+    }
+    else
+    {
+        ticks = (~0UL - start_of_sleep) + ticks + 1;
+    }
+    /* time_delta is a number of 32kHz ticks: convert to milliseconds */
+#else
+    /* the counter is counting down so previous value is greater.
+     * already expressed in 1kHz ticks */
+    ticks = RTC_GetWakeupCount(RTC);
+    if (ticks > start_of_sleep)
+    {
+        ticks = (ticks - start_of_sleep);
+    }
+    else
+    {
+        ticks = 0x10000 - start_of_sleep + ticks;
+    }
+    ticks <<=5;
+#endif
+    OSA_InterruptEnable();
+
+    TMR_DBG_LOG("ticks32k=%d", ticks);
+    return (uint32_t)ticks;
+}
+
+void tickless_PostProcessing(tmrlp_tickless_systick_t * p_lp_ctx)
+{
+    uint32_t sleep_duration_32k_ticks = 0;
+    uint32_t comp_plus_dur = 0;
+    int32_t tick_jump_diff = 0;
+
+    /* Restart SysTick so it runs from SysTick->LOAD
+       again, then set SysTick->LOAD back to its standard
+       value. The critical section is used to ensure the tick interrupt
+       can only execute once in the case that the reload register is near
+       zero.
+    */
+    SysTick->VAL  = 0UL; /* Current value is reset */
+    SysTick->LOAD = tmr_fro_cal_ctx.TimerCountsForOneSysTick; /* Set reload value first */
+    SysTick->CTRL = p_lp_ctx->sysTick_CSR; /* Systick restart now */
+
+    sleep_duration_32k_ticks = TMR_GetTotalSleepDuration32kTicks(p_lp_ctx->sleep_start_ts_32kTicks);
+
+    configASSERT( sleep_duration_32k_ticks < WTIMER1_MAX_VALUE );
+
+    comp_plus_dur            = p_lp_ctx->compensation_32kticks + sleep_duration_32k_ticks;
+
+    p_lp_ctx->idle_tick_jump = TICKS32K_TO_MILLISECONDS(comp_plus_dur) / portTICK_PERIOD_MS;
+    idle_time_carry_ticks    = comp_plus_dur - MILLISECONDS_TO_TICKS32K(p_lp_ctx->idle_tick_jump*portTICK_PERIOD_MS);
+
+    SYSTICK_DBG_LOG("compensation=%d carry=%d idle=%d", comp_plus_dur, idle_time_carry_ticks, p_lp_ctx->idle_tick_jump);
+    SYSTICK_DBG_LOG("sleep_duration = %d", sleep_duration_32k_ticks);
+
+    tick_jump_diff = p_lp_ctx->rtosSystickExpectedIdleTime - p_lp_ctx->idle_tick_jump;
+
+    /* The system wakes up a bit in advance (can happen in case the carry is quite big),  consider this is the right time */
+    if (tick_jump_diff == 1)
+    {
+        p_lp_ctx->idle_tick_jump = p_lp_ctx->rtosSystickExpectedIdleTime;
+        SYSTICK_DBG_LOG("warning tick_jump_diff = %d", tick_jump_diff);
+    }
+
+    /* For unknown reason (probably the system took too much time to wakeup, this is pretty unpredictable as it depends on the
+        application), we are too late. In this scenarion, consider the sleep duration is the expected Idle time. This has the drawback to
+        lead to a systick timebase shift compared to a reference clock , so should be avoided as much as possible */
+    if (tick_jump_diff < 0)
+    {
+        p_lp_ctx->idle_tick_jump = p_lp_ctx->rtosSystickExpectedIdleTime;
+        SYSTICK_DBG_LOG("Error tick_jump_diff = %d", tick_jump_diff);
+    }
+
+    /* Update the OS time ticks. */
+    vTaskStepTick( p_lp_ctx->idle_tick_jump );
+
+    if (p_lp_ctx->osSleep_activity_scheduled)
+    {
+        /* Remove the os timer activity */
+        TMR_eRemoveActivityUnsafe(&osTimerEvent);
+    }
+}
+
+/* suppose 32MHz crystal is running and FRO48M running */
+void tickless_StartFroCalibration(void)
+{
+    FRO48M_StartCalibration();
+
+    if (froCalibrationState == gFro48MCalibration_c)
+    {
+        tmr_fro_cal_ctx.cal_ongoing = true;
+    }
+    else
+    {
+        tmr_fro_cal_ctx.cal_ongoing = false;
+    }
+}
+
+static uint32_t tickless_GetCoreFreqTickReloadValue(void)
+{
+    uint32_t reload_value;
+
+    assert( tmr_fro_cal_ctx.core_clock_freq != 0 );
+    SYSTICK_DBG_LOG("core_freq=%d", tmr_fro_cal_ctx.core_clock_freq);
+
+    reload_value = (tmr_fro_cal_ctx.core_clock_freq / configTICK_RATE_HZ);
+
+//    if (reload_value > SysTick_lp_ctx.StoppedTimerCompensation)
+//        reload_value -= SysTick_lp_ctx.StoppedTimerCompensation;
+
+    return reload_value;
+}
+
+static uint32_t tickless_CompleteFroCalibration(void)
+{
+    return FRO48M_CompleteCalibration(); 
+}
+
+void tickless_init(void)
+{
+    tmr_fro_cal_ctx.cal_ongoing                 = false;
+
+    /* give a first frequency value - this may be refined by calibration */
+    tmr_fro_cal_ctx.core_clock_freq             = CLOCK_GetFreq(kCLOCK_CoreSysClk);
+    tmr_fro_cal_ctx.TimerCountsForOneSysTick    = tickless_GetCoreFreqTickReloadValue(); /* Sets TickCountForOneTick */
+}
+
+bool_t tickless_EstimateCoreClockFreq(void)
+{
+    bool_t ret = FALSE;
+
+    if (tmr_fro_cal_ctx.cal_ongoing)
+    {
+        uint32_t core_freq = tickless_CompleteFroCalibration();
+
+        if (core_freq == 0)
+        {
+            ret = TRUE;
+        }
+        else
+        {
+            if (core_freq == 0xFFFFFFFF)
+            {
+                SYSTICK_DBG_LOG("Invalid calibration state");
+            }
+            else
+            {
+                tmr_fro_cal_ctx.core_clock_freq             = (uint32_t)core_freq;
+                tmr_fro_cal_ctx.TimerCountsForOneSysTick    = tickless_GetCoreFreqTickReloadValue(); /* Sets TickCountForOneTick */
+                SYSTICK_DBG_LOG("core_freq=%d", tmr_fro_cal_ctx.core_clock_freq);
+            }
+
+            tmr_fro_cal_ctx.cal_ongoing = false;
+            ret = FALSE;
+        }
+    }
+    return ret;
+}
+
+void tickless_SystickCheckDriftInit(void)
+{
+#if gTimestampUseWtimer_c
+    origin_systick_32k_ts = Timestamp_GetCounter32bit();
+#endif
+}
+
+void tickless_SystickCheckDrift(void)
+{
+#if gTimestampUseWtimer_c
+    static int32_t prev_delta_ticks = -1;
+
+    uint32_t cnt = Timestamp_GetCounter32bit() - origin_systick_32k_ts;
+    uint32_t os_msec = OSA_TimeGetMsec();
+    uint32_t cnt_msec = TICKS32K_TO_MILLISECONDS(cnt);
+    uint32_t delta = 0;
+
+    if (cnt_msec > os_msec)
+    {
+        delta = cnt_msec-os_msec;
+    }
+    else
+    {
+        delta = os_msec-cnt_msec;
+    }
+
+    SYSTICK_DBG_LOG("os_msec=%d delta=%d cnt_msec=%d", os_msec, delta, cnt_msec);
+
+    int32_t nb_TICK = delta / portTICK_PERIOD_MS;
+    #define MAX_NB_TICK_DRIFT 10
+#if 0
+#define PRINT_NB_TICK(x) PRINTF("%d.", x)
+#else
+#define PRINT_NB_TICK(...)
+#endif
+    do {
+        if (nb_TICK > prev_delta_ticks)
+        {
+            PRINTF("\r\nd=%d cnt_msec=%d\r\n", delta, cnt_msec);
+            prev_delta_ticks = nb_TICK;
+        }
+        PRINT_NB_TICK(nb_TICK);
+#if 0
+        if (nb_TICK > MAX_NB_TICK_DRIFT)
+        {
+#if defined gLoggingActive_d && gLoggingActive_d
+            DbgLogDump(true);
+#endif
+            break;
+        }
+#endif
+    } while(0);
+#endif
+}
+#endif /* FSL_RTOS_FREE_RTOS */
+
+
+#ifndef DISABLE_TMR_ADAPTER
+#include "fsl_power.h"
+#include "fsl_inputmux.h"
+#include "fsl_inputmux_connections.h"
+#include "fsl_fmeas.h"
+
+#ifndef LpIoSet
+#define LpIoSet(x, y)
+#endif
+
+/* Calculate FRO32K frequency in 1/16 of Hertz to improve accuracy - shall not be modified */
+#define FREQ32K_CAL_SHIFT                 4
+
+static TMR_clock_32k_hk_t mHk32k = {
+    .freq32k          = 32768,
+    .freq32k_16thHz  = (32768 << FREQ32K_CAL_SHIFT), /* expressed in 16th of Hz: (1<<19) */
+};
+
+static void FRO32K_Update32kFrequency(uint32_t *freq)
+{
+    if ((freq != NULL) && (*freq != 0UL))
+    {
+        uint64_t u64_ts;
+        TMR_clock_32k_hk_t *hk = (TMR_clock_32k_hk_t *)TMR_Get32kHandle();
+
+        uint32_t val = hk->freq32k_16thHz;
+        val = ((val << FRO32K_CAL_AVERAGE) - val + *freq) >> FRO32K_CAL_AVERAGE ;
+        hk->freq32k_16thHz = val;
+        hk->freq32k = (val >> FREQ32K_CAL_SHIFT);
+        *freq = hk->freq32k;
+
+        /* update SW timestamp with new frequency estimation */
+        u64_ts = TMR_GetTimestampUs();
+        (void)u64_ts;
+
+        TMR_DBG_LOG("ts=%d freq32k=%d freq32k_16thHz=%d", (uint32_t)u64_ts, hk->freq32k, hk->freq32k_16thHz);
+
+    }
+    else
+    {
+        LpIoSet(4, 1);
+        LpIoSet(4, 0);
+        LpIoSet(4, 1);
+        LpIoSet(4, 0);
+
+#if FRO32K_CAL_INCOMPLETE_PRINTF
+        PRINTF("32K cal incomplete\r\n");
+        TMR_DBG_LOG("32K cal incomplete");
+#endif
+    }
+}
+
+void * TMR_Get32kHandle(void)
+{
+#if 1 || (cPWR_FullPowerDownMode)
+    return (void*)&mHk32k;
+#else
+    return NULL;
+#endif
+}
+
+void FRO32K_Init(void)
+{
+#if gClkRecalFro32K /* Will recalibrate 32k FRO on each warm start */
+    // TODO MCB-539: parallelize FRO32K calibration to reduce the cold boot time
+    uint32_t freq;
+
+    FRO32K_StartCalibration();
+    do {
+       freq = FRO32K_CompleteCalibration();
+    }  while (!freq);
+#else /* no gClkRecalFro32K */
+    /* Does selected sleep mode require 32kHz oscillator?
+        this is removed, Application shall take care of this now ...*/
+    //if (0 != (PWR_GetDeepSleepConfig() & PWR_CFG_OSC_ON))
+    {
+        bool            fmeas_clk_enable;
+        bool            mdm_clk_enable;
+        uint32_t        freqComp;
+
+        /* Check if XTAL32K has been enabled by application, otherwise
+         * enable the FRO32K and calibrate it - the XTAL32K may not be
+         * present on the board */
+        if (   (0 == (SYSCON->OSC32CLKSEL & SYSCON_OSC32CLKSEL_SEL32KHZ_MASK))
+            || (0 == (PMC->PDRUNCFG & (1UL << kPDRUNCFG_PD_XTAL32K_EN)))
+           )
+        {
+            /* Enable FRO32k */
+            CLOCK_EnableClock(kCLOCK_Fro32k);
+
+            /* Enable 32MHz XTAL if not running - FRO32K already enable if we are here*/
+            if ( !(ASYNC_SYSCON->XTAL32MCTRL & ASYNC_SYSCON_XTAL32MCTRL_XO32M_TO_MCU_ENABLE_MASK) )
+            {
+                CLOCK_EnableClock(kCLOCK_Xtal32M);
+            }
+
+            /* Fmeas clock gets enabled by the generic calibration code, so note if we
+               should disable it again afterwards */
+            fmeas_clk_enable = CLOCK_IsClockEnable(kCLOCK_Fmeas);
+
+            /* RFT1366 requires BLE LP clock to be used for 32kHz measurement. It gets
+               enabled within the generic calibration code, so note if we should
+               disable it again afterwards */
+            mdm_clk_enable = SYSCON->MODEMCTRL & SYSCON_MODEMCTRL_BLE_LP_OSC32K_EN_MASK;
+
+            /* Call Low Power function to start calibration */
+            FRO32K_StartCalibration();
+
+            /* Call Low Power function to wait for end of calibration */
+            do
+            {
+                freqComp = FRO32K_CompleteCalibration();
+            } while (0 == freqComp);
+
+            /* Disable the clocks if disable previously */
+            if ( !fmeas_clk_enable )
+            {
+                CLOCK_DisableClock(kCLOCK_Fmeas);
+            }
+
+            if ( !mdm_clk_enable )
+            {
+                SYSCON->MODEMCTRL &= ~SYSCON_MODEMCTRL_BLE_LP_OSC32K_EN(1);
+            }
+        }
+        else
+        {
+            /* Case of the Xtal32k */
+            mHk32k.freq32k_16thHz = 32768 << FREQ32K_CAL_SHIFT;
+            mHk32k.freq32k = 32768;
+        }
+    }
+#endif /* gClkRecalFro32K */
+}
+
+/* suppose 32MHz crystal is running and 32K running */
+void FRO32K_StartCalibration(void)
+{
+    if (froCalibrationState == gFroCalibrationInactive_c)
+    {
+        INPUTMUX_Init(INPUTMUX);
+
+        /* Setup to measure the selected target */
+        INPUTMUX_AttachSignal(INPUTMUX, 1U, kINPUTMUX_Xtal32MhzToFreqmeas);
+        INPUTMUX_AttachSignal(INPUTMUX, 0U, kINPUTMUX_32KhzOscToFreqmeas);
+
+        /* Temporary fix for RFT1366 : JN518x Frequency measure does not work 32kHz
+           if used for target clock */
+        SYSCON->MODEMCTRL |= SYSCON_MODEMCTRL_BLE_LP_OSC32K_EN(1);
+
+        CLOCK_EnableClock(kCLOCK_Fmeas);
+
+        /* Start a measurement cycle and wait for it to complete. If the target
+           clock is not running, the measurement cycle will remain active
+           forever, so a timeout may be necessary if the target clock can stop */
+        FMEAS_StartMeasureWithScale(FMEAS_SYSCON, FRO32K_CAL_SCALE);
+        froCalibrationState = gFro32kCalibration_c;
+    }
+}
+
+// Return the result in unit of 1/(2^freq_scale)th of Hertz for higher accuracy
+uint32_t FRO32K_CompleteCalibration(void)
+{
+    uint32_t        freqComp    = 0U;
+    uint32_t        refCount    = 0U;
+    uint32_t        targetCount = 0U;
+    uint32_t        freqRef     = CLOCK_GetFreq(kCLOCK_Xtal32M);
+
+    if (froCalibrationState != gFro32kCalibration_c)
+    {
+        /* Set to invalid value */
+        freqComp = 0xFFFFFFFF;
+    }
+    else if (FMEAS_IsMeasureComplete(FMEAS_SYSCON))
+    {
+        /* Get computed frequency */
+        FMEAS_GetCountWithScale(FMEAS_SYSCON, FRO32K_CAL_SCALE, &refCount, &targetCount);
+        freqComp = (uint32_t)(((((uint64_t)freqRef)*refCount)<<FREQ32K_CAL_SHIFT) / targetCount);
+
+        /* Disable the clocks if disable previously */
+        CLOCK_DisableClock(kCLOCK_Fmeas);
+
+        /* update frequency estimation with new measurement */
+        FRO32K_Update32kFrequency(&freqComp);
+        froCalibrationState = gFroCalibrationInactive_c;
+    }
+
+    return freqComp;
+}
+
+/* suppose 32MHz crystal is running and FRO48M running */
+void FRO48M_StartCalibration(void)
+{
+    if (froCalibrationState == gFroCalibrationInactive_c)
+    {
+        INPUTMUX_Init(INPUTMUX);
+
+        /* Setup to measure the selected target */
+        INPUTMUX_AttachSignal(INPUTMUX, 1U, kINPUTMUX_Xtal32MhzToFreqmeas);
+        INPUTMUX_AttachSignal(INPUTMUX, 0U, kINPUTMUX_MainClkToFreqmeas);
+
+        CLOCK_EnableClock(kCLOCK_Fmeas);
+
+        /* Start a measurement cycle and wait for it to complete. If the target
+           clock is not running, the measurement cycle will remain active
+           forever, so a timeout may be necessary if the target clock can stop */
+        FMEAS_StartMeasureWithScale(FMEAS_SYSCON, 17);
+        froCalibrationState = gFro48MCalibration_c;
+    }
+}
+
+/*  Return the result in Hertz */
+uint32_t FRO48M_CompleteCalibration(void)
+{
+    uint32_t        freqComp    = 0U;
+    uint32_t        refCount    = 0U;
+    uint32_t        targetCount = 0U;
+    uint32_t        freqRef     = CLOCK_GetFreq(kCLOCK_Xtal32M);
+
+    if (froCalibrationState != gFro48MCalibration_c)
+    {
+        /* Set to invalid value */
+        freqComp = 0xFFFFFFFF;
+    }
+    else if (FMEAS_IsMeasureComplete(FMEAS_SYSCON))
+    {
+        /* Wait 2^17 counts of the reference clock : 4096us */
+        /* Get computed frequency */
+        FMEAS_GetCountWithScale(FMEAS_SYSCON, 17, &refCount, &targetCount);
+        freqComp = (uint32_t)(((((uint64_t)freqRef)*refCount)) / targetCount);
+
+        /* Disable the clocks */
+        CLOCK_DisableClock(kCLOCK_Fmeas);
+#ifndef FSL_RTOS_FREE_RTOS
+        /* For the baremetal use case, adjust the value of SysTick->LOAD after calibration.
+           RTOS and tickless implementations already cover this part. 
+           Denominator value needs to be adjusted according to application. */
+        SysTick->LOAD = freqComp / 1000;
+#endif
+        froCalibrationState = gFroCalibrationInactive_c;
+    }
+
+    return freqComp;
+}
+
+uint64_t TMR_Convert32kTicks2Us(uint64_t u64ticks)
+{
+    uint32_t freqHz = mHk32k.freq32k;
+    uint64_t u64TimeUs;
+
+    u64TimeUs = u64ticks * 1000000 / freqHz;
+
+    return u64TimeUs;
+}
+
+uint64_t TMR_ConvertUsToTicks(uint64_t u64timeUs)
+{
+    uint32_t freqHz = mHk32k.freq32k;
+    uint64_t u64AdjustedTicks;
+
+    u64AdjustedTicks = u64timeUs * freqHz / 1000000;
+    return u64AdjustedTicks;
+}
+
+uint64_t TMR_GetTimestampUs(void)
+{
+    static uint64_t u64SwTimestampUs = 0;
+    static uint64_t u64HwTimestampTick = 0;
+
+    uint64_t additional_timestamp_us;
+    uint64_t u64HwTimestampTick_new;
+    uint64_t wrapped_val = 0;
+
+    OSA_DisableIRQGlobal();
+
+    /* Get new HW 32bit HW timestamp */
+    u64HwTimestampTick_new = (uint64_t)Timestamp_GetCounter32bit();
+
+    if (u64HwTimestampTick > u64HwTimestampTick_new)
+    {
+        /* counter has wrapped */
+        wrapped_val = 0xFFFFFFFF;
+    }
+
+    additional_timestamp_us   = TMR_Convert32kTicks2Us((uint32_t)( (u64HwTimestampTick_new+wrapped_val)-u64HwTimestampTick) );
+    u64SwTimestampUs         +=additional_timestamp_us;
+
+    /* store HW timestamp for next time so the timebase drift is calculated from next period only */
+    u64HwTimestampTick     = u64HwTimestampTick_new;
+
+    OSA_EnableIRQGlobal();
+
+    return u64SwTimestampUs;
+}
+#endif
+

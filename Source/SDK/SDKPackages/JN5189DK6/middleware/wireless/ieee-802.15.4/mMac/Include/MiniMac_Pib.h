@@ -275,6 +275,8 @@ typedef struct
 {
     int8         i8Power;
     uint8        u8Channel;
+    uint8        u8CcaMode;
+    uint8        u8CcaThreshold;
 } tsMiniMacPhyPib;
 
 /* 802.15.4-2003 security */

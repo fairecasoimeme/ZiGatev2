@@ -65,7 +65,9 @@
 #endif
 
 #if gBootData_None_c
+#ifndef gBootData_Image_Offset_c
 #define gBootData_Image_Offset_c           (0x00)
+#endif
 #else
 #define gBootData_StartMarker_Value_c      0xDE, 0xAD, 0xAC, 0xE5
 #define gBootData_StartMarker_Offset_c     (0x00)

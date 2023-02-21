@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2020 NXP
+* Copyright 2016-2022 NXP
 * All rights reserved.
 *
 * \file
@@ -16,11 +16,59 @@
 * Include
 *************************************************************************************
 ************************************************************************************/
+
 #include "EmbeddedTypes.h"
 #include "MemManager.h"
 #include "Messaging.h"
 #include "fsl_os_abstraction.h"
 #include "assert.h"
+
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
+
+/*
+ * When MemManagerLight is used it creates a dependency with fsl_component list handling.
+ * In turn the Host Stack library, still links with legacy APIs that need to be mimicked
+ * as done below.
+ *
+ */
+
+void* ListRemoveHeadMsg(list_handle_t list)
+{
+    return MSG_QueueRemoveHead(list);
+}
+
+messaging_status_t ListAddTailMsg(list_handle_t msgQueue, void* pMsg )
+{
+    return MSG_QueueAddTail((messaging_t *)msgQueue, pMsg);
+}
+
+messaging_status_t ListAddHeadMsg(list_handle_t msgQueue, void* pMsg )
+{
+    return MSG_QueueAddHead((messaging_t *)msgQueue, pMsg);
+}
+
+void *ListGetHeadMsg(list_handle_t msgQueue)
+{
+    return MSG_QueueGetHead(msgQueue);
+}
+
+messaging_status_t ListRemoveMsg( void* pMsg )
+{
+    return MSG_QueueRemove(pMsg);
+}
+
+messaging_status_t ListAddPrevMsg( void* pMsg, void* pNewMsg )
+{
+    return MSG_QueueAddPrev(pMsg, pNewMsg);
+
+}
+
+void *ListGetNextMsg   ( void* pMsg )
+{
+	return MSG_QueueGetNext(pMsg);
+}
+
+#else
 
 /************************************************************************************
 *************************************************************************************
@@ -275,7 +323,7 @@ uint16_t MSG_GetSize(void* buffer)
 
 memStatus_t MSG_Free(void* buffer)
 {
-    memStatus_t ret = MEM_FREE_ERROR_c;
+	memStatus_t ret = MEM_FREE_ERROR_c;
 
     if( buffer != NULL )
     {
@@ -283,3 +331,4 @@ memStatus_t MSG_Free(void* buffer)
     }
     return ret;
 }
+#endif

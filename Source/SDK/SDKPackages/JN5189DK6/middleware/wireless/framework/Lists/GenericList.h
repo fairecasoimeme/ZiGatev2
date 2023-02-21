@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2022 NXP
 * All rights reserved.
 *
 * \file
@@ -10,10 +10,36 @@
 * SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
 
-#ifndef _GENERIC_LIST_H_
-#define _GENERIC_LIST_H_
+#ifndef _FWK_GENERIC_LIST_H_
+#define _FWK_GENERIC_LIST_H_
 
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
+#include "fsl_component_generic_list.h"
 
+#define listHandle           list_handle_t
+#define listElementHandle_t  list_element_handle_t
+#define list_t               list_handle_t
+#define gListOk_c            kLIST_Ok
+#define gListDuplicate_c     kLIST_DuplicateError
+#define gListFull_c          kLIST_Full
+#define gListEmpty_c         kLIST_Empty
+#define gListOrphanElement_c kLIST_OrphanElement
+#define gListNotSupport_c    kLIST_NotSupport
+
+#define ListGetList          LIST_GetList
+#define ListAddHead          LIST_AddHead
+#define ListAddTail          LIST_AddTail
+
+#define ListRemoveHead       LIST_RemoveHead
+#define ListGetHead          LIST_GetHead
+#define ListGetNext          LIST_GetNext
+#define ListGetPrev          LIST_GetPrev
+#define ListRemoveElement    LIST_RemoveElement
+#define ListAddPrevElement   LIST_AddPrevElement
+#define ListGetSize          LIST_GetSize
+#define ListGetAvailable     LIST_GetAvailableSize
+
+#else
 /*! *********************************************************************************
 *************************************************************************************
 * Include
@@ -21,6 +47,7 @@
 ********************************************************************************** */
 
 #include "EmbeddedTypes.h"
+
 
 
 /*! *********************************************************************************
@@ -39,7 +66,7 @@ typedef enum
   gListOk_c = 0,
   gListFull_c,
   gListEmpty_c,
-  gOrphanElement_c
+  gListOrphanElement_c
 }listStatus_t;
 
 typedef struct list_tag
@@ -93,5 +120,5 @@ listStatus_t ListTest(void);
 #else
 #define LIST_ASSERT(condition) (void)(condition);
 #endif
-
+#endif /* gMemManagerLight */
 #endif /*_GENERIC_LIST_H_*/

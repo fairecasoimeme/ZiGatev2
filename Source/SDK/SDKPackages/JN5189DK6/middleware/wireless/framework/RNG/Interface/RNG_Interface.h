@@ -190,9 +190,20 @@ uint32_t RND_u32GetRand256(void);
 *
 * \return random number
 *
-**********************************************************
 ********************************************************************************** */
 uint32_t RND_u32GetRand(uint32_t u32Min, uint32_t u32Max);
+
+/*! *********************************************************************************
+* \brief  Returns a random number string of the required length.
+*
+* \param[in]  ctx_data context pointer unused
+* \param[out] output pointer on random octet string
+* \param[in]  len number of random bytes to be generated
+*
+* \return 0 if successful, -1 otherwise
+*
+************************************************************************************ */
+int PRNG_GetRandomData(void * ctx_data, unsigned char *output, size_t len);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, Freescale Semiconductor, Inc.
+ * Copyright 2016-2022 NXP
  * All rights reserved.
  *
  *
@@ -82,6 +83,9 @@ typedef enum _SYSCON_RSTn
     kHASH_RST_SHIFT_RSTn    = ((1UL << 16) | SYSCON_PRESETCTRL1_HASH_RST_SHIFT),         /**< Hash SHA reset */
     kCTIMER0_RST_SHIFT_RSTn = ((2UL << 16) | ASYNC_SYSCON_ASYNCPRESETCTRL_CT32B0_SHIFT), /**< CT32B0 reset control */
     kCTIMER1_RST_SHIFT_RSTn = ((2UL << 16) | ASYNC_SYSCON_ASYNCPRESETCTRL_CT32B1_SHIFT), /**< CT32B1 reset control */
+#if defined(SUPPORT_FOR_15_4) && SUPPORT_FOR_15_4
+    kZIGBEE_RST_SHIFT_RSTn = ((1UL << 16) | SYSCON_PRESETCTRL1_ZIGBEE_RST_SHIFT), /**< Zigbee MAC reset */
+#endif
 } SYSCON_RSTn_t;
 
 /** Array initializers with peripheral reset bits **/
@@ -242,6 +246,17 @@ void RESET_PeripheralReset(reset_ip_name_t peripheral);
  * On reboot, function POWER_GetResetCause() from fsl_power.h will return RESET_SYS_REQ
  */
 void RESET_SystemReset(void);
+
+/*!
+ * @brief Reset the ARM core.
+ *
+ * Software reset of the ARM core not peripherals.
+ *
+ * Note: RAM is conserved, SWD remains attached. Flash controller is Power Down but LDO unchanged.
+ * On reboot, function POWER_GetResetCause() from fsl_power.h will return RESET_SW_REQ
+ */
+void RESET_ArmReset(void);
+
 
 #if defined(__cplusplus)
 }

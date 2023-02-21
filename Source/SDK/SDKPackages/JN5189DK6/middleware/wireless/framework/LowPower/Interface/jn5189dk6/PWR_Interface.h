@@ -51,11 +51,22 @@ extern "C" {
 #define PWR_CFG_RAM_OFF         (0x08)
 #define PWR_CFG_OSC_ON          (0x10)
 #define PWR_CFG_OSC_OFF         (0x20)
+#define PWR_CFG_TMR_OFF         (0x40)
+
 
 /* Bitfield values that can be passed to PWR_vWakeUpConfig */
 #define PWR_NTAG_FD_WAKEUP    ( 1 << 22 ) /** wakeup from NTAG field detect interrupt */
 #define PWR_ANA_COMP_WAKEUP   ( 1 << 23 ) /** wakeup from analog comparator in sleep mode - Prevent deep sleep where IO ring is disabled */
 #define PWR_BOD_WAKEUP        ( 1 << 24 ) /** wakeup from Brown-Out Detect interrupt */
+
+/* Basic MACROs that provide estimated time to enter and exit lowpower */
+#ifndef PWR_SYSTEM_EXIT_LOW_POWER_DURATION_MS
+#define PWR_SYSTEM_EXIT_LOW_POWER_DURATION_MS       2
+#endif
+
+#ifndef PWR_SYSTEM_ENTER_LOW_POWER_DURATION_MS
+#define PWR_SYSTEM_ENTER_LOW_POWER_DURATION_MS      2
+#endif
 
 /*****************************************************************************
  *                        PUBLIC TYPE DEFINITIONS                            *
@@ -85,9 +96,8 @@ typedef  union
         uint8_t FromACmp0       :1;  /* Wakeup by Analog Comparator 0*/
         uint8_t FromACmp1       :1;  /* Wakeup by Analog Comparator 1*/
         uint8_t FromBOD         :1;  /* Wakeup by Brown-out Detect */
-        uint8_t FromBLELL       :1;  /* Wakeup by BLE LinkLayer */
 
-        uint8_t Unused          :3;  /* Unused */
+        uint8_t Unused          :4;  /* Unused */
 
         uint8_t DidPowerDown    :1;  /* set when going to power down */
     } Bits;
@@ -117,10 +127,11 @@ typedef void ( *pfPWRCallBack_t ) (void);
  */
 typedef enum
 {
-    PWR_E_SLEEP_OSCON_RAMON   = 1,  /*32Khz Osc on and Ram On*/
-	PWR_E_SLEEP_OSCON_RAMOFF  = 2,  /*32Khz Osc on and Ram off*/
-	PWR_E_SLEEP_OSCOFF_RAMON  = 5,  /*32Khz Osc off and Ram on*/
-	PWR_E_SLEEP_OSCOFF_RAMOFF = 6,  /*32Khz Osc off and Ram off*/
+    PWR_E_SLEEP_OSCON_RAMON          = 1,  /*32Khz Osc on and Ram On*/
+	PWR_E_SLEEP_OSCON_RAMOFF         = 2,  /*32Khz Osc on and Ram off see cPWR_DeepSleep_RamOffOsc32kOn */
+	PWR_E_SLEEP_OSCOFF_RAMON         = 5,  /*32Khz Osc off and Ram on see cPWR_DeepSleep_RamOnOsc32kOff */
+	PWR_E_SLEEP_OSCOFF_RAMOFF        = 6,  /*32Khz Osc off and Ram off see cPWR_DeepSleep_RamOffOsc32kOff2 */
+	PWR_E_SLEEP_OSCON_RAMOFF_TMROFF  = 7,  /*32Khz Osc on and Ram off all Timers stopped see cPWR_DeepSleep_RamOffOsc32kOnTimersOff */
 	PWR_E_SLEEP_INVALID,
 } tePWR_SleepMode;
 
@@ -151,12 +162,6 @@ typedef enum {
     PWR_E_MODE_INVALID,
 } PWR_teStatus;
 
-/* @brief:  lp_32k_dyn must match the clock_32k_hk_t structure */
-typedef struct  {
-    uint32_t freq32k;          /*!< 32k clock actual calculated frequency in Hz */
-    uint32_t freq32k_16thHz;  /*!< 32k clock actual calculated frequency in 16th of Hz */
-    int32_t  ppm_32k;          /*!< the result of 32k clock software calibration in part per million */
-} PWR_clock_32k_hk_t;
 
 /*****************************************************************************
  *                        PUBLIC VARIABLES                            *
@@ -181,6 +186,14 @@ typedef struct  {
  * Return: -
  *---------------------------------------------------------------------------*/
 extern void PWR_Init(void);
+
+/*---------------------------------------------------------------------------
+ * Name: PWR_ForceInit
+ * Description: - Force the initialization of the PWR module even if it was already initialized
+ * Parameters: -
+ * Return: -
+ *---------------------------------------------------------------------------*/
+extern void PWR_ForceInit(void);
 
 /*---------------------------------------------------------------------------
  * Name: PWR_ChangeDeepSleepMode
@@ -256,6 +269,17 @@ void PWR_AllowXcvrToSleep(void);
  * Return: - TRUE  : If the device is allowed to go to the LPM else FALSE
  *---------------------------------------------------------------------------*/
 extern bool_t PWR_CheckIfDeviceCanGoToSleep(void);
+
+/*---------------------------------------------------------------------------
+ * Name: PWR_CheckIfDeviceCanGoToSleepExt
+ * Description: - Same than PWR_CheckIfDeviceCanGoToSleep but int8_t
+ * Parameters: -
+ * Return: - int : >0 error codeTRUE
+              = 0 : need to stay active (no WFI)
+              = -1 : sleep :WFI only
+              <-1  : lowpower
+ *---------------------------------------------------------------------------*/
+extern int PWR_CheckIfDeviceCanGoToSleepExt(void);
 
 /*---------------------------------------------------------------------------
  * Name: PWR_EnterLowPower
@@ -359,29 +383,6 @@ PWR_WakeupReason_t PWR_GetWakeupReason(void);
  *---------------------------------------------------------------------------*/
 void PWR_ClearWakeupReason(void);
 
-/*---------------------------------------------------------------------------
- * Name: PWR_Start32KCalibration
- * Description: -
- * Parameters: -
- * Return: -
- *---------------------------------------------------------------------------*/
-void PWR_Start32KCalibration(void);
-
-/*---------------------------------------------------------------------------
- * Name: PWR_Complete32KCalibration
- * Description: -
- * Parameters: -
- * Return: -
- *---------------------------------------------------------------------------*/
-uint32_t PWR_Complete32KCalibration(uint8_t u8Shift);
-
-/*---------------------------------------------------------------------------
- * Name: PWR_GetHk32kHandle
- * Description: return handle on 32k housekeeping structure.
- * Parameters: -
- * Return: pointer on structure
- *---------------------------------------------------------------------------*/
-extern PWR_clock_32k_hk_t *PWR_GetHk32kHandle(void);
 
 /*---------------------------------------------------------------------------
  * Name: PWR_IndicateBLEActive
@@ -406,7 +407,7 @@ extern void PWR_IndicateBLEActive(bool_t bBLE_ActiveIndication);
 
 /* Added from PWRM --> */
 
-/*
+/**
  * In E_AHI_SLEEP_OSCON_RAMOFF, due to lack retention, all PWRM timer expiring after a wakeup from
  * sleep mode will not have the callback called. Typical scenerio happens when the application
  * uses the second wake timer, if the second timer expires before the PWRM timer programmed by
@@ -418,12 +419,17 @@ PWR_teStatus PWR_eScheduleActivity(
         uint32_t u32TimeMs,
         void (*prCallbackfn)(void));
 
+PWR_teStatus PWR_eScheduleActivity32kTicks(
+        PWR_tsWakeTimerEvent *psWake,
+        uint32_t u32Ticks,
+        void (*prCallbackfn)(void));
+
 PWR_teStatus PWR_eRemoveActivity(
         PWR_tsWakeTimerEvent *psWake);
 
 void vAppRegisterPWRCallbacks(void);
 
-/*
+/**
  * Shall be called from hardware_init() after the hardware is initiliazed.
  * PWR_vColdStart() does the following actions :
  * - call vAppRegisterPWRMCallbacks
@@ -518,7 +524,11 @@ uint32_t PWR_u32GetRamRetention(void);
  */
 void PWR_vForceRadioRetention(bool_t bRetain);
 
-void PWR_vWakeInterruptCallback(void);
+/**
+ * Reset Lowpower Mode configuration
+ * to be called when lower configuration to go to Power Down with RAM On has changed
+ */
+void PWR_ResetPowerDownModeConfig(void);
 
 /* <-- Added from PWRM */
 
@@ -526,8 +536,10 @@ void PWR_Start32kCounter(void);
 uint32_t PWR_Get32kTimestamp(void);
 
 
-
 /* <--Added for freeRTOS tickless mode */
+
+
+
 
 #ifdef __cplusplus
 }

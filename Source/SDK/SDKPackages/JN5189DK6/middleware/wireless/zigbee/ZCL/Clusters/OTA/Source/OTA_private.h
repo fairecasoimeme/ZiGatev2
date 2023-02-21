@@ -169,6 +169,10 @@ PUBLIC  void vOtaFlashLockErase(
 
 PUBLIC bool_t bOtaIsImageValid( tsOTA_Common*    psOTA_Common,
                               uint8*           pu8Data );
+PUBLIC bool_t bOtaIsImageAuthenticated(void);
+
+PUBLIC bool_t bOtaIsAuthenticationEnabled(void);
+
 PUBLIC void vOtaSwitchLoads(void);
 PUBLIC uint32 eOTA_OtaOffset(void);
 PUBLIC tsReg128 eOTA_retOtaUseKey(void);

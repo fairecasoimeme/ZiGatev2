@@ -490,7 +490,6 @@ SECTIONS
     .data _end_uninit_RESERVED : ALIGN(4)
     {
        FILL(0xff)
-       *(.ll_exchange_mem)   /* TO fix : create a specific section for *(.ll_exchange_mem) before the . data section */
        _data = . ;
        *(vtable)
        *(.ramfunc*)

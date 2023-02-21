@@ -65,7 +65,7 @@ if os.path.isdir(args.key_path) == False:
         public_key_psectcmd=args.key_path+"/pub_key_psect.sh"
 
         with open(private_key_file, 'w') as key_file:
-            key_file.write(key.exportKey('PEM', args.password))
+            key_file.write((key.exportKey('PEM', args.password)).decode('utf-8'))
 
         # generate DK6Programmer command to set the image_pub_key in the PSECT
         # Only use this command to set or repalce the public key when :

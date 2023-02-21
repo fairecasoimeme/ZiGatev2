@@ -188,6 +188,7 @@ PUBLIC   void vZCL_HandleAttributesReadRequest(
 
     // size of outgoing buffer
     u16responseBufferSize = u16ZCL_GetTxPayloadSize(pZPSevent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr);
+
     // read attributes from the device
 
     // allow the device to update the attributes - express stylee
@@ -309,9 +310,9 @@ PUBLIC   void vZCL_HandleAttributesReadRequest(
 
 
 	   vSL_WriteMessage ( 0x0100,
-			   	   	   	   	   	   	   	   	   u16LengthOuput,
-												 au8LinkTxBuffer,
-												 pZPSevent->uEvent.sApsDataIndEvent.u8LinkQuality);
+							   u16LengthOuput,
+								 au8LinkTxBuffer,
+								 pZPSevent->uEvent.sApsDataIndEvent.u8LinkQuality);
     }
 
     //if (sZCL_CallBackEvent.eZCL_Status == E_ZCL_SUCCESS )

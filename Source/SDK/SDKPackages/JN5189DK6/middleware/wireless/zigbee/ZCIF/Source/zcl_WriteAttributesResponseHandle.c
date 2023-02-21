@@ -150,6 +150,13 @@ PUBLIC void   vZCL_HandleAttributesWriteResponse(
                 psZCL_EndPointDefinition->pCallBackFunctions(&sZCL_CallBackEvent);
             }
         }
+        else
+        {
+            // Following a write where all the attributes have been written
+            // without errors since, in this case, no
+            // E_ZCL_CBET_WRITE_INDIVIDUAL_ATTRIBUTE_RESPONSE events are generated.
+            sZCL_CallBackEvent.uMessage.sIndividualAttributeResponse.eAttributeStatus = E_ZCL_CMDS_SUCCESS;
+        }
 
         // re-use last attribute generated structure for message but indicate command is complete, last attribute
         // will get 2 callbacks effectively

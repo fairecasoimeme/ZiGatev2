@@ -779,7 +779,7 @@ PUBLIC  teZCL_Status eOTA_ClientSwitchToNewImage(uint8 u8SourceEndPointId)
             }
 #endif
 #endif
-            if(bOtaIsImageValid(psOTA_Common, au8MagicNumbers)
+            if(bOtaIsImageValid(psOTA_Common, au8MagicNumbers) && bOtaIsImageAuthenticated()
 #ifdef SOTA_ENABLED
                 /* TODO add a test to check the compatibility list inside the blob */
 #endif
@@ -1014,7 +1014,17 @@ PUBLIC  teZCL_Status eOTA_HandleImageVerification(uint8 u8SourceEndpoint,
         vReverseMemcpy((uint8*)&u16OtaHeaderSize,&psOTA_Common->sOTACallBackMessage.sPersistedData.au8Header[6],sizeof(uint16));
         vReverseMemcpy((uint8*)&u32TotalImageSize,&psOTA_Common->sOTACallBackMessage.sPersistedData.au8Header[52],sizeof(uint32));
         u32ImageSize = u32TotalImageSize - u16OtaHeaderSize - OTA_TAG_HEADER_SIZE;
-        u32NewImageEndOffset = u32ImageSize + u32NewImageTmpOffset;
+        /* Check if img authentication feature is enabled and if it is the case remove the signature len for the CRC calculation
+        */
+        if (bOtaIsAuthenticationEnabled())
+        {
+            u32NewImageEndOffset = u32ImageSize + u32NewImageTmpOffset - OTA_BOOTLOADER_SIGNATURE_SIZE;
+        }
+        else
+        {
+            u32NewImageEndOffset = u32ImageSize + u32NewImageTmpOffset;
+        }
+        
         DBG_vPrintf(TRACE_OTA_CRC_DEBUG,"HeaderSize = %04x, TotalImageSize = %08x, EndOffset = %08x \n",u16OtaHeaderSize,u32TotalImageSize, u32NewImageEndOffset);
 
         /* If bEncExternalFlash, let's read IV from external flash */

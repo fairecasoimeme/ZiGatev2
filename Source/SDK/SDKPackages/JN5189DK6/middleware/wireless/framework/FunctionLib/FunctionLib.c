@@ -11,6 +11,7 @@
 ********************************************************************************** */
 
 #include "FunctionLib.h"
+#include "fwk_hal_macros.h"
 
 #if gUseToolchainMemFunc_d
 #include <string.h>
@@ -416,6 +417,61 @@ void FLib_MemInPlaceCpy (void* pDst,
         }
     }
 }
+
+/*! *********************************************************************************
+* \brief  Copy bytes. The byte at index i from the buffer is copied to index
+*         ((n-1) - i) in the same buffer (and vice versa).
+*         Used for endianess conversion of octet strings.
+*
+* \param[out] pBuf    Pointer to destination memory block to be byte reversed.
+* \param[in]  cBytes  Number of bytes to copy
+*
+* \remarks
+*       If the size is a multiple of 4 bytes, the operation is done word by word.
+*       Assumes that pBuf is word aligned.
+********************************************************************************** */
+void FLib_ReverseByteOrderInPlace(void *buf, uint32_t cBytes)
+{
+    int i;
+
+    if ((cBytes % sizeof(uint32_t)) == 0)
+    {
+        uint32_t tmpU32;
+        uint32_t N_words = cBytes >> 2;
+        uint32_t * p_st  = (uint32_t*)buf;
+        uint32_t * p_nd  = &p_st[N_words-1];
+        i = N_words / 2;
+        while (i > 0)
+        {
+            tmpU32 = HAL_BSWAP32(*p_nd);
+            *p_nd = HAL_BSWAP32(*p_st);
+            *p_st = tmpU32;
+             p_nd--;
+            p_st++;
+            i--;
+        }
+        if (N_words & 1)
+        {
+            tmpU32 = HAL_BSWAP32(*p_nd);
+            *p_st = tmpU32;
+        }
+    }
+    else
+    {
+        uint8_t tmpU8;
+        uint8_t *st = buf;
+        uint8_t *end = &st[cBytes - 1];
+        i = cBytes / 2;
+        while (i > 0)
+        {
+            tmpU8 = *end;
+            *end-- = *st;
+            *st++ = tmpU8;
+            i--;
+        }
+    }
+}
+
 
 /*! *********************************************************************************
 * \brief This function copies a 16bit value to an unaligned a memory block.

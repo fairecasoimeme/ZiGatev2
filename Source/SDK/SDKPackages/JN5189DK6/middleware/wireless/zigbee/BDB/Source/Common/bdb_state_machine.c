@@ -59,6 +59,8 @@
 //FRED
 #include "app_common.h"
 #include "SerialLink.h"
+#include "app_Znc_cmds.h"
+#include "zps_struct.h"
 //FRED
 #include <string.h>
 #include <stdlib.h>
@@ -78,6 +80,8 @@
 /***        Exported Variables                                            ***/
 /****************************************************************************/
 PUBLIC tsBDB sBDB;
+extern ZPS_NwkDevice tmpNtActv[200];
+extern uint8	u8SizeTmpNtActv;
 
 /****************************************************************************/
 /***        Local Variables                                               ***/
@@ -102,10 +106,51 @@ PUBLIC tsBDB sBDB;
 PUBLIC void APP_vGenCallback(uint8 u8Endpoint, ZPS_tsAfEvent *psStackEvent)
 {
     BDB_tsZpsAfEvent sZpsAfEvent;
-    uint16                 u16Length =  0;
-	uint8                  au8LinkTxBuffer[50];
+	uint8     				u8LinkQuality;
+	u8LinkQuality=psStackEvent->uEvent.sApsDataIndEvent.u8LinkQuality;
 
-    DBG_vPrintf(TRACE_BDB, "BDB: APP_vGenCallback [EP:%d src:%d dst:%d status:%d time:%ld cluster:%02x - type:%d] \n",
+//manage src
+	uint64 srcIEEE = ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr);
+	if ((srcIEEE !=0) && (psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr!=0) )
+	{
+		if (APP_ExistDevice(srcIEEE))
+		{
+			uint8 tmp = APP_GetIndexDevice(srcIEEE);
+			tmpNtActv[tmp].u8LinkQuality = u8LinkQuality;
+
+		}else{
+			tmpNtActv[u8SizeTmpNtActv].u16ShortAddr=psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr;
+			tmpNtActv[u8SizeTmpNtActv].u64IEEEAddr=srcIEEE;
+			tmpNtActv[u8SizeTmpNtActv].u8LinkQuality=u8LinkQuality;
+			tmpNtActv[u8SizeTmpNtActv].u8Type=2;
+			u8SizeTmpNtActv++;
+		}
+	}
+//manage dst
+	uint64 dstIEEE = ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), psStackEvent->uEvent.sApsDataIndEvent.uDstAddress.u16Addr);
+
+	if (dstIEEE!=0 && (psStackEvent->uEvent.sApsDataIndEvent.uDstAddress.u16Addr!=0) )
+	{
+		if (APP_ExistDevice(dstIEEE))
+		{
+			uint8 tmp = APP_GetIndexDevice(dstIEEE);
+			tmpNtActv[tmp].u8LinkQuality = u8LinkQuality;
+
+		}else{
+			tmpNtActv[u8SizeTmpNtActv].u16ShortAddr=psStackEvent->uEvent.sApsDataIndEvent.uDstAddress.u16Addr;
+			tmpNtActv[u8SizeTmpNtActv].u64IEEEAddr=dstIEEE;
+			tmpNtActv[u8SizeTmpNtActv].u8LinkQuality=u8LinkQuality;
+			tmpNtActv[u8SizeTmpNtActv].u8Type=2;
+			u8SizeTmpNtActv++;
+		}
+	}
+	/*DBG_vPrintf(1, "srcshort: %04x: IEEE %016llx - dstshort: %04x: IEEE %016llx",
+			psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr,
+			ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), psStackEvent->uEvent.sApsDataIndEvent.uSrcAddress.u16Addr),
+			psStackEvent->uEvent.sApsDataIndEvent.uDstAddress.u16Addr,
+			ZPS_u64NwkNibFindExtAddr((void *)ZPS_pvNwkGetHandle(), psStackEvent->uEvent.sApsDataIndEvent.uDstAddress.u16Addr)
+	        );*/
+	DBG_vPrintf(TRACE_BDB, "BDB: APP_vGenCallback [EP:%d src:%d dst:%d status:%d time:%ld cluster:%02x - type:%d] \n",
     					u8Endpoint,
     					psStackEvent->uEvent.sApsDataIndEvent.u8SrcEndpoint,
     					psStackEvent->uEvent.sApsDataIndEvent.u8DstEndpoint ,
@@ -140,6 +185,21 @@ PUBLIC void APP_vGenCallback(uint8 u8Endpoint, ZPS_tsAfEvent *psStackEvent)
 		if(ZQ_bQueueSend(sBDB.hBdbEventsMsgQ, &sZpsAfEvent) == FALSE)
 		{
 			DBG_vPrintf(TRACE_BDB, "BDB: Failed to post zpsEvent %d \n", psStackEvent->eType);
+			if (sZpsAfEvent.sStackEvent.eType == ZPS_EVENT_APS_DATA_INDICATION)
+	        {
+	            /* otherwise, BDB task passed ZCL to vZCL_HandleDataIndication or ZDP to ZDO servers which would free it */
+	            PDUM_eAPduFreeAPduInstance(sZpsAfEvent.sStackEvent.uEvent.sApsDataIndEvent.hAPduInst);
+	        }
+	        else if (sZpsAfEvent.sStackEvent.eType == ZPS_EVENT_APS_INTERPAN_DATA_INDICATION)
+	        {
+	            /* otherwise, BDB task passed it to vZCL_HandleInterPanIndication which would free it */
+	            PDUM_eAPduFreeAPduInstance(sZpsAfEvent.sStackEvent.uEvent.sApsInterPanDataIndEvent.hAPduInst);
+	        }
+	        else if (sZpsAfEvent.sStackEvent.eType == ZPS_EVENT_APS_ZGP_DATA_INDICATION)
+	        {
+	            /* otherwise, BDB task passed it to vZCL_HandleZgpDataIndication which would free it */
+	            PDUM_eAPduFreeAPduInstance(sZpsAfEvent.sStackEvent.uEvent.sApsZgpDataIndEvent.hAPduInst);
+	        }
 		}
     }
 }

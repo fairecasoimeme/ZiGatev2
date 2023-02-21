@@ -62,6 +62,9 @@ extern "C" {
 #include "zps_nwk_sap.h"
 #include "zps_nwk_slist.h"
 #include "zps_tsv.h"
+#ifdef R23_UPDATES
+#include "tlv.h"
+#endif
 
 /************************/
 /**** MACROS/DEFINES ****/
@@ -97,6 +100,10 @@ typedef enum {
     ZED_TIMEOUT_INDEX_MAX,
     ZED_TIMEOUT_UNDEFINED = 0xff
 }teZedTimeout;
+
+#define ZED_TIMEOUT_STATUS_SUCCESS              0
+#define ZED_TIMEOUT_STATUS_INCORRECT_VALUE      1
+#define ZED_TIMEOUT_STATUS_UNSUPPORTED_FEATURE  2
 
 #define CHILD_KEEP_ALIVE_UNDEFINED      		0
 #define CHILD_KEEP_ALIVE_POLL           		0x01
@@ -387,6 +394,10 @@ typedef struct
         } bfBitfields;
         uint8 au8Field[2];
     } uAncAttrs;
+#ifdef R23_UPDATES
+    uint8 u8BeaconAppendixLen;             /**< Bytes written into the appendix array */
+    uint8 au8BeaconAppendixTlvs[ZPS_NWK_MAX_BEACON_PAYLOAD_LEN];
+#endif
 } ZPS_tsNwkDiscNtEntry;
 
 /**
@@ -458,7 +469,9 @@ typedef struct
     uint8  u8AddrAlloc;                                     /**< nwkAddrAlloc */
     uint8  u8UseTreeRouting;                                /**< nwkUseTreeRouting: bool */
     uint8  u8SymLink;                                       /**< nwkSymLink: bool */
+#ifndef R23_UPDATES
     uint8  u8UseMulticast;                                  /**< nwkUseMulticast: bool */
+#endif
     uint8  u8LinkStatusPeriod;                              /**< nwkLinkStatusPeriod */
     uint8  u8RouterAgeLimit;                                /**< nwkRouterAgeLimit */
     uint8  u8RouteDiscoveryRetriesPermitted;                /**< nwkRouteDiscoveryRetriesPermitted */
@@ -485,6 +498,7 @@ typedef struct
 typedef struct
 {
     ZPS_tsTsvTimer sTimer;   /**< Route discovery timer */
+    uint16 u16NwkDstAddr;    /**< Network address of RREQ's target */
     uint16 u16NwkSrcAddr;    /**< Network address of RREQ's initiator */
     uint16 u16NwkSenderAddr; /**< Network address of RREQ's corresponding to u8RreqId neighbour relayer with best link cost */
     uint16 u16RtEntryId;       /**< Associated Routing Table entry ID (its index) */
@@ -681,7 +695,9 @@ typedef struct
     uint8  u8AddrAlloc;                                     /**< nwkAddrAlloc */
     uint8  u8UseTreeRouting;                                /**< nwkUseTreeRouting: bool */
     uint8  u8SymLink;                                       /**< nwkSymLink: bool */
+#ifndef R23_UPDATES
     uint8  u8UseMulticast;                                  /**< nwkUseMulticast: bool */
+#endif
     uint8  u8LinkStatusPeriod;                              /**< nwkLinkStatusPeriod */
     uint8  u8RouterAgeLimit;                                /**< nwkRouterAgeLimit */
     uint8  u8RouteDiscoveryRetriesPermitted;                /**< nwkRouteDiscoveryRetriesPermitted */
@@ -726,7 +742,16 @@ typedef struct
     uint16 u16RReqProcDropped;                              /**< RX Route Request processing dropped */
     uint16 u16RReqProcCompleted;                            /**< RX Route Request processing completed */
     uint16 u16DfcmDropped;                                  /**< Timed deferred confirms not delivered due to overflow */
+#ifdef R23_UPDATES
+    uint16 u16PanIdConflictCount;                            /**< nwkPanIdConflictCount */
 
+    tsTlvGeneric *psNetworkWideBeaconAppendixTlvs;          /**< nwkNetworkWideBeaconAppendixTLVs */
+    tsTlvGeneric *psDeviceBeaconPayloadTlvs;                /**< nwkDeviceBeaconPayloadTLVs */
+    tsTlvGeneric *psZedTimeoutPayloadTlvs;                  /**< End Device Timeout Request TLVs */
+    uint8         u8NetworkWideBeaconAppendixSize;          /**< Allocated size for nwkNetworkWideBeaconAppendixTLVs */
+    uint8         u8DeviceBeaconTlvsSize;                   /**< Allocated size for nwkDeviceBeaconPayloadTLVs */
+    uint8         u8ZedTimeoutTlvsSize;                     /**< Allocated size for End Device Timeout */
+#endif
     /**** Tables ****/
     zps_tsNwkSlist       sActvSortedList;                   /**< Linked list of sorted NT entries */
     ZPS_tsNwkNibTblSize  sTblSize;                          /**< Table sizes */
@@ -849,6 +874,11 @@ PUBLIC void
 ZPS_vNwkNibSetUpdateId(void *pvNwk,
                        uint8 u8UpdateId);
 
+#ifdef R23_UPDATES
+PUBLIC void ZPS_vNwkNibSetBeaconAppendix(void *pvNwk, bool_t bWide, bool_t bSet,
+                                         uint8 u8Size, tsTlvGeneric *psTlvs);
+#endif
+
 PUBLIC void
 ZPS_vNwkNibSetPanId(void *pvNwk,
                     uint16 u16PanId);
@@ -917,7 +947,7 @@ PUBLIC void zps_vBuildSortedActvNTList(void* pvNwk);
 PUBLIC bool_t zps_bNwkFindAddIeeeAddr(void *pvNwk,uint64 u64MacAddress, uint16 *pu16Location, ZPS_teNwkMacTableAccess eTableAccess);
 PUBLIC void ZPS_vRemoveEntryFromAddressMap(void *pvNwk, uint16 u16ShortAddress);
 PUBLIC uint64 ZPS_u64NwkNibGetMappedIeeeAddr(void* pvNwk, uint16 u16Location);
-PUBLIC void ZPS_vNwkTimerQueueOverflow(ZPS_tsTsvTimerInfo *psTimerInfo);
+PUBLIC bool_t ZPS_vNwkTimerQueueOverflow(ZPS_tsTsvTimerInfo *psTimerInfo);
 PUBLIC void ZPS_vNwkSendNwkStatusCommand(void *pvNwk, uint16 u16DstAddress, uint16 u16TargetAddress, uint8 u8CommandId, uint8 u8Radius);
 PUBLIC uint8 ZPS_u8NwkSendNwkEdTimeoutsCommand(void *pvNwk);
 PUBLIC bool_t ZPS_bNwkSetEnddeviceTimeout(void *pvNwk, uint8 u8Timeout);

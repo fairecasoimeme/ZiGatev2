@@ -256,6 +256,8 @@ extern "C" {
 
 #define BDB_ZTIMER_STORAGE              (1 + BDB_INCLUDE_NS_TIMER + BDB_INCLUDE_FB_TIMER + BDB_INCLUDE_TL_TIMER)
 
+#define LAST_SCAN_CHANNEL(x)            (31 - __builtin_clz(x))
+
 #ifdef ENABLE_SUBG_IF
 #define BDB_CHANNEL_MIN (0)
 #define BDB_CHANNEL_MAX (30)

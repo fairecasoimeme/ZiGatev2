@@ -41,6 +41,10 @@ extern "C" {
 /****************************************************************************/
 /***        Include files                                                 ***/
 /****************************************************************************/
+#if defined BUILD_OPT_DYNAMIC_SCHED
+#define MAC_PROTO_TAG ZB_PROTO_ID
+#endif
+
 #include "jendefs.h"
 #include "MMAC.h"
 #include "MiniMac.h"
@@ -55,13 +59,6 @@ extern "C" {
 #define vAppApiSaveMacSettings          vMiniMac_SaveSettings
 #define pvAppApiGetMacHandle(A)         NULL
 #define pvAppApiGetMacAddrLocation      pvAppApiDefGetMacAddrLocation
-
-#if (defined JENNIC_CHIP_FAMILY_JN516x) || (defined JENNIC_CHIP_FAMILY_JN517x)
-/* High Power Module Enable */
-#define APP_API_MODULE_STD   (0)
-#define APP_API_MODULE_HPM05 (1)
-#define APP_API_MODULE_HPM06 (2)
-#endif
 
 /****************************************************************************/
 /***        Type Definitions                                              ***/

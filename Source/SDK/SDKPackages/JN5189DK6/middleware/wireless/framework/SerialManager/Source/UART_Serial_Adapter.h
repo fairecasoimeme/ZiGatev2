@@ -20,6 +20,12 @@
 #define gUartIsrPrio_c (0x40)
 #endif
 
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1)
+#ifndef gSerialMgrDmaHelperIf_c
+#define gSerialMgrDmaHelperIf_c 0
+#endif
+
+#endif
 #include "SerialManager.h"
 
 
@@ -103,5 +109,9 @@ uint32_t USART_EnableLowPowerWakeup(uint32_t instance);
 uint32_t USART_DisableLowPowerWakeup(uint32_t instance);
 uint32_t USART_IsWakeupSource(uint32_t instance);
 void USART_RxIntCtrl(uint32_t instance, bool_t fc_on);
+
+#if defined(gSerialMgrUseDmaHelper_d) && (gSerialMgrUseDmaHelper_d==1)
+void USART_Poll(uint32_t instance);
+#endif
 
 #endif /* __UART_ADAPTER_H__ */

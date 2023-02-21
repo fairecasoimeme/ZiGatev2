@@ -599,7 +599,9 @@ typedef union
     /* Broadcast transaction table separate */  /**< nwkBroadcastTransactionTable */
     /* Group ID table separate */               /**< nwkGroupIDTable */
     uint64 u64ExtendedPanId;                    /**< nwkExtendedPANID */
+#ifndef R23_UPDATES
     uint8  u8UseMulticast;                      /**< nwkUseMulticast: bool */
+#endif
     /* Route record table separate */           /**< nwkRouteRecordTable */
     uint8  u8IsConcentrator;                    /**< nwkIsConcentrator: bool */
     uint8  u8ConcentratorRadius;                /**< nwkConcentratorRadius */
@@ -1161,6 +1163,13 @@ typedef struct
     bool_t    bIncoming;
 }ZPS_tsNwkNlmeCfmFCOverflow;
 
+typedef struct
+{
+    PDUM_thNPdu hNPdu;
+    uint8       u8NPduOffset;
+    uint8       u8Cmd;
+}ZPS_tsNwkNlmeIndTlv;
+
 typedef enum
 {
 	ZPS_NWK_DUTYCYCLE_NORMAL=0,
@@ -1385,6 +1394,7 @@ typedef enum
     ZPS_NWK_NLME_IND_DUTYCYCLE,          /**< Use with ZPS_tsNwkNlmeIndDutyCycle */
     ZPS_NWK_NLME_IND_ROUTE_RECORD,       /**< Use with ZPS_tsNwkNlmeCfmRouteRecord */
     ZPS_NWK_NLME_IND_FC_OVERFLOW,        /**< Use with ZPS_tsNwkNlmeCfmFCOverflow */
+    ZPS_NWK_NLME_IND_TLV,                /**< Use with ZPS_tsNwkNlmeIndTlv */
     ZPS_NWK_NLME_DCFM_ACTIVE_DISCOVERY,
     NUM_ZPS_NWK_NLME_DCFM_IND
 } ZPS_teNwkNlmeDcfmIndType;
@@ -1414,6 +1424,7 @@ typedef union
     ZPS_tsNwkNlmeIndDutyCycle        sIndDutyCycle;         /**< MAC Duty Cycle Indication */
     ZPS_tsNwkNlmeCfmRouteRecord      sCfmRouteRecord;       /**< Route Record Received confirm */
     ZPS_tsNwkNlmeCfmFCOverflow       sCfmFCOverflow;        /**< FC overflow */
+    ZPS_tsNwkNlmeIndTlv              sIndTlv;               /**< Incoming TLV indication */
 } ZPS_tuNlmeDcfmIndParam;
 
 /**

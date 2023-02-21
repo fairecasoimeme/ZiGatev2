@@ -93,6 +93,7 @@ extern "C" {
 
 #define MAC_PAGE_FROM_MASK(X)					((uint8)(X >> 27))
 #define MAC_CHANNELMASK_FROM_MASK(X)			((uint32)(X & 0x07FFFFFF))
+#define MAC_PAGE_MASK_FROM_PAGE(X)              ((uint32)((X) << 27))
 
 
 #define MAC_CHAN_MASK_PAGE_0                    (0u)
@@ -102,11 +103,11 @@ extern "C" {
 #define MAC_CHAN_MASK_PAGE_31                   (31u)
 
 #define MAC_PAGE_MASK							(0x1F << 27)
-#define MAC_PAGE_MASK_0 						(0	<< 27)
-#define MAC_PAGE_MASK_28 						(28 << 27)
-#define MAC_PAGE_MASK_29						(29 << 27)
-#define MAC_PAGE_MASK_30 						(30 << 27)
-#define MAC_PAGE_MASK_31 						(31 << 27)
+#define MAC_PAGE_MASK_0 						MAC_PAGE_MASK_FROM_PAGE(0)
+#define MAC_PAGE_MASK_28 						MAC_PAGE_MASK_FROM_PAGE(28)
+#define MAC_PAGE_MASK_29						MAC_PAGE_MASK_FROM_PAGE(29)
+#define MAC_PAGE_MASK_30 						MAC_PAGE_MASK_FROM_PAGE(30)
+#define MAC_PAGE_MASK_31 						MAC_PAGE_MASK_FROM_PAGE(31)
 
 
 #define MAC_ID_DCFMIND(X) 						(((MAC_DcfmIndHdr_s*) X )->u16MacID)
@@ -442,7 +443,8 @@ typedef struct
 {
     MAC_PanDescr_s   sPANdescriptor;                                      /**< PAN descriptor */
     uint8            u8BSN;                                               /**< Beacon sequence number */
-    uint8            au8BeaconPayload[MAC_MAX_ZBP_BEACON_PAYLOAD_LEN];    /**< Beacon payload */
+    uint8            u8Len;                                               /**< Beacon length */
+    uint8            au8BeaconPayload[MAC_MAX_BEACON_PAYLOAD_LEN];        /**< Beacon payload */
 } MAC_tsMlmeVsIndBeacon;
 
 typedef union
@@ -589,8 +591,6 @@ PUBLIC	bool_t		ZPS_bMacPibGetRxOnWhenIdle(void);
 PUBLIC	tsExtAddr	ZPS_sMacPibGetCoordExtAddr(void);
 PUBLIC	uint32		ZPS_u32MacPibGetMacFrameCounter(void);
 PUBLIC	bool_t		ZPS_bMacPibGetAssociationPermit(void);
-PUBLIC	uint8		ZPS_u8MacPibGetBeaconPayloadLength(void);
-PUBLIC	uint8		ZPS_u8MacPibGetBeaconPayload(uint8 *pu8Payload);
 PUBLIC	uint8		ZPS_u8MacPibGetBsn(void);
 PUBLIC	uint8		ZPS_u8MacPibGetDsn(void);
 PUBLIC	bool_t		ZPS_bMacPibGetPanCoordinator(void);

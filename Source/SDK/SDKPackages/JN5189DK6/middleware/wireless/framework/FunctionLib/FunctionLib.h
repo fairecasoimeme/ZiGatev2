@@ -123,7 +123,7 @@ void FLib_MemCpyReverseOrder (void* pDst,
 * \param[in] pData2  Second memory block to compare
 * \param[in] cBytes  Number of bytes to compare
 *
-* \return  TRUE if memory areas are equal. FALSE othwerwise.
+* \return  TRUE if memory areas are equal. FALSE otherwise.
 *
 ********************************************************************************** */
 bool_t FLib_MemCmp (const void* pData1,
@@ -177,6 +177,19 @@ void FLib_MemInPlaceCpy (void* pDst,
                          uint32_t cBytes
                         );
 
+/*! *********************************************************************************
+* \brief  Copy bytes. The byte at index i from the buffer is copied to index
+*         ((n-1) - i) in the same buffer (and vice versa).
+*         Used for endianess conversion of octet strings.
+*
+* \param[out] pBuf    Pointer to destination memory block to be byte reversed.
+* \param[in]  cBytes  Number of bytes to copy
+*
+* \remarks
+*       If the size is a multiple of 4 bytes, the operation is done word by word.
+*       Assumes that pBuf is word aligned.
+********************************************************************************** */
+void FLib_ReverseByteOrderInPlace(void *buf, uint32_t cBytes);
 
 /*! *********************************************************************************
 * \brief  Copies a 16bit value to an unaligned a memory block.

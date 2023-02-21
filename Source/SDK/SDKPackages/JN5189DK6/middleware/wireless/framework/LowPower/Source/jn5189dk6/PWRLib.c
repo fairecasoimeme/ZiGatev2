@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017, 2019-2020 NXP
+* Copyright 2016-2017, 2019-2020, 2022 NXP
 * All rights reserved.
 *
 * \file
@@ -20,11 +20,17 @@
 #include "PWRLib.h"
 #include "PWR_Configuration.h"
 #include "TimersManager.h"
+#include "MemManager.h"
 #include "fsl_os_abstraction.h"
+
 #include "GPIO_Adapter.h"
 #include "fsl_power.h"
 #include "rom_lowpower.h"
 #include "fsl_flash.h"
+#include "board_utility.h"
+#ifndef LpIoSet
+#define LpIoSet(x, y)
+#endif
 
 #if gSupportBle
 #include "ble_general.h"
@@ -39,20 +45,67 @@ extern uint32_t                   __base_RAM1;
 
 extern uint32_t                   _end_boot_resume_stack;
 
+
+#ifndef gPWR_FreqScalingWFI
+#define gPWR_FreqScalingWFI 0
+#endif
+
+#if (gPWR_FreqScalingWFI > 0)
+  #if (gPWR_FreqScalingWFI != 32) && (gPWR_FreqScalingWFI != 24) && (gPWR_FreqScalingWFI != 16) && (gPWR_FreqScalingWFI != 12) && (gPWR_FreqScalingWFI != 8) && (gPWR_FreqScalingWFI != 6) && (gPWR_FreqScalingWFI != 4)  && (gPWR_FreqScalingWFI != 2)
+  #error "Should define a WFI frequency that is a whole divisor of 48M, 32M or 12M and greater or equal than 12M"
+  #endif
+#endif
+
+#if !defined(gMemManagerLight) || (gMemManagerLight == 0)
 #if defined(__IAR_SYSTEMS_ICC__)
 #pragma location = ".s_end_fw_retention"
 static uint32_t                   _end_fw_retention;
 #pragma section="HEAP"
 #define heapStartAddr (uint32_t)__section_begin("HEAP")
 #define heapEndAddr   (uint32_t)__section_end("HEAP")
-#else
+#else /* gcc */
 extern uint32_t                   _end_fw_retention;
 extern uint32_t                   _pvHeapStart;
 extern uint32_t                   _pvHeapLimit;
 #define heapStartAddr (uint32_t)&_pvHeapStart
 #define heapEndAddr   (uint32_t)&_pvHeapLimit
 #endif
+#else /* gMemManagerLight */
+#if defined(__IAR_SYSTEMS_ICC__)
+#pragma location = ".heap"
+static uint32_t                   __HEAP_start__;
+#pragma section="HEAP"
+#define heapStartAddr (uint32_t)__section_begin("HEAP")
+#define heapEndAddr   (uint32_t)__section_end("HEAP")
+#else /* gcc */
+extern uint32_t                   __HEAP_start__;
+#define heapStartAddr   (uint32_t)&__HEAP_start__
+#endif
+#endif
 
+#if defined PWR_StackCompressionRetention_d && (PWR_StackCompressionRetention_d != 0)
+/* Defines number of milliseconds of power down time from which it
+ * becomes worthwhile compressing the stacks: the copy back and forth between
+ * unretained and retained RAM banks has a linear energy cost.
+ * Shutting down the 16kB RAM Bank holding the stacks saves 420nA while in power down mode
+ * with RAM retention on. The energy to perform these data movements
+ * at Power Down time and on Wake up is dependent on the number of tasks in
+ * and the stack depths at the time of power down.
+ * The power budget of the stack compression operation remains positive as long as the
+ * energy for the copy is less than that for the retention of the Bank0 for the default  duration
+ * defined by the constant below. May be tuned in app_preinclude.h 
+ */
+#ifndef PWR_StackCompressionDurationMsThreshold
+#define PWR_StackCompressionDurationMsThreshold       3000u
+#endif
+#endif
+
+#if gSupportBle
+#define BLE_BASE_ADDR 0x400A0000
+#define BLE_INTSTAT_REG       *((volatile uint32_t*)(BLE_BASE_ADDR + 0x00000010))
+#define BLE_RADIOPWRUPDN_REG  *((volatile uint32_t*)(BLE_BASE_ADDR + 0x00000080))
+#define BLE_SLPINTSTAT_BIT    4
+#endif
 
 #define RESUME_STACK_POINTER      ((uint32_t)&_end_boot_resume_stack)
 #define PWR_JUMP_BUF_SIZE         10
@@ -151,6 +204,12 @@ const sram_bank_desc_t pm_sram1_bank_desc[] =
  *****************************************************************************/
 static uint8_t mPWRLib_DeepSleepMode = 0;
 
+static uint32_t lowpower_power_cfg[POWER_LOWPOWER_STRUCTURE_SIZE];
+static void *lowpower_power_cfg_p = NULL;
+
+#if defined PWR_StackCompressionRetention_d && (PWR_StackCompressionRetention_d != 0)
+static volatile uint32_t time_to_next_expected_wakeup = ~0UL; /* time to next programmed activity in msec*/
+#endif
 /*****************************************************************************
  *                               PUBLIC VARIABLES                            *
  *---------------------------------------------------------------------------*
@@ -186,7 +245,6 @@ volatile PWR_WakeupReason_t PWRLib_MCU_WakeupReason;
 #if ROM_API_CALL
 #include "lowpower_jn5180.h"
 extern void Chip_LOWPOWER_PowerCycleCpuAndFlash(LPC_LOWPOWER_T *p_lowpower_cfg);
-LPC_LOWPOWER_T p_lowpower_cfg;
 #endif
 
 #if defined(__IAR_SYSTEMS_ICC__)
@@ -305,30 +363,55 @@ void PWRLib_Init(void)
 {
 }
 
+#if defined PWR_StackCompressionRetention_d && (PWR_StackCompressionRetention_d != 0)
+void PWR_SetProgrammedDeadline(uint32_t time_msec)
+{
+    if (time_msec < time_to_next_expected_wakeup)
+    {
+        time_to_next_expected_wakeup = time_msec;
+    }
+}
+#endif
+
 static uint32_t PWRLib_SetRamBanksRetention(void)
 {
     uint32_t bank_mask = 0;
-    register uint32_t stack_top;
-    GET_MSP(stack_top);
+#if !defined FSL_RTOS_FREE_RTOS || (FSL_RTOS_FREE_RTOS == 0)
+    register uint32_t stack_bottom;
+    GET_MSP(stack_bottom);
+#endif
 
-    /*  retrieve HEAP limits */
 
     /* Set retention for all data from start of SRAM0 up to retention limit */
     /* Assess the RAM banks to be held in sleep mode based on _end_fw_retention
      * linker script symbol.
-     * */
-    bank_mask |= PWRLib_u32RamBanksSpanned(pm_sram0_bank_desc[0].start_address,
-                                           (uint32_t)&_end_fw_retention - pm_sram0_bank_desc[0].start_address);
+         * */
+    /*  retrieve HEAP limits */
+    uint32_t top_retained_area;
+    int32_t heap_sz;
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
+    top_retained_area =  MEM_GetHeapUpperLimit();
+    heap_sz = top_retained_area - heapStartAddr;
+#else
+    top_retained_area = (uint32_t)&_end_fw_retention;
+    heap_sz = (heapEndAddr - heapStartAddr);
+#endif
+    uint32_t start_retention;
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
+    start_retention = pm_sram0_bank_desc[1].start_address;
+#else
+    start_retention = pm_sram0_bank_desc[0].start_address;
+#endif
+
+    bank_mask |= PWRLib_u32RamBanksSpanned(start_retention,
+                                               top_retained_area - start_retention);
 
     /*
      * If the retention policy is to conserve RAM from bottom to end_of_fw_retention.
      */
-
-    int32_t heap_sz = (heapEndAddr - heapStartAddr);
-
     if (heap_sz > 0)
     {
-        bank_mask |= PWRLib_u32RamBanksSpanned(heapStartAddr, heap_sz);
+    	bank_mask |= PWRLib_u32RamBanksSpanned(heapStartAddr, heap_sz);
     }
     /* SRAM0 bank 7 must be held in retention no matter how other data are mapped because the 32 bytes of
      * boot persistent data need to be preserved and it dwells at the top of bank7 @0x04015fe0.
@@ -343,6 +426,7 @@ static uint32_t PWRLib_SetRamBanksRetention(void)
      * later.
      * */
     bank_mask |= PWRLib_u32RamBanksSpanned(PWR_SRAM0_END-32, 32);
+
     /* PM_CFG_SRAM_ALL_RETENTION can be used to set all SRAM banks in retention */
 #if gLoggingActive_d
     /* Usually the log ring is occupying the remainder of the available space in SRAM1 till
@@ -351,18 +435,27 @@ static uint32_t PWRLib_SetRamBanksRetention(void)
     uint32_t log_ring_addr;
     uint32_t log_ring_sz;
     DbgLogGetStartAddrAndSize(&log_ring_addr, &log_ring_sz);
+
     if (log_ring_sz!= 0)
     {
-        bank_mask |= PWRLib_u32RamBanksSpanned(log_ring_addr, log_ring_sz);
+    	bank_mask |= PWRLib_u32RamBanksSpanned(log_ring_addr, log_ring_sz);
     }
 #endif
+#if !defined FSL_RTOS_FREE_RTOS || (FSL_RTOS_FREE_RTOS == 0)
     /* Need to keep the startup task's stack in retention down to current stack position */
     /* The most part of the retained mask has already been set at PWR_Init call but the stack
      * pointer might have gone past the bottom of the original bank */
-    if (stack_top < PWR_SRAM0_BANK7_START_ADDR)
+    if (stack_bottom < PWR_SRAM0_BANK1_START_ADDR)
     {
-        bank_mask |= PWRLib_u32RamBanksSpanned(stack_top, PWR_SRAM0_END-stack_top);
+    	bank_mask |= 0x001;
+    	/* Force bank 0 into retention in the unholy case where it is going too deep.
+    	 * The stack top placement should be tuned in a a way such that this never happens.
+    	 * Thence the assert in debug only.
+    	 * */
+    	assert(0);
     }
+#endif
+
     return bank_mask;
 }
 
@@ -378,7 +471,8 @@ void PWRLib_SetDeepSleepMode(uint8_t lpMode)
 #if gSupportBle
     if (lpMode == cPWR_DeepSleep_RamOffOsc32kOn ||
          lpMode == cPWR_PowerDown_RamRet ||
-         lpMode == cPWR_DeepSleep_RamOffOsc32kOff)
+         lpMode == cPWR_DeepSleep_RamOffOsc32kOff ||
+		 lpMode == cPWR_DeepSleep_RamOffOsc32kOnTimersOff)
         BLE_enable_sleep();
     else
         BLE_disable_sleep();
@@ -396,6 +490,87 @@ uint8_t PWRLib_GetDeepSleepMode(void)
     return mPWRLib_DeepSleepMode;
 }
 
+#define RXPWRUP_TIME(x) (141 - (x))
+#define RTRIP_DELAY(x) (64 - (x))
+#define TXPWRUP_TIME(x) (80 - x)
+
+#if defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI > 0 )
+
+static void RadioTimingTweakForFrequencyScaling(void)
+{
+#define TXPWRDN_VAL 15 /* independent from frequency */
+#if (gPWR_FreqScalingWFI == 24 ) || (gPWR_FreqScalingWFI == 32 )
+    /* For WFI frequency scaling above 24MHz the radio timing settings do not
+     * require adjustment  from original value
+     * */
+#define TX_PATH_ANTICIPATED (0U)
+#define RX_PATH_ANTICIPATED (0U)
+#elif (gPWR_FreqScalingWFI == 16)
+#define TX_PATH_ANTICIPATED (4U)
+#define RX_PATH_ANTICIPATED (2U)
+#elif (gPWR_FreqScalingWFI == 12)
+#define TX_PATH_ANTICIPATED (3U)
+#define RX_PATH_ANTICIPATED (4U)
+#elif (gPWR_FreqScalingWFI == 8)
+#define TX_PATH_ANTICIPATED (3U)
+#define RX_PATH_ANTICIPATED (8U)
+#elif (gPWR_FreqScalingWFI == 6)
+#define TX_PATH_ANTICIPATED (3U)
+#define RX_PATH_ANTICIPATED (10U)
+#elif (gPWR_FreqScalingWFI == 4)
+#define TX_PATH_ANTICIPATED (3U)
+#define RX_PATH_ANTICIPATED (16U)
+#elif (gPWR_FreqScalingWFI == 2)
+#define TX_PATH_ANTICIPATED (4U)
+#define RX_PATH_ANTICIPATED (30U)
+#endif
+#if (gPWR_FreqScalingWFI < 24 )
+    uint32_t val = (TXPWRUP_TIME(TX_PATH_ANTICIPATED) | (TXPWRDN_VAL << 8) |
+            (RXPWRUP_TIME(RX_PATH_ANTICIPATED) << 16) | (RTRIP_DELAY(RX_PATH_ANTICIPATED) << 24));
+    /* no need to change if WFI frequency is above 24 MHz */
+    BLE_RADIOPWRUPDN_REG = val;
+    //DbgLogAdd(__FUNCTION__ , "RADIOPWRUPDN=%x", 1, val);
+#endif
+}
+
+static void SetAhbClkDiv(uint8_t div)
+{
+    SYSCON->AHBCLKDIV = SYSCON_AHBCLKDIV_REQFLAG_MASK | SYSCON_AHBCLKDIV_DIV((div-1));
+#if 0
+    /* might Need to wait if SysTick is maintained in WFI and need to be reprogrammed */
+    while (SYSCON->AHBCLKDIV & SYSCON_AHBCLKDIV_REQFLAG_MASK)
+    {
+        __NOP();
+    }
+#endif
+}
+
+static void ChangeFrequencyBeforeWfi(void)
+{
+#if (gPWR_FreqScalingWFI == 12)
+    /* FRO 12MHz */
+    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_FRO12M);
+#elif (gPWR_FreqScalingWFI == 32)
+    /* XTAL 32MHz */
+    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_XTAL32M);
+#elif (gPWR_FreqScalingWFI == 16) || (gPWR_FreqScalingWFI == 8) ||  (gPWR_FreqScalingWFI == 4) ||  (gPWR_FreqScalingWFI == 2)
+    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_XTAL32M);
+    SetAhbClkDiv(32/gPWR_FreqScalingWFI);
+#elif (gPWR_FreqScalingWFI == 24) || (gPWR_FreqScalingWFI == 6)
+    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_FRO48M);
+    SetAhbClkDiv(48/gPWR_FreqScalingWFI);
+#endif
+}
+
+static void RestoreCoreFrequencyAfterSleep(uint32_t mainclksel, uint32_t ahbdiv)
+{
+    /* FRO 48MHz or 32MHz - the flash wait states were not changed during WFI */
+    SYSCON->MAINCLKSEL       = mainclksel;
+
+    /* Revert the Main Clock divisor to 1 */
+    SetAhbClkDiv(ahbdiv+1);
+}
+#endif
 
 /*---------------------------------------------------------------------------
  * Name: PWRLib_MCUEnter_Sleep
@@ -412,20 +587,23 @@ uint8_t PWRLib_GetDeepSleepMode(void)
 extern uint8_t mLPMFlag;
 void PWRLib_MCU_Enter_Sleep(void)
 {
-    PWR_DBG_LOG("");
-    OSA_DisableIRQGlobal();
-#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
-    BOARD_DbgIoSet(0, 0);
-#endif
+    //PWR_DBG_LOG("");
 
-#if defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI == 2)
-    /* FRO 12MHz */
-    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_FRO12M);
-#elif defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI == 1)
-    /* XTAL 32MHz */
-    SYSCON -> MAINCLKSEL = SYSCON_MAINCLKSEL_SEL(BOARD_MAINCLK_XTAL32M);
-#endif
+    LpIoSet(0, 0);
 
+#if defined (gPWR_FreqScalingWFI) && (gPWR_FreqScalingWFI != 0 )
+    uint32_t save_MAINCLKSEL = SYSCON -> MAINCLKSEL;
+    uint32_t save_AHBCLKDIV  = SYSCON->AHBCLKDIV;
+    uint32_t save_radio_timing = BLE_RADIOPWRUPDN_REG;
+    if(BLE_GetNbActiveLink() == 0U)
+    {
+
+#if (gPWR_FreqScalingWFI < 24 )
+        RadioTimingTweakForFrequencyScaling();
+#endif
+        ChangeFrequencyBeforeWfi();
+    }
+#endif
 #if gPWR_FlashControllerPowerDownInWFI
     if ( mLPMFlag==0 )
     {
@@ -433,20 +611,14 @@ void PWRLib_MCU_Enter_Sleep(void)
         memset (&p_lowpower_cfg, 0, sizeof(LPC_LOWPOWER_T));
 
         p_lowpower_cfg.CFG   |= LOWPOWER_CFG_WFI_NOT_WFE_MASK;
-#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
-        BOARD_DbgIoSet(3, 1);
-#endif
+        LpIoSet(3, 1);
         Chip_LOWPOWER_PowerCycleCpuAndFlash(&p_lowpower_cfg);
 #else
-#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
-        BOARD_DbgIoSet(3, 1);
-#endif
+        LpIoSet(3, 1);
 
         PWRLib_EnterSleep_WithFlashControllerPowerDown();
 #endif
-#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
-        BOARD_DbgIoSet(3, 0);
-#endif
+        LpIoSet(3, 0);
     }
     else
     {
@@ -457,28 +629,40 @@ void PWRLib_MCU_Enter_Sleep(void)
     POWER_EnterSleep();
 #endif
 
-
-#if gPWR_FreqScalingWFI
-#if gPWR_LdoVoltDynamic
-    /* Need to increase LDO voltage before increasing CPU clock */
-    POWER_ApplyLdoActiveVoltage(PM_LDO_VOLT_1_1V_DEFAULT);
-    /* wait for LDO voltage to reach the voltage setting */
-    CLOCK_uDelay(10U);
+#if defined gPWR_FreqScalingWFI && (gPWR_FreqScalingWFI == 4)
+    SetAhbClkDiv(32/8);
 #endif
 
-    /* FRO 48MHz or 32MHz - the flash wait states were not changed during WFI */
-    SYSCON->MAINCLKSEL       = SYSCON_MAINCLKSEL_SEL(BOARD_TARGET_CPU_FREQ);
+#if defined gPWR_FreqScalingWFI && (gPWR_FreqScalingWFI > 0)
+    if(BLE_GetNbActiveLink() == 0U)
+    {
+  #if gPWR_LdoVoltDynamic
 
-#if gPWR_LdoVoltDynamic
-    POWER_ApplyLdoActiveVoltage(PM_LDO_VOLT_1_0V);
-#endif
+        /* Need to increase LDO voltage before increasing CPU clock */
+        POWER_ApplyLdoActiveVoltage_1V1();
+
+        /* wait for LDO voltage to reach the voltage setting */
+        /* This is still run at reduced frequency!
+         *  CLOCK_uDelay is not usable at very slow clocks < 8MHz because the number of
+         * instructions that is unrolls is huge. At 2MHz the 10us delay is only 20 CPU cycles.
+         * DelayUsecMHz is merely a 4 cycle NOP loop. This yields a relatively good accuracy.
+         * */
+        //DelayUsecMHz(10U, gPWR_FreqScalingWFI );
+        DelayLoopN( (10U * gPWR_FreqScalingWFI) / 4 );
+  #endif
+
+        RestoreCoreFrequencyAfterSleep(save_MAINCLKSEL, save_AHBCLKDIV);
+  #if (gPWR_FreqScalingWFI < 24 )
+        BLE_RADIOPWRUPDN_REG = save_radio_timing;
+  #endif
+
+  #if gPWR_LdoVoltDynamic
+        POWER_ApplyLdoActiveVoltage_1V0();
+  #endif
+    }
 #endif
 
-#if defined(gDbgIoCfg_c) && (gDbgIoCfg_c == 1)
-    BOARD_DbgIoSet(0, 1);
-#endif
-
-    OSA_EnableIRQGlobal();
+    LpIoSet(0, 1);
 }
 #if gSwdWakeupReconnect_c
 bool swd_PD_deny = false;
@@ -492,6 +676,7 @@ bool PWR_SWD_GetPowerDownDeny(void)
     return swd_PD_deny;
 }
 #endif
+extern int error_status;
 /*---------------------------------------------------------------------------
  * Name: PWRLib_UpdateWakeupReason
  * Description: Updates wakeup reason when exiting deep sleep
@@ -557,7 +742,6 @@ void PWR_UpdateWakeupReason(void)
         PWRLib_MCU_WakeupReason.Bits.FromUSART0 = 1U;
     }
 
-
     /* BOD */
     if (NVIC_GetPendingIRQ(WDT_BOD_IRQn))
     {
@@ -567,24 +751,135 @@ void PWR_UpdateWakeupReason(void)
 
 #if gSupportBle
     /* BLE */
-    if (NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn))
+
+#if 1
+    int ret = -1;
+    if(PWRLib_MCU_WakeupReason.Bits.DidPowerDown == 1U)
     {
-        PWR_DBG_LOG("BLE_LL_ALL_IRQn");
-        PWRLib_MCU_WakeupReason.Bits.FromBLELL = 1U;
+        if ((PWRLib_MCU_WakeupReason.AllBits & ~0x8000U) == 0)
+        {
+            // No  wakeup reason, Suppose the LL is waking up, just need to wait
+            PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
+            LpIoSet(4, 0);
+            LpIoSet(4, 1);
+        }
+        else
+        {
+            /* there is already a wakeup reason, just check that LL wake event does not happen at the same time */
+            if ( !NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn) && !NVIC_GetPendingIRQ( BLE_WAKE_UP_TIMER_IRQn) )
+            {
+                LpIoSet(2, 1);
+                 /* Force LL to be active if not */
+extern int BLE_SetActive(void);
+                ret = BLE_SetActive();
+                LpIoSet(2, 0);
+
+                /*    0: SW flag shows LL has not been to DSM
+                      1: LL is being waking up,
+                      2: LL is still asleep */
+                if ( ret == 1 )
+                {
+                    PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
+                }
+
+                if ( ret < 1 )
+                {
+                    PWR_DBG_LOG("err: ret=%d ", ret);
+                    error_status = -1;
+                }
+            }
+        }
     }
 
-    /* BLE */
+    int count_down = 5000;
+    LpIoSet(3, 1);
+    while (!NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn) && (count_down>0))
+    {
+        LpIoSet(3, 0);
+        LpIoSet(3, 1);
+        count_down--;
+    }
+    LpIoSet(3, 0);
+
+    /* Enable BLE Interrupt */
+    NVIC_SetPriority(BLE_LL_ALL_IRQn, 0x01U);
+    NVIC_EnableIRQ(BLE_LL_ALL_IRQn);
+
+    NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
+
+    if (count_down !=0)
+    {
+extern void BLE_LL_ALL_IRQHandler(void);
+        for(int i=3; i>0; i--)
+        {
+            BLE_LL_ALL_IRQHandler();
+        }
+    }
+    else
+    {
+        PWR_DBG_LOG("err: %d / %d", ret, count_down);
+        error_status = -2;
+    }
+
+
+
+#else
+    int ret = -1;
+    if (  /* NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn) ||*/ NVIC_GetPendingIRQ( BLE_WAKE_UP_TIMER_IRQn))
+    {
+        PWR_DBG_LOG("BLE_WAKE_UP_TIMER_IRQn");
+        NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
+        PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
+    }
+    else
+    {
+        /* Force LL to be active if not */
+        ret = BLE_SetActive();
+
+        /*    0: SW flag shows LL has not been to DSM
+              1: LL is being waking up,
+              2: LL is still asleep */
+        if ( ret < 1 )
+        {
+            PWR_DBG_LOG("err: ret=%d ", ret);
+            error_status = -1;
+        }
+    }
+#if 0
     if (NVIC_GetPendingIRQ( BLE_WAKE_UP_TIMER_IRQn))
     {
         PWR_DBG_LOG("BLE_WAKE_UP_TIMER_IRQn");
         PWRLib_MCU_WakeupReason.Bits.FromBLE_LLTimer = 1U;
         NVIC_ClearPendingIRQ(BLE_WAKE_UP_TIMER_IRQn);
     }
-
+#endif
     /* Enable BLE Interrupt */
     NVIC_SetPriority(BLE_LL_ALL_IRQn, 0x01U);
     NVIC_EnableIRQ(BLE_LL_ALL_IRQn);
-#endif
+
+    /* wakeup of BLE LL shall always happen here
+          in Case of Async wakeup, this will take longer but we can wait */
+    LpIoSet(3, 1);
+    int count_down = 5000;
+    while (!NVIC_GetPendingIRQ( BLE_LL_ALL_IRQn) && (count_down>0))
+    {
+        LpIoSet(3, 0);
+        LpIoSet(3, 1);
+        count_down--;
+    }
+    LpIoSet(3, 0);
+
+    if (count_down !=0)
+    {
+extern void BLE_LL_ALL_IRQHandler(void);
+        BLE_LL_ALL_IRQHandler();
+    }
+    else
+    {
+        PWR_DBG_LOG("err: %d / %d", ret, count_down);
+        error_status = -2;
+    }
+
     /* We may have peeked the NVIC Pending IRQ too early:
        The duration of the application Wakeup call back participates to that delay but
        60us at least are required after the end of hardware_init for the IRQ to raise.
@@ -593,11 +888,14 @@ void PWR_UpdateWakeupReason(void)
      */
     if(PWRLib_MCU_WakeupReason.Bits.DidPowerDown == 1U)
     {
-    	if ((PWRLib_MCU_WakeupReason.AllBits & ~0x8000U) == 0)
-    	{
-    		PWR_DBG_LOG("no IRQ detected");
-    	}
+        if ((PWRLib_MCU_WakeupReason.AllBits & ~0x8000U) == 0)
+        {
+            /* most of the time, LL has not woken up yet so we usually see no wakeup reason when LL timer expires */
+            //error_status = +3;
+        }
     }
+#endif
+#endif
 }
 
 void PWR_ClearWakeupReason(void)
@@ -611,49 +909,159 @@ PWR_WakeupReason_t PWR_GetWakeupReason(void)
     return PWRLib_MCU_WakeupReason;
 }
 
-
 void WarmMain(void)
 {
     /* Interrupts should be disabled */
     __disable_irq();
+
 #if defined(USE_RTOS) && (USE_RTOS)
     /* Switch to the psp stack */
     asm volatile("movs r0, #2");
     asm volatile("msr CONTROL, r0");
- #endif
+#endif
     // Restore context
     PWR_longjmp(pwr_CPUContext, TRUE);
 }
 
 
-void PWRLib_EnterPowerDownMode(pwrlib_pd_cfg_t *pd_cfg)
+void PWR_ResetPowerDownModeConfig(void)
 {
-    PWR_DBG_LOG("");
-    pm_power_config_t power_config;
-    uint32_t pwrlib_pm_ram_config;
+    /* set to NULL to be recalculate next time */
+    lowpower_power_cfg_p = NULL;
+}
 
-    power_config.pm_wakeup_src = pd_cfg->wakeup_src;
+void PWR_SetWakeUpConfig(uint32_t set_msk, uint32_t clr_msk);
+uint32_t PWR_GetWakeUpConfig(void);
+void vSetWakeUpIoConfig(void);
 
-    pwrlib_pm_ram_config = PWRLib_SetRamBanksRetention();
-
-    pd_cfg->sleep_cfg |= pwrlib_pm_ram_config;
-
+static void PWRLib_LLDsmComplete(void)
+{
 #if gSupportBle
-    power_config.pm_wakeup_src |= (POWER_WAKEUPSRC_BLE_OSC_EN
-                                   | POWER_WAKEUPSRC_RTC ); /* POWER_WAKEUPSRC_BLE_WAKE_TIMER */
-
-    /* BLE always assumes RFP retention registers retained */
-    power_config.pm_config = pd_cfg->sleep_cfg | PM_CFG_XTAL32M_AUTOSTART  | PM_CFG_RADIO_RET;
-#else
-    power_config.pm_config = pd_cfg->sleep_cfg | PM_CFG_XTAL32M_AUTOSTART;
+#ifndef PWR_DisableLateBleIsolateModem
+    BLE_IsolateModem();
+#endif
 #endif
 
-    power_config.pm_wakeup_io           = pd_cfg->wakeup_io & (BIT(22)-1) ;
-    if (power_config.pm_wakeup_io)
+#if gPWR_LdoVoltDynamic
+    /* If gPWR_SmartFrequencyScaling equals to 2 and CPU Clock is 32MHz,
+     * LDO has been already set to 1V1 in RelinquishXtal32MCtrl */
+#if gPWR_CpuClk_48MHz || (!gPWR_CpuClk_48MHz && gPWR_SmartFrequencyScaling != 2)
+    /* Apply default LDO voltage */
+    POWER_ApplyLdoActiveVoltage_1V1();
+#endif
+#endif
+
+#if gSupportBle
+#if !gPWR_LpOscOptim
+    /* Waiting for MODEMSTATUS.BLE_LP_OSC_EN bit to drop is apparently not necessary,
+     * this will happen anyway. SYSCON are retained during powerdown
+     * waiting is around 30us
+     * */
+    BLE_WaitForLpOscReady();
+#endif
+#endif
+}
+
+void PWRLib_EnterPowerDownModeRamOn(uint32_t mode)
+{
+    //PWR_DBG_LOG("");
+
+    pm_power_config_t power_config;
+    uint32_t pwrlib_pm_ram_config;
+#if !defined(gPWR_LpEntryStructOptim) || (gPWR_LpEntryStructOptim == 0)
+    lowpower_power_cfg_p = NULL;
+#endif
+
+#if defined PWR_StackCompressionRetention_d && (PWR_StackCompressionRetention_d != 0)
+#if !defined (FSL_RTOS_FREE_RTOS) || (FSL_RTOS_FREE_RTOS == 0)
+#error "PWR_StackCompressionRetention_d can only be used in conjunction with RTOS"
+#endif
+    if (time_to_next_expected_wakeup >= PWR_StackCompressionDurationMsThreshold)
     {
-        power_config.pm_wakeup_src        |=  POWER_WAKEUPSRC_IO;
+        /* We can save the stacks safely here because until Power Down execution runs on
+         * the Idle Task Stack that is retained anyway.
+         * Cancel retention of Bank0 and do limited copy to other retained region.
+         * */
+    	PWR_vStackRetentionBank0(false);
+        OSA_LowPowerCompressStackToRetainedLocation();
+    }
+    else
+    {
+        /* Force retention of Bank0 where stacks are located */
+    	PWR_vStackRetentionBank0(true);
+#ifdef PWR_StackCompressDBG
+    	*(uint32_t*)0x04000800 = 0x12345678;
+    	*(uint32_t*)0x04000804 = 0x9abcdef0;
+#endif
+
+        PWR_DBG_LOG("Stacks retained time=%d", time_to_next_expected_wakeup);
+
     }
 
+    /* Reset time_to_next_expected_wakeup now that decision was taken */
+    time_to_next_expected_wakeup = ~0UL;
+
+#endif
+
+    if ( lowpower_power_cfg_p == NULL )
+    {
+        pwrlib_pd_cfg_t pd_cfg;
+        lowpower_power_cfg_p    = (void*)&lowpower_power_cfg;
+
+        memset(&pd_cfg, 0x0, sizeof(pwrlib_pd_cfg_t));
+
+        /* get the IO wakeup configuration */
+        vSetWakeUpIoConfig();
+
+        if (mode & PWR_CFG_MAINTAIN_AO_LDO)
+        {
+            pd_cfg.sleep_cfg |= PM_CFG_KEEP_AO_VOLTAGE;
+        }
+
+        pd_cfg.wakeup_io  = PWR_GetWakeUpConfig();
+        pd_cfg.wakeup_src = u64GetWakeupSourceConfig(mode);
+        pd_cfg.sleep_cfg  |= PWR_u32GetRamRetention();
+
+#if defined(gPWR_ForceWakeTimer0_WakeupSrc) && (gPWR_ForceWakeTimer0_WakeupSrc == 1)
+        pd_cfg.wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER0;
+#endif
+#if defined(gPWR_ForceWakeTimer1_WakeupSrc) && (gPWR_ForceWakeTimer1_WakeupSrc == 1)
+        pd_cfg.wakeup_src |= POWER_WAKEUPSRC_WAKE_UP_TIMER1;
+#endif
+#if defined(gPWR_ForceRtc_WakeupSrc) && (gPWR_ForceRtc_WakeupSrc == 1)
+        pd_cfg.wakeup_src |= POWER_WAKEUPSRC_RTC;
+#endif
+
+        power_config.pm_wakeup_src = pd_cfg.wakeup_src;
+
+        pwrlib_pm_ram_config = PWRLib_SetRamBanksRetention();
+
+        pd_cfg.sleep_cfg |= pwrlib_pm_ram_config;
+
+#if gSupportBle
+        power_config.pm_wakeup_src |= (POWER_WAKEUPSRC_BLE_OSC_EN
+                                       | POWER_WAKEUPSRC_RTC ); /* POWER_WAKEUPSRC_BLE_WAKE_TIMER */
+
+        /* BLE always assumes RFP retention registers retained */
+#if (gPWR_Xtal32MDeactMode == 2)
+        power_config.pm_config = pd_cfg.sleep_cfg | PM_CFG_RADIO_RET;
+#else
+        power_config.pm_config = pd_cfg.sleep_cfg | PM_CFG_XTAL32M_AUTOSTART  | PM_CFG_RADIO_RET;
+#endif
+
+#else
+        power_config.pm_config = pd_cfg.sleep_cfg | PM_CFG_XTAL32M_AUTOSTART;
+#endif
+
+        power_config.pm_wakeup_io           = pd_cfg.wakeup_io & (BIT(22)-1) ;
+        if (power_config.pm_wakeup_io)
+        {
+            power_config.pm_wakeup_src        |=  POWER_WAKEUPSRC_IO;
+        }
+
+        POWER_GetPowerDownConfig(&power_config, lowpower_power_cfg_p);
+        POWER_RegisterPowerDownEntryHookFunction( PWRLib_LLDsmComplete );
+    }
     BOOT_SetResumeStackPointer(RESUME_STACK_POINTER);
 
     /* on application warm start, prevent the application from corrupting the current stack */
@@ -664,10 +1072,10 @@ void PWRLib_EnterPowerDownMode(pwrlib_pd_cfg_t *pd_cfg)
 
     if ( 0 == PWR_setjmp(pwr_CPUContext))
     {
-        POWER_EnterPowerMode( PM_POWER_DOWN, &power_config );
+        POWER_GoToPowerDown( lowpower_power_cfg_p );
     }
-}
 
+}
 
 void PWRLib_EnterPowerDownModeRamOff(pwrlib_pd_cfg_t *pd_cfg)
 {
@@ -697,6 +1105,11 @@ void PWRLib_EnterDeepDownMode(pwrlib_pd_cfg_t *pd_cfg)
     {
         power_config.pm_wakeup_src         |=  POWER_WAKEUPSRC_IO;
     }
+
+#if gPWR_LdoVoltDynamic
+    /* Apply default LDO voltage */
+    POWER_ApplyLdoActiveVoltage_1V1();
+#endif
 
     POWER_EnterPowerMode( PM_DEEP_DOWN, &power_config );
 }

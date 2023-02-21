@@ -112,8 +112,12 @@ typedef enum {
 typedef struct {
     uint32                   : 8; /* padding */
     uint32 eLogicalType      : 3;
+#ifndef R23_UPDATES
     uint32 bComplexDescAvail : 1;
     uint32 bUserDescAvail    : 1;
+#else
+    uint32                   : 2 /* padding */;
+#endif
     uint32 eReserved         : 3; /* reserved */
     uint32 eFrequencyBand    : 5;
     uint32 eApsFlags         : 3;
@@ -158,10 +162,12 @@ typedef struct {
     uint8 *au8OutDiscoveryEnabledFlags;
 } ZPS_tsAplAfSimpleDescriptor;
 
+#ifndef R23_UPDATES
 /* Node's user descriptor */
 typedef struct {
     char szUserDescriptor[16];
 } ZPS_tsAplAfUserDescriptor;
+#endif
 
 typedef enum {
     ZPS_EVENT_NONE,                                     /*  0, 0x00 */
@@ -194,8 +200,12 @@ typedef enum {
     ZPS_EVENT_NWK_DUTYCYCLE_INDICATION,                 /* 27, 0x1B */
     ZPS_EVENT_NWK_FAILED_TO_SELECT_AUX_CHANNEL,         /* 28, 0x1C */
     ZPS_EVENT_NWK_ROUTE_RECORD_INDICATION,              /* 29, 0x1D */
-    ZPS_EVENT_NWK_DISCOVERY_ACTIVE_COMPLETE,            /* 30, 0x1F */
-    ZPS_ZCP_EVENT_FAILURE
+    ZPS_EVENT_NWK_DISCOVERY_ACTIVE_COMPLETE,            /* 30, 0x1E */
+#ifdef R23_UPDATES
+    ZPS_EVENT_NWK_CMD_TLV_INDICATION,                   /* 31, 0x1F */
+#endif
+    ZPS_ZCP_EVENT_FAILURE,
+    ZPS_EVENT_TLV_FOUND = 128,                          /* 128, 0x80, ORed over the above */
 } ZPS_teAfEventType;
 
 
@@ -214,6 +224,7 @@ typedef struct
     uint8 eStatus;
     uint8 eSecurityStatus;
     uint8 u8LinkQuality;
+    uint8 u8APduOffset;
     bool_t bFramePending;
 } ZPS_tsAfDataIndEvent;
 
@@ -428,7 +439,14 @@ typedef struct {
 	uint8     u8Status;
 } ZPS_tsAfNwkRouteRecordIndEvent;
 
-
+#ifdef R23_UPDATES
+typedef struct
+{
+    PDUM_thNPdu hNPdu;
+    uint8       u8NPduOffset;
+    uint8       u8Cmd;
+} ZPS_tsAfNwkTlvFoundEvent;
+#endif
 
 typedef union
 {
@@ -458,6 +476,9 @@ typedef union
     ZPS_tsAfTCstatusEvent               sApsTcEvent;
     ZPS_tsAfNwkDutyCycleIndEvent        sNwkDutyCycleIndicationEvent;
     ZPS_tsAfNwkRouteRecordIndEvent      sNwkRouteRecordIndEvent;
+#ifdef R23_UPDATES
+    ZPS_tsAfNwkTlvFoundEvent            sNwkTlvFoundEvent;
+#endif
 } ZPS_tuAfEventData;
 
 /* event messages from the stack to the application */

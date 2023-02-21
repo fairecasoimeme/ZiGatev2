@@ -58,7 +58,7 @@ status_t TRNG_Init(RNG_Type *base, const trng_config_t *userConfig)
         return kStatus_Fail;
     }
     SYSCON->PRESETCTRLSET[1] = SYSCON_PRESETCTRLSET1_RNG_RST_SET_MASK;
-    //CLOCK_EnableClock(kCLOCK_Xtal32M);
+    // CLOCK_EnableClock(kCLOCK_Xtal32M);
     CLOCK_EnableClock(kCLOCK_Rng);
     SYSCON->PRESETCTRLCLR[1] = SYSCON_PRESETCTRLCLR1_RNG_RST_CLR_MASK;
 
@@ -94,37 +94,57 @@ status_t TRNG_GetRandomData(RNG_Type *base, void *data, size_t data_size)
     uint8_t *data_p = (uint8_t *)data;
     uint32_t i;
 
-    /* Check if valid parameters */
-    if ((base == NULL) || (data == NULL) || (data_size == 0))
-    {
-        return kStatus_InvalidArgument;
-    }
-
-    /* Read random data as per user request */
+    status_t status;
     do
     {
-        /* Read random data from register Entropy.*/
-        random_32 = base->RANDOM_NUMBER;
-
-        /* Extract required bytes */
-        random_p = (uint8_t *)&random_32;
-
-        if (data_size < sizeof(random_32))
+        /* Check if valid parameters */
+        if ((base == NULL) || (data == NULL) || (data_size == 0))
         {
-            random_size = data_size;
+            status = kStatus_InvalidArgument;
+            break;
         }
-        else
+        if (!(ASYNC_SYSCON->XTAL32MCTRL & ASYNC_SYSCON_XTAL32MCTRL_XO_ENABLE_MASK))
         {
-            random_size = sizeof(random_32);
+            status = kStatus_Fail;
+            break;
         }
-
-        for (i = 0U; i < random_size; i++)
+        /* Clocks might have been stopped since init : must return an error */
+        if ((SYSCON->AHBCLKCTRL[1] & SYSCON_AHBCLKCTRL1_RNG_MASK) == 0u)
         {
-            *data_p++ = *random_p++;
+            status = kStatus_Fail;
+            break;
         }
+        if ((SYSCON->RNGCLKCTRL & SYSCON_RNGCLKCTRL_ENABLE_MASK) == 0u)
+        {
+            status = kStatus_Fail;
+            break;
+        }
+        /* Read random data as per user request */
+        do
+        {
+            /* Read random data from register Entropy.*/
+            random_32 = base->RANDOM_NUMBER;
 
-        data_size -= random_size;
-    } while (data_size > 0);
+            /* Extract required bytes */
+            random_p = (uint8_t *)&random_32;
 
-    return kStatus_Success;
+            if (data_size < sizeof(random_32))
+            {
+                random_size = data_size;
+            }
+            else
+            {
+                random_size = sizeof(random_32);
+            }
+
+            for (i = 0U; i < random_size; i++)
+            {
+                *data_p++ = *random_p++;
+            }
+
+            data_size -= random_size;
+        } while (data_size > 0);
+        status = kStatus_Success;
+    } while (0);
+    return status;
 }

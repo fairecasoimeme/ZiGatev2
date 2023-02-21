@@ -120,11 +120,9 @@ PUBLIC void vMAC_RestoreSettings(void);
 PUBLIC bool_t bAppApi_CurrentlyScanning(void);
 
 PUBLIC void vAppApiSetComplianceLimits(int8  i8TxMaxPower,
-                                       int8  i8TxMaxPowerCh26,
-                                       uint8 u8CcaThreshold);
+                                       int8  i8TxMaxPowerCh26);
 PUBLIC void vAppApiSetRadioTxModes(teAppApiRadioTxMode eTxMode,
                                    teAppApiRadioTxMode eTxModeCh26);
-PUBLIC void vAppApiSetHighPowerMode(uint8 u8ModuleID, bool_t bMode);
 
 /****************************************************************************/
 /***        Exported Variables                                            ***/

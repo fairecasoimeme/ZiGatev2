@@ -237,7 +237,9 @@ static uint32_t CLOCK_GetMainClockRate(void)
    -- Core clock
    ---------------------------------------------------------------------------- */
 
+#if !NO_SYSCORECLK_UPD
 uint32_t SystemCoreClock = DEFAULT_SYSTEM_CLOCK;
+#endif
 
 #if defined(__ICCARM__)
 //*****************************************************************************
@@ -263,6 +265,9 @@ void ResetISR(void)
 
 void ResetISR2(void)
 {
+    /* Force clock to switch to FRO32M to speed up initialization */
+    SYSCON -> MAINCLKSEL = 3;  // BOARD_MAINCLK_FRO32M
+
     if ((void (*)(void))WarmMain != NULL)
     {
         unsigned int warm_start;
@@ -358,9 +363,10 @@ void ResetISR2(void)
 
 void SystemInit (void) {
     uint32_t trim;
+#if !NO_SYSCORECLK_UPD
     /* Initialise SystemCoreClock value */
     SystemCoreClockUpdate();
-
+#endif
     /* Initialise NVIC priority grouping value */
     NVIC_SetPriorityGrouping(4);
 
@@ -377,7 +383,8 @@ void SystemInit (void) {
    -- SystemCoreClockUpdate()
    ---------------------------------------------------------------------------- */
 
+#if !NO_SYSCORECLK_UPD
 void SystemCoreClockUpdate (void) {
     SystemCoreClock = (CLOCK_GetMainClockRate() / ((SYSCON->AHBCLKDIV & SYSCON_AHBCLKDIV_DIV_MASK) + 1U));
 }
-
+#endif

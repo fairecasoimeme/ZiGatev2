@@ -355,6 +355,7 @@ void TMR_RTCAlarmNotify(void)
     }
 }
 
+#if (mTMR_PIT_Timestamp_Enabled_d==0) && (gTimestampUseWtimer_c==0)
 #if defined (gMWS_UseCoexistence_d) && (gMWS_UseCoexistence_d)
 /*! -------------------------------------------------------------------------
  * \brief Initialize timestamp service using CTIMER
@@ -363,7 +364,7 @@ static void TMR_CTTimeStampInit(void)
 {
     ctimer_config_t config;
     CTIMER_GetDefaultConfig(&config);
-    config.prescale = BOARD_GetCtimerClock(CTIMER1) / 1000000; // To get 1us Resolution */
+    config.prescale = CLOCK_GetFreq(kCLOCK_Timer1) / 1000000;
     CTIMER_Init(CTIMER1, &config);
     CTIMER_StartTimer(CTIMER1);
 }
@@ -376,6 +377,7 @@ static uint32_t TMR_CTGetTimestamp(void)
     return CTIMER_GetTimerCountValue(CTIMER1);
 }
 #endif
+#endif /*(mTMR_PIT_Timestamp_Enabled_d==0) && (gTimestampUseWtimer_c==0)*/
 
 #endif /*gTimestamp_Enabled_d*/
 

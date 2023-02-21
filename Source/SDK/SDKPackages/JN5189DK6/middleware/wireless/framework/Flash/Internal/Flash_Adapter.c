@@ -46,17 +46,17 @@
 #if defined(__IAR_SYSTEMS_ICC__)
 extern uint32_t _SCRATCH_AREA_START_[];
 extern uint32_t _SCRATCH_AREA_END_[];
-#define ScratchStartAddr   (uint32_t)(_SCRATCH_AREA_START_)
-#define ScratchEndAddr     (uint32_t)(_SCRATCH_AREA_END_)
+#define ScratchStartAddr   (uint8_t *)(_SCRATCH_AREA_START_)
+#define ScratchEndAddr     (uint8_t *)(_SCRATCH_AREA_END_)
 #else
-extern uint32_t        _scratch_buf_start;
-extern uint32_t        _scratch_buf_end;
-#define ScratchStartAddr (uint32_t)&_scratch_buf_start
-#define ScratchEndAddr   (uint32_t)&_scratch_buf_end
+extern uint32_t        _scratch_buf_start[];
+extern uint32_t        _scratch_buf_end[];
+#define ScratchStartAddr (uint8_t *)_scratch_buf_start
+#define ScratchEndAddr   (uint8_t *)_scratch_buf_end
 #endif
 #else
-#define ScratchStartAddr   (uint32_t)0x04000000UL
-#define ScratchEndAddr     (uint32_t)0x04000400UL
+#define ScratchStartAddr   (uint8_t *)0x04000000UL
+#define ScratchEndAddr     (uint8_t *)0x04000400UL
 #endif
 
 #endif
@@ -355,10 +355,13 @@ uint32_t NV_SafeReadFromFlash(uint8_t * ram_dst, uint8_t * flash_src, size_t siz
 void NV_FlashPerformAudit(void)
 {
     int status;
+    uint32_t chip_type = Chip_GetType();
+    uint32_t end;
 
     uint32_t addr = INT_STORAGE_START_OFFSET;
     if (INT_STORAGE_END_OFFSET == INT_STORAGE_START_OFFSET) addr++;
-    uint32_t end =  (uint32_t)0x9ddff;
+
+    end = (chip_type == CHIP_QN9030) ? 0x0004ffffU : 0x0009ddffU;
 
     uint32_t  failed_addr;
     /* The scratch area is large enough to contain 2 flash pages */

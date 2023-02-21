@@ -1,3 +1,21 @@
+/****************************************************************************
+ *
+ * Copyright 2020,2022 NXP.
+ *
+ * NXP Confidential. 
+ * 
+ * This software is owned or controlled by NXP and may only be used strictly 
+ * in accordance with the applicable license terms.  
+ * By expressly accepting such terms or by downloading, installing, activating 
+ * and/or otherwise using the software, you are agreeing that you have read, 
+ * and that you agree to comply with and are bound by, such license terms.  
+ * If you do not agree to be bound by the applicable license terms, 
+ * then you may not retain, install, activate or otherwise use the software. 
+ * 
+ *
+ ****************************************************************************/
+
+
 /*****************************************************************************
  *
  * MODULE:      Utils
@@ -6,31 +24,7 @@
  *
  * DESCRIPTION:
  *
- *****************************************************************************
- *
- * This software is owned by NXP B.V. and/or its supplier and is protected
- * under applicable copyright laws. All rights are reserved. We grant You,
- * and any third parties, a license to use this software solely and
- * exclusively on NXP products [NXP Microcontrollers such as JN5168, JN5179].
- * You, and any third parties must reproduce the copyright and warranty notice
- * and any other legend of ownership on each copy or partial copy of the
- * software.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Copyright NXP B.V. 2016. All rights reserved
- *
- ****************************************************************************/
+ *****************************************************************************/
 
 #ifndef APPZDPEXTRACTION_H_
 #define APPZDPEXTRACTION_H_
@@ -42,11 +36,16 @@
 #include "pdum_nwk.h"
 
 typedef struct {
+    uint8   u8Status;
+} ZPS_tsAplZdpSingleStatusRsp;
+
+typedef struct {
     union {
         ZPS_tsAplZdpDeviceAnnceReq sDeviceAnnce;
         ZPS_tsAplZdpMgmtNwkUpdateReq sMgmtNwkUpdateReq;
         ZPS_tsAplZdpMgmtNwkEnhanceUpdateReq sMgmtEnhancedUpdateReq;
         ZPS_tsAplZdpMgmtPermitJoiningReq sPermitJoiningReq;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpDiscoveryCacheRsp sDiscoveryCacheRsp;
         ZPS_tsAplZdpDiscoveryStoreRsp sDiscoveryStoreRsp;
         ZPS_tsAplZdpNodeDescStoreRsp sNodeDescStoreRsp;
@@ -54,26 +53,37 @@ typedef struct {
         ZPS_tsAplZdpSimpleDescStoreRsp sSimpleDescStoreRsp;
         ZPS_tsAplZdpRemoveNodeCacheRsp sRemoveNodeCacheRsp;
         ZPS_tsAplZdpEndDeviceBindRsp sEndDeviceBindRsp;
+#endif
         ZPS_tsAplZdpBindRsp sBindRsp;
         ZPS_tsAplZdpUnbindRsp sUnbindRsp;
+        ZPS_tsAplZdpSingleStatusRsp sSingleStatusRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpReplaceDeviceRsp sReplaceDeviceRsp;
         ZPS_tsAplZdpStoreBkupBindEntryRsp sStoreBkupBindEntryRsp;
         ZPS_tsAplZdpRemoveBkupBindEntryRsp sRemoveBkupBindEntryRsp;
         ZPS_tsAplZdpBackupSourceBindRsp sBackupSourceBindRsp;
+#endif
         ZPS_tsAplZdpMgmtLeaveRsp sMgmtLeaveRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpMgmtDirectJoinRsp sMgmtDirectJoinRsp;
+#endif
         ZPS_tsAplZdpMgmtPermitJoiningRsp sPermitJoiningRsp;
         ZPS_tsAplZdpNodeDescRsp sNodeDescRsp;
         ZPS_tsAplZdpPowerDescRsp sPowerDescRsp;
         ZPS_tsAplZdpSimpleDescRsp sSimpleDescRsp;
         ZPS_tsAplZdpNwkAddrRsp sNwkAddrRsp;
         ZPS_tsAplZdpIeeeAddrRsp sIeeeAddrRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpUserDescConf sUserDescConf;
+#endif
         ZPS_tsAplZdpSystemServerDiscoveryRsp sSystemServerDiscoveryRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpPowerDescStoreRsp sPowerDescStoreRsp;
         ZPS_tsAplZdpUserDescRsp sUserDescRsp;
+#endif
         ZPS_tsAplZdpActiveEpRsp sActiveEpRsp;
         ZPS_tsAplZdpMatchDescRsp sMatchDescRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpComplexDescRsp sComplexDescRsp;
         ZPS_tsAplZdpFindNodeCacheRsp sFindNodeCacheRsp;
         ZPS_tsAplZdpExtendedSimpleDescRsp sExtendedSimpleDescRsp;
@@ -83,18 +93,24 @@ typedef struct {
         ZPS_tsAplZdpRecoverBindTableRsp sRecoverBindTableRsp;
         ZPS_tsAplZdpRecoverSourceBindRsp sRecoverSourceBindRsp;
         ZPS_tsAplZdpMgmtNwkDiscRsp sMgmtNwkDiscRsp;
+#endif
         ZPS_tsAplZdpMgmtLqiRsp sMgmtLqiRsp;
         ZPS_tsAplZdpMgmtRtgRsp sRtgRsp;
         ZPS_tsAplZdpMgmtBindRsp sMgmtBindRsp;
+#ifndef R23_UPDATES
         ZPS_tsAplZdpMgmtCacheRsp sMgmtCacheRsp;
+#endif
         ZPS_tsAplZdpMgmtNwkUpdateNotify sMgmtNwkUpdateNotify;
         ZPS_tsAplZdpMgmtNwkUnSolictedUpdateNotify sMgmtNwkUnsolicitedUpdateNotify;
+        ZPS_tsAplZdpMgmtMibIeeeRsp sMgmtMibIeeeRsp;
     }uZdpData;
     union {
         ZPS_tsAplZdpBindingTableEntry asBindingTable[5];
         ZPS_tsAplZdpNetworkDescr asNwkDescTable[5];
         ZPS_tsAplZdpNtListEntry asNtList[2];
+#ifndef R23_UPDATES
         ZPS_tsAplDiscoveryCache aDiscCache[5];
+#endif
         uint16 au16Data[34];
         uint8 au8Data[77];
         uint64 au64Data[9];
@@ -104,146 +120,162 @@ typedef struct {
 }ZPS_tsAfZdpEvent;
 
 
-PUBLIC bool_t zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNwkAddressResponse(ZPS_tsAfEvent *psZdoServerEvent, 
                                                 ZPS_tsAfZdpEvent* psReturnStruct);
                                                 
-PUBLIC bool_t zps_bAplZdpUnpackIeeeAddressResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackIeeeAddressResponse(ZPS_tsAfEvent *psZdoServerEvent, 
                                                 ZPS_tsAfZdpEvent* psReturnStruct);
                                                 
-PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent, 
                                           ZPS_tsAfZdpEvent* psReturnStruct);
 
-PUBLIC bool_t zps_bAplZdpUnpackEnhancedNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackEnhancedNwkUpdateReq(ZPS_tsAfEvent *psZdoServerEvent,
                                           ZPS_tsAfZdpEvent* psReturnStruct);
                                           
-PUBLIC bool_t zps_bAplZdpUnpackPermitJoinReq(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackPermitJoinReq(ZPS_tsAfEvent *psZdoServerEvent,
                                            ZPS_tsAfZdpEvent* psReturnStruct);
                                            
-PUBLIC bool_t zps_bAplZdpUnpackDevicAnnounce(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackDevicAnnounce(ZPS_tsAfEvent *psZdoServerEvent,
                                            ZPS_tsAfZdpEvent* psReturnStruct);
                                            
-PUBLIC bool_t zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNodeDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                               ZPS_tsAfZdpEvent* psReturnStruct);                                              
                                               
-PUBLIC bool_t zps_bAplZdpUnpackPowerDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackPowerDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
                                                
-PUBLIC bool_t zps_bAplZdpUnpackSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                 ZPS_tsAfZdpEvent* psReturnStruct);
                                                 
-PUBLIC bool_t zps_bAplZdpUnpackActiveEpResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackActiveEpResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                               ZPS_tsAfZdpEvent* psReturnStruct);
                                               
-PUBLIC bool_t zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMatchDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
                                                
-PUBLIC bool_t zps_bAplZdpUnpackDiscCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackDiscCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
                                                
-PUBLIC bool_t zps_bAplZdpUnpackDiscStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackDiscStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
                                                
-PUBLIC bool_t zps_bAplZdpUnpackNodeDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNodeDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackActiveEpStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackActiveEpStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackSimpleDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackSimpleDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                      ZPS_tsAfZdpEvent* psReturnStruct);
                                                      
-PUBLIC bool_t zps_bAplZdpUnpackRemoveNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackRemoveNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                      ZPS_tsAfZdpEvent* psReturnStruct);
                                                      
-PUBLIC bool_t zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackBackUpSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                       ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
                                                                                                             
-PUBLIC bool_t zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMgmtLeaveResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
                                                
-PUBLIC bool_t zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackMgmtDirectJoinResponse(ZPS_tsAfEvent *psZdoServerEvent,
+                                                    ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
+                                                    
+PUBLIC bool zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                     ZPS_tsAfZdpEvent* psReturnStruct);
                                                     
-PUBLIC bool_t zps_bAplZdpUnpackMgmtPermitJoinResponse(ZPS_tsAfEvent *psZdoServerEvent,
-                                                    ZPS_tsAfZdpEvent* psReturnStruct);
-                                                    
-PUBLIC bool_t zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackEndDeviceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                           ZPS_tsAfZdpEvent* psReturnStruct);
                                           
-PUBLIC bool_t zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackUnBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                             ZPS_tsAfZdpEvent* psReturnStruct);
                                             
-PUBLIC bool_t zps_bAplZdpUnpackReplaceDeviceResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackReplaceDeviceResponse(ZPS_tsAfEvent *psZdoServerEvent,
+                                                   ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
+                                                   
+PUBLIC bool zps_bAplZdpUnpackStoreBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackStoreBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
-                                                   ZPS_tsAfZdpEvent* psReturnStruct);
-                                                   
-PUBLIC bool_t zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackRemoveBkupBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                     ZPS_tsAfZdpEvent* psReturnStruct);
                                                     
-PUBLIC bool_t zps_bAplZdpUnpackMgmtLqiResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMgmtLqiResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                              ZPS_tsAfZdpEvent* psReturnStruct);
                                              
-PUBLIC bool_t zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMgmtRtgResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                              ZPS_tsAfZdpEvent* psReturnStruct);
                                              
-PUBLIC bool_t zps_bAplZdpUnpackNwkUpdateNotifyResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNwkUpdateNotifyResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                      ZPS_tsAfZdpEvent* psReturnStruct);
 
-PUBLIC bool_t zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackNwkUnsolicitedUpdateNotify(ZPS_tsAfEvent *psZdoServerEvent,
                                                      ZPS_tsAfZdpEvent* psReturnStruct );
                                                      
-PUBLIC bool_t zps_bAplZdpUnpackComplexDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackComplexDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                  ZPS_tsAfZdpEvent* psReturnStruct);
-                                                 
-PUBLIC bool_t zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
-                                              ZPS_tsAfZdpEvent* psReturnStruct);
-                                              
-PUBLIC bool_t zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServerEvent,
-                                                     ZPS_tsAfZdpEvent* psReturnStruct);
                                                      
-PUBLIC bool_t zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackUserDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+                                              ZPS_tsAfZdpEvent* psReturnStruct);
+
+PUBLIC bool zps_bAplZdpUnpackUserDescConfirmResponse(ZPS_tsAfEvent *psZdoServerEvent,
+                                                     ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
+                                                     
+PUBLIC bool zps_bAplZdpUnpackSystemServerDiscResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                       ZPS_tsAfZdpEvent* psReturnStruct);
                                                       
-PUBLIC bool_t zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackBkupBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackPowerDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackPowerDescStoreResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                     ZPS_tsAfZdpEvent* psReturnStruct);
                                                     
-PUBLIC bool_t zps_bAplZdpUnpackFindNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackFindNodeCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                    ZPS_tsAfZdpEvent* psReturnStruct);
                                                    
-PUBLIC bool_t zps_bAplZdpUnpackExtendedSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackExtendedSimpleDescResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                         ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
                                                         
-PUBLIC bool_t zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackExtendedActiveEndpointResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                             ZPS_tsAfZdpEvent* psReturnStruct);
                                                             
-PUBLIC bool_t zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackBindRegisterResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                   ZPS_tsAfZdpEvent* psReturnStruct);
                                                   
-PUBLIC bool_t zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackRecoverBindTableResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                       ZPS_tsAfZdpEvent* psReturnStruct);
                                                       
-PUBLIC bool_t zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackRecoverSourceBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                        ZPS_tsAfZdpEvent* psReturnStruct);                                               
 
                                                   
-PUBLIC bool_t zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMgmtNwkDiscResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                  ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
                                                  
-PUBLIC bool_t zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackMgmtBindResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                               ZPS_tsAfZdpEvent* psReturnStruct);
                                               
-PUBLIC bool_t zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
+#ifndef R23_UPDATES
+PUBLIC bool zps_bAplZdpUnpackMgmtCacheResponse(ZPS_tsAfEvent *psZdoServerEvent,
                                                ZPS_tsAfZdpEvent* psReturnStruct);
+#endif
                                                
-PUBLIC bool_t zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent,
+PUBLIC bool zps_bAplZdpUnpackResponse (ZPS_tsAfEvent *psZdoServerEvent,
                                        ZPS_tsAfZdpEvent* psReturnStruct);
 
 

@@ -1,6 +1,6 @@
 /*! *********************************************************************************
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2017, 2022 NXP
 * All rights reserved.
 *
 * \file
@@ -9,10 +9,20 @@
 *
 * SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************** */
+#ifndef _FWK_MEM_MANAGER_H_
+#define _FWK_MEM_MANAGER_H_
 
-#ifndef _MEM_MANAGER_H_
-#define _MEM_MANAGER_H_
+#if defined(gMemManagerLight) && (gMemManagerLight != 0)
 
+#include "fsl_component_mem_manager.h"
+typedef mem_status_t memStatus_t;
+#define	MEM_SUCCESS_c       kStatus_MemSuccess
+#define	MEM_INIT_ERROR_c    kStatus_MemInitError
+#define	MEM_ALLOC_ERROR_c   kStatus_MemAllocError
+#define	MEM_FREE_ERROR_c    kStatus_MemFreeError
+#define	MEM_UNKNOWN_ERROR_c kStatus_MemUnknownError
+
+#else /* gMemManagerLight */
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -23,6 +33,10 @@
 
 #include "EmbeddedTypes.h"
 #include "GenericList.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /*! *********************************************************************************
@@ -220,4 +234,9 @@ extern __attribute__((weak)) uint32_t MEM_GetTimeStamp(void);
 
 #endif /*MEM_TRACKING*/
 
-#endif /* _MEM_MANAGER_H_ */ 
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+#endif /* _FWK_MEM_MANAGER_H_ */

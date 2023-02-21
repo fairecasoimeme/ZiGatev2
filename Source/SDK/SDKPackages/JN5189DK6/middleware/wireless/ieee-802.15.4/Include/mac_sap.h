@@ -1932,8 +1932,9 @@ typedef enum
     PHY_PIB_ATTR_CURRENT_CHANNEL    = 0,  /**<  */
     PHY_PIB_ATTR_CHANNELS_SUPPORTED = 1,  /**<  */
     PHY_PIB_ATTR_TX_POWER           = 2,  /**<  */
-	PHY_PIB_ATTR_CCA_MODE			= 3,  /**<  */
-	PHY_PIB_ATTR_AUX_CHANNEL 		= 4   /**< Only for multi-MAC or sub-GHz */
+    PHY_PIB_ATTR_CCA_MODE           = 3,  /**<  */
+    PHY_PIB_ATTR_AUX_CHANNEL        = 4,  /**< Only for multi-MAC or sub-GHz */
+    PHY_PIB_ATTR_CCA_THRESHOLD      = 5,  /**<  */
 } PHY_PibAttr_e;
 
 /**

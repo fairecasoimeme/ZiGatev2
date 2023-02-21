@@ -41,6 +41,10 @@ extern "C" {
 /****************************************************************************/
 /***        Include files                                                 ***/
 /****************************************************************************/
+#if defined BUILD_OPT_DYNAMIC_SCHED
+#define MAC_PROTO_TAG ZB_PROTO_ID
+#endif
+
 #include "jendefs.h"
 #include "MMAC.h"
 #include "MiniMac_Pib.h"
@@ -409,7 +413,6 @@ extern PUBLIC tsExtAddr sThisDeviceMacAddr;
 /****************************************************************************/
 /* Initialisation functions */
 PUBLIC void vMiniMac_Init(teInitOptions eInitOptions);
-PUBLIC void vMiniMac_SetHighPowerMode(teModuleType eModuleType);
 PUBLIC void vMiniMac_SaveSettings(void);
 PUBLIC void vMiniMac_ConfigureDoze(uint32 u32Period, uint32 u32Duration);
 PUBLIC void vMiniMac_SleepCompensation(uint32 u32SleepTimeInMs);
@@ -466,6 +469,7 @@ PUBLIC void vMiniMac_MLME_SetReq_RxOnWhenIdle(bool_t bNewState);
 PUBLIC void vMiniMac_PLME_SetReq_Channel(uint8 u8Channel);
 PUBLIC void vMiniMac_PLME_SetReq_Power(uint8 u8Power);
 PUBLIC void vMiniMac_PLME_SetReq_CcaMode(uint8 u8Mode);
+PUBLIC void vMiniMac_PLME_SetReq_CcaThreshold(uint8 u8Threshold);
 
 /* MCPS API */
 PUBLIC teMacStatus eMiniMac_MCPS_DataReq(

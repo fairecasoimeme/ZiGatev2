@@ -128,7 +128,7 @@ const uint8_t gUseRtos_c = USE_RTOS;  /* USE_RTOS = 0 for BareMetal and 1 for OS
 *************************************************************************************
 ********************************************************************************** */
 
-list_t threadList;
+//list_t threadList;
 
 #if osNumberOfSemaphores
 osSemaphoreStruct_t osSemaphoreHeap[osNumberOfSemaphores];
@@ -1353,6 +1353,17 @@ void OSA_InstallIntHandler(uint32_t IRQNumber, void (*handler)(void))
 #if defined ( __IAR_SYSTEMS_ICC__ )
     _Pragma ("diag_remark = PM138")
 #endif
+}
+
+/*FUNCTION**********************************************************************
+ *
+ * Function Name : OSA_InIsrContext
+ * Description   : self explanatory.
+ *
+ *END**************************************************************************/
+bool_t OSA_InIsrContext(void)
+{
+    return __get_IPSR();
 }
 
 /*! *********************************************************************************

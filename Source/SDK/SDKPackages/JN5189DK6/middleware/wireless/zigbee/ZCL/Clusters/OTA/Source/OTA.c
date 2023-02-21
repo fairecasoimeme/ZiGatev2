@@ -2872,7 +2872,19 @@ PUBLIC  bool_t bOtaIsSerializationDataValid(
 #endif
 
     /* Link Keys Comparison */
-    memcpy(au8ReadBuffer1, pu8LinkKey, 16);
+    /* Note: the compiler is fooled by the fact that pu8LinkKey,
+     * points to _FlsLinkKey, which is a void pointer. It cannot
+     * infer the size of the pointed to quantity, and thus emits
+     * a warning. There are two solutions to this:
+     * - use a pragma to squash the warning
+     * - change _FlsLinkKey to be a 16B long vector
+     * The quickest seems to be the former
+     */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+     memcpy(au8ReadBuffer1, pu8LinkKey, 16);
+#pragma GCC diagnostic pop
+
 #if !(defined OTA_INTERNAL_STORAGE) && !(defined KSDK2)
 #if (defined JENNIC_CHIP_FAMILY_JN516x) || (defined JENNIC_CHIP_FAMILY_JN517x)
     if(bEncExternalFlash)
@@ -3176,12 +3188,21 @@ PUBLIC  teZCL_Status eOTA_GetOtaHeader(
            }
            else
            {
-               return E_ZCL_FAIL;
+               eStatus = E_ZCL_FAIL;
            }
        }
        else
        {
-           *psOTAHeader = sOTAHeader[u8ImageIndex - OTA_MAX_IMAGES_PER_ENDPOINT];
+#if (OTA_MAX_CO_PROCESSOR_IMAGES != 0)
+           if (u8ImageIndex - OTA_MAX_IMAGES_PER_ENDPOINT < OTA_MAX_CO_PROCESSOR_IMAGES)
+           {
+               *psOTAHeader = sOTAHeader[u8ImageIndex - OTA_MAX_IMAGES_PER_ENDPOINT];
+           }
+           else
+#endif
+           {
+               eStatus= E_ZCL_FAIL;
+           }
        }
     }
     return eStatus;

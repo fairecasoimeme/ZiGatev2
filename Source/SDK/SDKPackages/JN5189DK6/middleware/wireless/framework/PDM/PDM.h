@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Copyright NXP B.V. 2012. All rights reserved
+ * Copyright NXP B.V. 2012, 2022. All rights reserved
  *
  ***************************************************************************/
 
@@ -41,7 +41,6 @@
 #include "EmbeddedTypes.h"
 
 #define PUBLIC
-
 
 #if defined __cplusplus
 extern "C" {
@@ -104,6 +103,18 @@ extern "C" {
 #define PDM_DECLARE_BUFFER(u16StartSegment, u8NumberOfSegments) \
     PUBLIC uint8 au8PDM_HeapBuffer[(u8NumberOfSegments) * 12] __attribute__((aligned (4)))
 #endif
+
+#if defined(__GNUC__)
+#define __PDM_WEAK_FUNC __attribute__((weak))
+#elif defined(__ICCARM__)
+#define __PDM_WEAK_FUNC __weak
+#elif defined( __CC_ARM )
+#define __PDM_WEAK_FUNC __weak
+#endif
+
+#define PDM_CNF_ENC_ENABLED  0x1     /* enable encryption */
+#define PDM_CNF_ENC_TMP_BUFF 0x2     /* input buffer is temporary, no need
+                                        to protect it or use staging buffer */
 
 /****************************************************************************/
 /***        Type Definitions                                              ***/
@@ -210,6 +221,30 @@ typedef struct
 } PDM_tfpSystemEventCallback;
 
 typedef void (*PDM_tpfvSystemEventCallback)(uint32_t u32eventNumber, PDM_eSystemEventCode eSystemEventCode);
+typedef void (*PDM_EncryptionCallback_t)(uint8_t *input_buffer, uint8_t **output_buffer, uint32_t NoOfBytes, uint32_t val);
+
+/*!
+ * \brief  Type definition for structure for lowpower functions callback structure to be registered to Sensors module
+ *     to disallow, allow lowpower during SecLib activity
+ */
+typedef struct
+{
+    PDM_EncryptionCallback_t
+        PDM_EncryptFunc; /*!< function callback pointer to encrypt data  */
+} PDM_EncryptDecryptCBs_t;
+
+typedef struct PDM_config_tag
+{
+    void * mutex; /*! Mutex to protect from concurrent access */
+    const PDM_EncryptDecryptCBs_t* PDM_EncryptionDecryptionCallbacks;  /*! Callback for encrypting/decrypting before/after write/read */
+} PDM_config_t;
+
+typedef struct {
+    uint8_t  *pStaging_buf;      /*!< staging buffer to encrypt the data from application before writing to FLash */
+    uint32_t  staging_buf_size;  /*!< staging buffer size */
+    uint32_t* pEncryptionKey;    /*!< if encryption is enabled, Address to save the Software encryption key, otherwise use the efuse key. */
+    uint8_t   config_flags;      /*!< bit0: 0 : Encryption disabled, 1 encryption enabled */
+} PDM_portConfig_t;
 
 /****************************************************************************/
 /***        Exported Functions                                            ***/
@@ -233,12 +268,69 @@ PUBLIC PDM_teStatus PDM_eInitialise(uint16_t u16StartSegment,
                                     uint8_t u8NumberOfSegments,
                                     PDM_tpfvSystemEventCallback fpvPDM_SystemEventCallback);
 
+
+/*!
+ * @brief Configure PDM (optional)
+ *
+ * This function is to configure the PDM to :
+ *  - provide mutex for protection against concurrent call
+ *  - Set Encryption/decryption callbacks, call to PDM_SetEncryption() is required
+ *      to configure the encryption key and counter
+ *  This function is called from PDM_Init() function
+ *
+ * @param pConfig: configuration
+ *
+ * @retval PDM_E_STATUS_OK if success PDM_E_STATUS_INTERNAL_ERROR otherwise
+ */
+PUBLIC PDM_teStatus PDM_eSetConfig(PDM_config_t * pConfig);
+
+
+/*!
+ * @brief Configure encryption for PDM (optional)
+ *
+ * Function to allow application to provide a staging buffer to the PDM lib. this staging buffer will be used to
+ * encrypt the user data buffer before writing to Flash. The staging buffer size shall be the maximum file size to be stored
+ * in the PDM
+ *
+ * If no staging buffer is provided, the PDM will try to allocate a
+ * Buffer from the heap.
+ *
+ * This function provides ability to configure a 16 bytes encryption key
+ *
+ * This function is to configure the encryption parameters when storing a file into the PDM.
+ * This function shall be called from application
+ *
+ * @param pdm_PortContext: encryption configuration structure
+ *
+ * @retval PDM_E_STATUS_OK if success PDM_E_STATUS_INTERNAL_ERROR otherwise
+ */
+PUBLIC PDM_teStatus PDM_SetEncryption(const PDM_portConfig_t *pdm_PortContext);
+
+/*!
+ * @brief Encryption/decryption of data buffer
+ *
+ * called from PDM lib and test code. Should not be called by upper layer
+ */
+void PDM_EncryptionCallback(uint8_t *input_buffer, uint8_t **output_buffer, uint32_t NoOfBytes, uint32_t val);
+
 /*!
  * @brief DeInitialise the PDM
  *
  * @retval PDM_E_STATUS_OK
  */
 PUBLIC PDM_teStatus PDM_DeInitialise(void);
+
+/*!
+ * @brief Get counter for data encryption with AES CTR  algorithm
+ *
+ *      Application can reimplement the calculation function of the counter
+ *      used by the AES CTR  algorithm
+ *
+ * @param val : value derived from recordId
+ * @param pCounter_l : pointer to allocated memory - caller shall provide allocated memory space for the key
+ *
+ */
+__PDM_WEAK_FUNC void PDM_GetCounter(uint32_t val, uint32_t pCounter_l[4]);
 
 /*!
  * @brief Save a PDM record
@@ -367,7 +459,7 @@ PUBLIC PDM_teStatus PDM_eReadDataFromRecord(uint16_t u16IdValue,
 PUBLIC void PDM_vDeleteDataRecord(uint16_t u16IdValue);
 
 /*!
- * @brief Delete a PDM record
+ * @brief Delete all PDM records
  *
  * This function deletes all records in NVM, including both application data and stack
  * context data, resulting in an empty PDM file system. The NVM segment Wear Count
@@ -383,7 +475,7 @@ PUBLIC void PDM_vDeleteAllDataRecords(void);
 /*!
  * @brief Seeks for a certain record by record identifier
  *
- * This function checks whether data associated with thd specified record ID
+ * This function checks whether data associated with the specified record ID
  * exists in the NVM. If the data record exists, the function returns the data
  * length, in bytes, in a location to which a pointer must be provided.
  *
@@ -409,7 +501,7 @@ PUBLIC bool_t PDM_bDoesDataExist(uint16_t u16IdValue, uint16_t *pu16DataLength);
 PUBLIC uint8_t PDM_u8GetSegmentCapacity(void);
 
 /*!
- * @brief Tells how many free segments are occupied in the PDM space
+ * @brief Tells how many used segments are occupied in the PDM space
  *
  * This function returns the number of used segments in the NVM
  * @see  PDM_u8GetSegmentCapacity
