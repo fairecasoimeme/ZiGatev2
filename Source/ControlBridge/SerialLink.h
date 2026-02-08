@@ -352,8 +352,13 @@ typedef enum
     E_SL_MSG_NWK_RECOVERY_EXTRACT_RSP                           =  0x8600,
     E_SL_MSG_NWK_RECOVERY_RESTORE_REQ                           =  0x0601,
     E_SL_MSG_NWK_RECOVERY_RESTORE_RSP                           =  0x8601,
+    E_SL_MSG_NWK_RECOVERY_EXTRACT_EXT_REQ                       =  0x0602,
+    E_SL_MSG_NWK_RECOVERY_EXTRACT_EXT_RSP                       =  0x8602,
+    E_SL_MSG_NWK_RECOVERY_RESTORE_EXT_REQ                       =  0x0603,
+    E_SL_MSG_NWK_RECOVERY_RESTORE_EXT_RSP                       =  0x8603,
 
     E_SL_MSG_ROUTE_DISCOVERY_CONFIRM                            =  0x8701,
+    E_SL_MSG_NWK_STATUS_INDICATION                              =  0x8703,
     E_SL_MSG_APS_DATA_ACK										=  0x8011,
     E_SL_MSG_APS_DATA_CONFIRM                                   =  0x8012,
     E_SL_MSG_APS_DATA_CONFIRM_FAILED                            =  0x8702,

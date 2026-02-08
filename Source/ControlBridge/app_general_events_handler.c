@@ -60,6 +60,7 @@
 #include "zps_apl_aib.h"
 #include "zps_apl_zdo.h"
 #include "zps_apl_af.h"
+#include "zps_nwk_sap.h"
 #include "app_Znc_cmds.h"
 #include "SerialLink.h"
 #include "app_uart.h"
@@ -644,12 +645,26 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
 
             if ( psStackEvent->uEvent.sApsDataConfirmEvent.u8Status )
             {
-
                 vSL_WriteMessage ( E_SL_MSG_APS_DATA_CONFIRM_FAILED,
                                    u16Length,
                                    au8LinkTxBuffer,
                                    u8LinkQuality);
-                //return;
+
+                /* Auto route discovery on NWK route failures for unicast (short addr) */
+                if ( psStackEvent->uEvent.sApsDataConfirmEvent.u8DstAddrMode != E_ZCL_AM_IEEE &&
+                     psStackEvent->uEvent.sApsDataConfirmEvent.u8DstAddrMode != E_ZCL_AM_IEEE_NO_ACK )
+                {
+                    uint8 u8Stat = psStackEvent->uEvent.sApsDataConfirmEvent.u8Status;
+                    if ( u8Stat == ZPS_NWK_ENUM_ROUTE_ERROR            ||
+                         u8Stat == ZPS_NWK_ENUM_ROUTE_DISCOVERY_FAILED ||
+                         u8Stat == ZPS_NWK_ENUM_FRAME_NOT_BUFFERED     ||
+                         u8Stat == ZPS_NWK_ENUM_FRAME_IS_BUFFERED )
+                    {
+                        uint16 u16Dst = psStackEvent->uEvent.sApsDataConfirmEvent.uDstAddr.u16Addr;
+                        vLog_Printf(TRACE_APP,LOG_DEBUG, "\nCFM fail -> RouteDisc for %04x (err=%02x)", u16Dst, u8Stat);
+                        ZPS_eAplZdoRouteRequest( u16Dst, 0 );
+                    }
+                }
             }else{
                 vSL_WriteMessage ( E_SL_MSG_APS_DATA_CONFIRM,
                                    u16Length,
@@ -1159,13 +1174,31 @@ PUBLIC void APP_vHandleStackEvents ( ZPS_tsAfEvent*    psStackEvent )
         break;
 
         case ZPS_EVENT_NWK_STATUS_INDICATION:
-            vLog_Printf(TRACE_APP,LOG_DEBUG, "\nNwkStat: Addr:%x Status:%x",
-                    psStackEvent->uEvent.sNwkStatusIndicationEvent.u16NwkAddr,
-                    psStackEvent->uEvent.sNwkStatusIndicationEvent.u8Status);
-            vLog_Printf(TRACE_APP,LOG_DEBUG, "\nNwkStat: Addr:%x Status:%x",
-                    psStackEvent->uEvent.sNwkStatusIndicationEvent.u16NwkAddr,
-                    psStackEvent->uEvent.sNwkStatusIndicationEvent.u8Status);
-         break;
+        {
+            uint16 u16NwkAddr = psStackEvent->uEvent.sNwkStatusIndicationEvent.u16NwkAddr;
+            uint8  u8NwkStatus = psStackEvent->uEvent.sNwkStatusIndicationEvent.u8Status;
+
+            vLog_Printf(TRACE_APP,LOG_DEBUG, "\nNwkStat: Addr:%04x Status:%02x", u16NwkAddr, u8NwkStatus);
+
+            /* Notify host */
+            u16Length = 0;
+            ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [0],         u16NwkAddr,  u16Length );
+            ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [u16Length],  u8NwkStatus, u16Length );
+            vSL_WriteMessage ( E_SL_MSG_NWK_STATUS_INDICATION, u16Length, au8LinkTxBuffer, u8LinkQuality );
+
+            /* Auto route discovery on route-related errors */
+            if ( u8NwkStatus == ZPS_NWK_ST_NO_ROUTE_AVAILABLE    ||
+                 u8NwkStatus == ZPS_NWK_ST_TREE_LINK_FAILURE     ||
+                 u8NwkStatus == ZPS_NWK_ST_NON_TREE_LINK_FAILURE ||
+                 u8NwkStatus == ZPS_NWK_ST_SOURCE_ROUTE_FAILURE  ||
+                 u8NwkStatus == ZPS_NWK_ST_MANY_TO_ONE_ROUTE_FAILURE )
+            {
+                vLog_Printf(TRACE_APP,LOG_DEBUG, "\nAuto RouteDisc for %04x (status=%02x)", u16NwkAddr, u8NwkStatus);
+                ZPS_teStatus eStatus = ZPS_eAplZdoRouteRequest( u16NwkAddr, 0 );
+                vLog_Printf(TRACE_APP,LOG_DEBUG, "\nRouteDisc result: %02x", eStatus);
+            }
+        }
+        break;
 
          case ZPS_EVENT_NWK_STARTED:
          case ZPS_EVENT_NWK_FAILED_TO_START:
