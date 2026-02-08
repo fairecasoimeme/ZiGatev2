@@ -656,11 +656,8 @@ void main_task (uint32_t parameter)
         /*myEventId = OSA_EventCreate(TRUE);*/
         initialized = TRUE;
 #if (ZIGBEE_USE_FRAMEWORK != 0)
+        RNG_Init();
         SecLib_Init();
-		if(gRngSuccess_d != RNG_Init())
-		{
-			DBG_vPrintf(TRUE,"Failed to init RNG\n");
-		}
         MEM_Init();
         TMR_Init();
 #endif
@@ -1356,17 +1353,6 @@ void hardware_init(void)
 bool_t APP_bZCL_IsManufacturerCodeSupported(uint16 u16ManufacturerCode)
 {
 	return TRUE;
-}
-
-WEAK uint32 u32Reverse(uint32 u32InWord)
-{
-    uint32 u32OutWord;
-
-    asm volatile ("REV %[reverse], %[input];"
-                  : [reverse] "=r" (u32OutWord)
-                  : [input]  "r"  (u32InWord)   );
-
-    return u32OutWord;
 }
 
 /*PRIVATE void vPdmEventHandlerCallback ( uint32                  u32EventNumber,

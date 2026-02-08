@@ -104,7 +104,7 @@
 #endif
 
 #ifndef VERSION
-#define VERSION    0x000503A0
+#define VERSION    0x00050324
 #endif
 /****************************************************************************/
 /***    Type Definitions                          ***/
@@ -194,7 +194,8 @@ PRIVATE ZPS_teStatus APP_eZdpComplexDescReq ( uint16    u16Addr,
                                               uint16    u16NwkAddressInterst,
                                               uint8*    pu8Seq );
 
-PRIVATE bool APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50]);
+PRIVATE bool_t APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50]);
+PUBLIC uint8 u8GetApduUsed(PDUM_thAPdu pAPdu);
 
 //PRIVATE void APP_MigratePDM( void );
 
@@ -599,6 +600,10 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 
                 void * thisNet = ZPS_pvAplZdoGetNwkHandle();
                 thisNib = ZPS_psNwkNibGetHandle(thisNet);
+                if (thisNib == NULL)
+                {
+                    break;
+                }
 
                 uint16                 u16Length =  0;
                 uint8                  au8LinkTxBuffer[1024];
@@ -622,7 +627,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 				}
 
 
-                for( i=0;i<u8SizeTmpNtActv;i++)
+                for( i=0;i<u8SizeTmpNtActv && i<200;i++)
                 {
                 	ZNC_BUF_U8_UPD  ( &au8LinkTxBuffer [ u16Length ], j,     u16Length );
 					ZNC_BUF_U16_UPD ( &au8LinkTxBuffer [ u16Length ], tmpNtActv[i].u16ShortAddr,                  u16Length );
@@ -668,6 +673,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                 return;
             }
             break;
+
             case (E_SL_MSG_SET_DEVICETYPE):
             {
 
@@ -719,6 +725,10 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 				uint8  au8LinkRxBuffer[10];
 
 				ZPS_tsAplAib * tsAplAib  = ZPS_psAplAibGetAib();
+				if (tsAplAib == NULL || tsAplAib->psAplApsmeAibBindingTable == NULL)
+				{
+					break;
+				}
 				ZNC_BUF_U8_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].u32SizeOfBindingTable,      u16Length );
 
 				for( j = 0 ; j < tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].u32SizeOfBindingTable ; j++ )
@@ -727,14 +737,14 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
 					if (tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DstAddrMode == ZPS_E_ADDR_MODE_GROUP)
 					{
 						// Group
-						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved,      u16Length );
+						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].uDstAddress.u16Addr,      u16Length );
 						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8SourceEndpoint,      u16Length );
 						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint,      u16Length );
 						ZNC_BUF_U16_UPD   ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16ClusterId,      u16Length );
 					}
 					else
 					{
-						u64Addr = ZPS_u64NwkNibGetMappedIeeeAddr( ZPS_pvAplZdoGetNwkHandle(), tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u16NwkAddrResolved);
+						u64Addr = ZPS_u64NwkNibGetMappedIeeeAddr( ZPS_pvAplZdoGetNwkHandle(), tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].uDstAddress.u16Addr);
 						ZNC_BUF_U64_UPD   ( &au8LinkRxBuffer [u16Length ], u64Addr,      u16Length );
 						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8SourceEndpoint,      u16Length );
 						ZNC_BUF_U8_UPD    ( &au8LinkRxBuffer [u16Length ], tsAplAib->psAplApsmeAibBindingTable->psAplApsmeBindingTable[0].pvAplApsmeBindingTableEntryForSpSrcAddr[j].u8DestinationEndPoint,      u16Length );
@@ -783,6 +793,10 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             {
             	ZPS_tsNwkNib * thisNib;
 				thisNib = ZPS_psNwkNibGetHandle(ZPS_pvAplZdoGetNwkHandle());
+				if (thisNib == NULL)
+				{
+					break;
+				}
 				uint16 u16Length =  0;
 				uint8  au8LinkRxBuffer[1024];
 				uint16 i = 0;
@@ -899,7 +913,7 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
             case (E_SL_MSG_SET_CE_FCC):
             {
                 bPowerCEFCC     =   au8LinkRxBuffer [ 0 ];
-               // vAppApiSetHighPowerMode(bPowerCEFCC, TRUE);
+                vAppApiSetHighPowerMode(bPowerCEFCC, TRUE);
             }
             break;
 				case (E_SL_MSG_SET_FLOW_CONTROL):
@@ -2750,6 +2764,35 @@ PUBLIC void APP_vProcessIncomingSerialCommands ( uint8    u8RxByte )
                                   0 );
             }
             break;
+
+            case (E_SL_MSG_NWK_RECOVERY_EXTRACT_EXT_REQ):
+            {
+                /* Extended extract with device table */
+                static tsNwkRecoveryExt sNwkRecoveryExt;
+                memset(&sNwkRecoveryExt, 0, sizeof(sNwkRecoveryExt));
+                vNetworkRecoveryObtainRecoverDataExt( &sNwkRecoveryExt );
+
+                /* Calculate actual size: base + header + devices */
+                uint16 u16Size = sizeof(tsNwkRecovery) + 4 +
+                                 (sNwkRecoveryExt.u8DeviceCount * sizeof(tsNwkRecoveryDevice));
+
+                vSL_WriteMessage( E_SL_MSG_NWK_RECOVERY_EXTRACT_EXT_RSP,
+                                  u16Size,
+                                  (uint8 *)&sNwkRecoveryExt,
+                                  0 );
+            }
+            break;
+
+            case (E_SL_MSG_NWK_RECOVERY_RESTORE_EXT_REQ):
+            {
+                uint8 u8Success = 0;
+                vNetworkRecoveryInsertRecoverDataExt( ( tsNwkRecoveryExt * ) &au8LinkRxBuffer );
+                vSL_WriteMessage( E_SL_MSG_NWK_RECOVERY_RESTORE_EXT_RSP,
+                                  sizeof(uint8),
+                                  &u8Success,
+                                  0 );
+            }
+            break;
 #endif
             case E_SL_MSG_BASIC_RESET_TO_FACTORY_DEFAULTS:
             {
@@ -3635,8 +3678,16 @@ PRIVATE ZPS_teStatus APP_eZdpPermitJoiningReq ( uint16    u16DstAddr,
                                                 uint8*    pu8RequestSent)
 {
     ZPS_teStatus eStatus = ZPS_APL_APS_E_INVALID_PARAMETER;
+    uint16 u16LocalAddr = ZPS_u16NwkNibGetNwkAddr(ZPS_pvAplZdoGetNwkHandle());
 
-    if(u16DstAddr != ZPS_u16NwkNibGetNwkAddr(ZPS_pvAplZdoGetNwkHandle()))
+    /* If broadcast address (0xFFFC), also open permit join locally on coordinator */
+    if (u16DstAddr == 0xFFFC)
+    {
+        /* Open permit join on coordinator itself first */
+        ZPS_eAplZdoPermitJoining(u8PermitDuration);
+    }
+
+    if(u16DstAddr != u16LocalAddr)
     {
         PDUM_thAPduInstance    hAPduInst;
 
@@ -4978,7 +5029,7 @@ PUBLIC uint8 u8GetApduUsed(PDUM_thAPdu pAPdu)
     return count;
 }
 
-PRIVATE bool APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50])
+PRIVATE bool_t APP_APSKeysExist( uint16 u16Addr, uint16 tmp[50])
 {
 	uint8 i=0;
 	for (i=0;i<50;i++)
